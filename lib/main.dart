@@ -1,16 +1,10 @@
 import 'package:flutter/material.dart';
-
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
+import 'pages/login_page.dart';
+import 'pages/settings_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // EMOptions options = EMOptions.withAppKey(
-  //   'easemob-demo#dujiepeng',
-  //   imServer: 'msync-im-qa-hsb.easemob.com',
-  //   imPort: 6717,
-  //   restServer: 'https://a1-qa-hsb.easemob.com',
-  // );
 
   EMOptions options = EMOptions.withAppKey(
     'easemob#dutest',
@@ -29,11 +23,19 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'QA Flutter',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
       ),
-      home: const MyHomePage(),
+      // 启动后优先跳到登录页面
+      initialRoute: '/login',
+      routes: {
+        '/login': (context) => const LoginPage(),
+        '/settings': (context) => const SettingsPage(),
+        '/home': (context) => const MyHomePage(),
+      },
     );
   }
 }
