@@ -42,7 +42,12 @@ class _MePageState extends State<MePage> {
           ),
         ),
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.only(
+            top: kToolbarHeight + 40,
+            left: 20,
+            right: 20,
+            bottom: 20,
+          ),
           children: [
             _buildSettingSectionTitle('偏好设置', isDark),
             _buildSwitchItem(
