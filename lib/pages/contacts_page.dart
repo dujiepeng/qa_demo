@@ -117,6 +117,9 @@ class _ContactsPageState extends State<ContactsPage> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint(
+      'ContactsPage: Building UI. _contacts.length = ${_contacts.length}, _isLoading = $_isLoading',
+    );
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(

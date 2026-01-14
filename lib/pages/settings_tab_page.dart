@@ -85,6 +85,7 @@ class _SettingsTabPageState extends State<SettingsTabPage> {
                 await EMClient.getInstance.logout();
                 // 清除内存登录状态
                 _settings.isLoggedIn = false;
+                await _settings.saveSettings();
                 // 跳转回登录页面
                 if (mounted) {
                   Navigator.of(

@@ -18,7 +18,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final settings = AppSettings();
     return MaterialApp(
       title: 'QA Flutter',
       debugShowCheckedModeBanner: false,
@@ -27,7 +26,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       // 根据登录状态动态决定起始页面
-      initialRoute: settings.isLoggedIn ? '/home' : '/login',
+      initialRoute: AppSettings().isLoggedIn ? '/home' : '/login',
       routes: {
         '/login': (context) => const LoginPage(),
         '/home': (context) => const HomePage(),

@@ -13,6 +13,7 @@ class ChatEventManager {
   void init() {
     debugPrint('ChatEventManager: Initializing listeners...');
     _addContactListener();
+    EMClient.getInstance.startCallback();
   }
 
   void _addContactListener() {
