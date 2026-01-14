@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
+import '../utils/chat_event_manager.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -42,8 +43,8 @@ class _LoginPageState extends State<LoginPage> {
         EMOptions options;
         if (_settings.useCustomServer) {
           // 如果开启了自定义服务器配置，在构造时直接传入详细信息
-          options = EMOptions(
-            appKey: _settings.appKey,
+          options = EMOptions.withAppKey(
+            _settings.appKey,
             autoLogin: false,
             debugMode: true,
             imServer: _settings.imServer,
@@ -73,6 +74,9 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       await EMClient.getInstance.loginWithPassword(uid, pwd);
+
+      // 初始化全局事件监听器
+      ChatEventManager.getInstance().init();
 
       // 更新登录状态并保存
       _settings.isLoggedIn = true;
