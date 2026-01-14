@@ -136,26 +136,25 @@ class _HomePageState extends State<HomePage> {
               final userId = controller.text.trim();
               if (userId.isEmpty) return;
 
+              // 提前获取 ScaffoldMessengerState，避免异步后 context 失效
+              final messenger = ScaffoldMessenger.of(context);
               Navigator.pop(context);
+
               try {
                 await EMClient.getInstance.contactManager.addContact(userId);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('已发送好友请求给: $userId'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('已发送好友请求给: $userId'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
               } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('添加失败: $e'),
-                      backgroundColor: Colors.redAccent,
-                    ),
-                  );
-                }
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('添加失败: $e'),
+                    backgroundColor: Colors.redAccent,
+                  ),
+                );
               }
             },
             style: ElevatedButton.styleFrom(
