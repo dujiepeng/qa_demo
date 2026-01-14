@@ -80,7 +80,7 @@ class _TestPageState extends State<TestPage> {
               crossAxisCount: 3,
               mainAxisSpacing: 10,
               crossAxisSpacing: 10,
-              childAspectRatio: 0.9,
+              childAspectRatio: 1.0,
             ),
             itemCount: _testItems.length,
             itemBuilder: (context, index) {
@@ -148,8 +148,8 @@ class _TestPageState extends State<TestPage> {
           ),
           if (item.badgeCount > 0)
             Positioned(
-              top: -5,
-              right: -5,
+              top: -2,
+              right: -2,
               child: Container(
                 padding: const EdgeInsets.all(5),
                 decoration: const BoxDecoration(
