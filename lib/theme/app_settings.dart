@@ -47,4 +47,21 @@ class AppSettings {
     await prefs.setString(_keyRestServer, restServer);
     isDirty = true;
   }
+
+  // 检查传入的配置是否与当前内存中的一致
+  bool hasChanged({
+    required bool newUseCustomAppKey,
+    required String newAppKey,
+    required bool newUseCustomServer,
+    required String newImServer,
+    required int newImPort,
+    required String newRestServer,
+  }) {
+    return newUseCustomAppKey != useCustomAppKey ||
+        newAppKey != appKey ||
+        newUseCustomServer != useCustomServer ||
+        newImServer != imServer ||
+        newImPort != imPort ||
+        newRestServer != restServer;
+  }
 }
