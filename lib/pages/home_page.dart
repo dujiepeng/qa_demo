@@ -25,17 +25,7 @@ class _HomePageState extends State<HomePage> {
         icon: Icons.chat_bubble_outline,
         isDark: isDark,
       ),
-      _PlaceholderPage(
-        title: '好友',
-        icon: Icons.people_outline,
-        isDark: isDark,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () => _showAddContactDialog(context, isDark),
-          ),
-        ],
-      ),
+      ContactsPage(isDark: isDark), // 替换为真实的联系人页面
       _PlaceholderPage(title: '群组', icon: Icons.group_outlined, isDark: isDark),
       _PlaceholderPage(
         title: '聊天室',
@@ -96,73 +86,6 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  void _showAddContactDialog(BuildContext context, bool isDark) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.backgroundEnd(isDark),
-        title: Text(
-          '添加好友',
-          style: TextStyle(color: AppColors.textPrimary(isDark)),
-        ),
-        content: TextField(
-          controller: controller,
-          style: TextStyle(color: AppColors.textPrimary(isDark)),
-          decoration: InputDecoration(
-            hintText: '请输入对方 UID',
-            hintStyle: TextStyle(
-              color: isDark ? Colors.white38 : Colors.black38,
-            ),
-            enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: AppColors.primary(isDark)),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              '取消',
-              style: TextStyle(color: AppColors.textSecondary(isDark)),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final userId = controller.text.trim();
-              if (userId.isEmpty) return;
-
-              // 提前获取 ScaffoldMessengerState，避免异步后 context 失效
-              final messenger = ScaffoldMessenger.of(context);
-              Navigator.pop(context);
-
-              try {
-                await EMClient.getInstance.contactManager.addContact(userId);
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text('已发送好友请求给: $userId'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } catch (e) {
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text('添加失败: $e'),
-                    backgroundColor: Colors.redAccent,
-                  ),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary(isDark),
-            ),
-            child: const Text('发送', style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }
@@ -270,17 +193,250 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
+class ContactsPage extends StatefulWidget {
+  final bool isDark;
+  const ContactsPage({super.key, required this.isDark});
+
+  @override
+  State<ContactsPage> createState() => _ContactsPageState();
+}
+
+class _ContactsPageState extends State<ContactsPage> {
+  List<String> _contacts = [];
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchContacts();
+  }
+
+  Future<void> _fetchContacts() async {
+    setState(() => _isLoading = true);
+    try {
+      final contacts = await EMClient.getInstance.contactManager
+          .fetchAllContacts();
+      setState(() {
+        _contacts = contacts;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('获取好友列表失败: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showAddContactDialog(BuildContext context) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.backgroundEnd(widget.isDark),
+        title: Text(
+          '添加好友',
+          style: TextStyle(color: AppColors.textPrimary(widget.isDark)),
+        ),
+        content: TextField(
+          controller: controller,
+          style: TextStyle(color: AppColors.textPrimary(widget.isDark)),
+          decoration: InputDecoration(
+            hintText: '请输入对方 UID',
+            hintStyle: TextStyle(
+              color: widget.isDark ? Colors.white38 : Colors.black38,
+            ),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: AppColors.primary(widget.isDark)),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              '取消',
+              style: TextStyle(color: AppColors.textSecondary(widget.isDark)),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final userId = controller.text.trim();
+              if (userId.isEmpty) return;
+
+              final messenger = ScaffoldMessenger.of(context);
+              Navigator.pop(context);
+
+              try {
+                await EMClient.getInstance.contactManager.addContact(userId);
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('已发送好友请求给: $userId'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } catch (e) {
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('添加失败: $e'),
+                    backgroundColor: Colors.redAccent,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary(widget.isDark),
+            ),
+            child: const Text('发送', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          '好友',
+          style: TextStyle(color: AppColors.textPrimary(widget.isDark)),
+        ),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () => _showAddContactDialog(context),
+          ),
+        ],
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.backgroundStart(widget.isDark),
+              AppColors.backgroundEnd(widget.isDark),
+            ],
+          ),
+        ),
+        child: _isLoading && _contacts.isEmpty
+            ? Center(
+                child: CircularProgressIndicator(
+                  color: AppColors.primary(widget.isDark),
+                ),
+              )
+            : RefreshIndicator(
+                onRefresh: _fetchContacts,
+                color: AppColors.primary(widget.isDark),
+                child: _contacts.isEmpty
+                    ? ListView(
+                        // 使空状态也能触发下拉刷新
+                        children: [
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.3,
+                          ),
+                          Center(
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.people_outline,
+                                  size: 80,
+                                  color: AppColors.primary(
+                                    widget.isDark,
+                                  ).withOpacity(0.5),
+                                ),
+                                const SizedBox(height: 20),
+                                Text(
+                                  '暂无好友',
+                                  style: TextStyle(
+                                    color: AppColors.textPrimary(widget.isDark),
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  '下拉刷新或点击右上角添加好友',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary(
+                                      widget.isDark,
+                                    ).withOpacity(0.7),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(10),
+                        itemCount: _contacts.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 10),
+                        itemBuilder: (context, index) {
+                          final contactId = _contacts[index];
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: AppColors.inputBackground(widget.isDark),
+                              borderRadius: BorderRadius.circular(15),
+                              border: Border.all(
+                                color: AppColors.glassBorder(widget.isDark),
+                              ),
+                            ),
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: AppColors.primary(
+                                  widget.isDark,
+                                ).withOpacity(0.2),
+                                child: Icon(
+                                  Icons.person,
+                                  color: AppColors.primary(widget.isDark),
+                                ),
+                              ),
+                              title: Text(
+                                contactId,
+                                style: TextStyle(
+                                  color: AppColors.textPrimary(widget.isDark),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              trailing: Icon(
+                                Icons.chevron_right,
+                                color: AppColors.textSecondary(widget.isDark),
+                              ),
+                              onTap: () {
+                                // 后续可以进入聊天页
+                              },
+                            ),
+                          );
+                        },
+                      ),
+              ),
+      ),
+    );
+  }
+}
+
 class _PlaceholderPage extends StatelessWidget {
   final String title;
   final IconData icon;
   final bool isDark;
-  final List<Widget>? actions;
 
   const _PlaceholderPage({
     required this.title,
     required this.icon,
     required this.isDark,
-    this.actions,
   });
 
   @override
@@ -295,7 +451,6 @@ class _PlaceholderPage extends StatelessWidget {
           style: TextStyle(color: AppColors.textPrimary(isDark)),
         ),
         centerTitle: true,
-        actions: actions,
       ),
       body: Container(
         decoration: BoxDecoration(
