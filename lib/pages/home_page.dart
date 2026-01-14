@@ -21,11 +21,10 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = _settings.isDarkMode;
-
     return AnimatedBuilder(
       animation: _settings,
       builder: (context, _) {
+        final isDark = _settings.isDarkMode;
         final List<Widget> pages;
         final List<BottomNavigationBarItem> items;
 

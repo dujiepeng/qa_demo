@@ -18,6 +18,7 @@ class _TestPageState extends State<TestPage> {
     final isDark = _settings.isDarkMode;
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
