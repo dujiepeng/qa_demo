@@ -45,105 +45,110 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.backgroundStart, AppColors.backgroundEnd],
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppColors.backgroundStart, AppColors.backgroundEnd],
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Stack(
-            children: [
-              // Settings Button
-              Positioned(
-                top: 10,
-                right: 10,
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.settings,
-                    color: AppColors.textPrimary,
-                  ),
-                  onPressed: () => Navigator.pushNamed(context, '/settings'),
-                ),
-              ),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 30),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Brand / Logo area
-                    const Icon(
-                      Icons.flash_on,
-                      size: 80,
-                      color: AppColors.primary,
+          child: SafeArea(
+            child: Stack(
+              children: [
+                // Settings Button
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.settings,
+                      color: AppColors.textPrimary,
                     ),
-                    const SizedBox(height: 20),
-                    const Center(
-                      child: Text(
-                        'QA FLUTTER',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                          letterSpacing: 2,
+                    onPressed: () => Navigator.pushNamed(context, '/settings'),
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 30),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Brand / Logo area
+                      const Icon(
+                        Icons.flash_on,
+                        size: 80,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(height: 20),
+                      const Center(
+                        child: Text(
+                          'QA FLUTTER',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                            letterSpacing: 2,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 40),
+                      const SizedBox(height: 40),
 
-                    // UID Input
-                    _buildTextField(
-                      controller: _uidController,
-                      hintText: 'UID',
-                      icon: Icons.person_outline,
-                    ),
-                    const SizedBox(height: 20),
+                      // UID Input
+                      _buildTextField(
+                        controller: _uidController,
+                        hintText: 'UID',
+                        icon: Icons.person_outline,
+                      ),
+                      const SizedBox(height: 20),
 
-                    // Password Input
-                    _buildTextField(
-                      controller: _pwdController,
-                      hintText: 'Password',
-                      icon: Icons.lock_outline,
-                      isObscured: true,
-                    ),
-                    const SizedBox(height: 30),
+                      // Password Input
+                      _buildTextField(
+                        controller: _pwdController,
+                        hintText: 'Password',
+                        icon: Icons.lock_outline,
+                        isObscured: true,
+                      ),
+                      const SizedBox(height: 30),
 
-                    // Login Button
-                    _isLoading
-                        ? const Center(
-                            child: CircularProgressIndicator(
-                              color: AppColors.primary,
-                            ),
-                          )
-                        : ElevatedButton(
-                            onPressed: _handleLogin,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(15),
+                      // Login Button
+                      _isLoading
+                          ? const Center(
+                              child: CircularProgressIndicator(
+                                color: AppColors.primary,
                               ),
-                              elevation: 5,
-                            ),
-                            child: const Text(
-                              'LOGIN',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                            )
+                          : ElevatedButton(
+                              onPressed: _handleLogin,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                ),
+                                elevation: 5,
+                              ),
+                              child: const Text(
+                                'LOGIN',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
                               ),
                             ),
-                          ),
 
-                    const SizedBox(height: 50),
-                  ],
+                      const SizedBox(height: 50),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
