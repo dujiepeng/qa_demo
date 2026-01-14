@@ -10,6 +10,9 @@ class ChatEventManager {
     return _instance!;
   }
 
+  // 好友申请数量通知器
+  final ValueNotifier<int> friendRequestCount = ValueNotifier<int>(0);
+
   void init() {
     debugPrint('ChatEventManager: Initializing listeners...');
     _addContactListener();
@@ -24,7 +27,8 @@ class ChatEventManager {
           debugPrint(
             'ChatEventManager: Received contact invitation from $userId, reason: $reason',
           );
-          // 后续可以增加全局弹窗或通知逻辑
+          // 增加好友申请计数，通知外部更新
+          friendRequestCount.value++;
         },
         onContactDeleted: (userId) {
           debugPrint('ChatEventManager: Contact deleted: $userId');
