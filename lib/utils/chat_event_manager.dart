@@ -12,6 +12,9 @@ class ChatEventManager {
 
   // 好友申请数量通知器
   final ValueNotifier<int> friendRequestCount = ValueNotifier<int>(0);
+  // 好友申请列表通知器 (存储 userId 和 reason 的 Map)
+  final ValueNotifier<List<Map<String, String>>> friendInvitations =
+      ValueNotifier<List<Map<String, String>>>([]);
 
   void init() {
     debugPrint('ChatEventManager: Initializing listeners...');
@@ -29,6 +32,16 @@ class ChatEventManager {
           );
           // 增加好友申请计数，通知外部更新
           friendRequestCount.value++;
+          // 记录详细申请信息
+          final newList = List<Map<String, String>>.from(
+            friendInvitations.value,
+          );
+          newList.add({
+            'userId': userId,
+            'reason': reason ?? '',
+            'time': DateTime.now().toString(),
+          });
+          friendInvitations.value = newList;
         },
         onContactDeleted: (userId) {
           debugPrint('ChatEventManager: Contact deleted: $userId');
