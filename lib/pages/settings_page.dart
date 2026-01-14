@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
 
@@ -38,17 +40,57 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _saveSettings() async {
-    _settings.appKey = _appKeyController.text.trim();
-    _settings.imServer = _imServerController.text.trim();
-    _settings.imPort = int.tryParse(_imPortController.text.trim()) ?? 6717;
-    _settings.restServer = _restServerController.text.trim();
+    final currentAppKey = _appKeyController.text.trim();
+    final currentImServer = _imServerController.text.trim();
+    final currentImPort = int.tryParse(_imPortController.text.trim()) ?? 6717;
+    final currentRestServer = _restServerController.text.trim();
 
-    await _settings.saveSettings(); // 持久化到本地
+    // 真正的对比：由于 switch 已经改变了 _settings，我们需要将控制器中的内容也考虑进去进行对比
+    final changed = _settings.hasChanged(
+      currentUseCustomAppKey: _settings.useCustomAppKey,
+      currentAppKey: currentAppKey,
+      currentUseCustomServer: _settings.useCustomServer,
+      currentImServer: currentImServer,
+      currentImPort: currentImPort,
+      currentRestServer: currentRestServer,
+    );
 
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Settings saved')));
+    if (changed) {
+      bool? confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('重启提醒'),
+          content: const Text('配置已发生变更，应用将保存并自动退出。请您稍后手动重新启动应用以使新配置生效。'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('确定'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm != true) return;
+
+      // 只有在确认后才真正写回 AppSettings 的持久化字段
+      _settings.appKey = currentAppKey;
+      _settings.imServer = currentImServer;
+      _settings.imPort = currentImPort;
+      _settings.restServer = currentRestServer;
+
+      await _settings.saveSettings();
+
+      // 彻底退出应用
+      exit(0);
+    } else {
+      // 没有任何变化，直接返回上一页
+      if (mounted) {
+        Navigator.pop(context);
+      }
     }
   }
 
@@ -65,13 +107,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         iconTheme: const IconThemeData(color: AppColors.textPrimary),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.check),
-            onPressed: () {
-              _saveSettings();
-              Navigator.pop(context);
-            },
-          ),
+          IconButton(icon: const Icon(Icons.check), onPressed: _saveSettings),
         ],
       ),
       body: GestureDetector(
