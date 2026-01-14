@@ -37,15 +37,19 @@ class _SettingsPageState extends State<SettingsPage> {
     super.dispose();
   }
 
-  void _saveSettings() {
+  void _saveSettings() async {
     _settings.appKey = _appKeyController.text.trim();
     _settings.imServer = _imServerController.text.trim();
     _settings.imPort = int.tryParse(_imPortController.text.trim()) ?? 6717;
     _settings.restServer = _restServerController.text.trim();
-    _settings.isDirty = true;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Settings saved')));
+
+    await _settings.saveSettings(); // 持久化到本地
+
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Settings saved')));
+    }
   }
 
   @override

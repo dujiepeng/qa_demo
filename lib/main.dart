@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import 'pages/login_page.dart';
 import 'pages/settings_page.dart';
+import 'theme/app_settings.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 加载持久化配置
+  await AppSettings().loadSettings();
 
   EMOptions options = EMOptions.withAppKey(
     'easemob#dutest',
