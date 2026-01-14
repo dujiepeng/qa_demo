@@ -6,6 +6,7 @@ import 'contacts_page.dart';
 import 'groups_page.dart';
 import 'rooms_page.dart';
 import 'me_page.dart';
+import 'test_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -29,15 +30,7 @@ class _HomePageState extends State<HomePage> {
         final List<BottomNavigationBarItem> items;
 
         if (_settings.isTestMode) {
-          pages = [
-            const Center(
-              child: Text(
-                '测试页面',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-            ),
-            MePage(isDark: isDark),
-          ];
+          pages = [TestPage(isDark: isDark), MePage(isDark: isDark)];
           items = const [
             BottomNavigationBarItem(
               icon: Icon(Icons.bug_report),
