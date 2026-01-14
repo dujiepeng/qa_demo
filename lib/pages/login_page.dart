@@ -140,32 +140,6 @@ class _LoginPageState extends State<LoginPage> {
                           ),
 
                     const SizedBox(height: 50),
-
-                    // Third Party Login Hint
-                    Row(
-                      children: const [
-                        Expanded(child: Divider(color: Colors.white24)),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 10),
-                          child: Text(
-                            'OR',
-                            style: TextStyle(color: Colors.white38),
-                          ),
-                        ),
-                        Expanded(child: Divider(color: Colors.white24)),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildSocialIcon(Icons.wechat, Colors.green),
-                        const SizedBox(width: 25),
-                        _buildSocialIcon(Icons.apple, Colors.white),
-                        const SizedBox(width: 25),
-                        _buildSocialIcon(Icons.alternate_email, Colors.blue),
-                      ],
-                    ),
                   ],
                 ),
               ),
@@ -202,21 +176,6 @@ class _LoginPageState extends State<LoginPage> {
             horizontal: 20,
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildSocialIcon(IconData icon, Color color) {
-    return InkWell(
-      onTap: () {}, // Not implemented
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.glassBorder),
-          color: AppColors.inputBackground,
-        ),
-        child: Icon(icon, color: color, size: 28),
       ),
     );
   }
