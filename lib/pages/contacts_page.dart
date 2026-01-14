@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../theme/app_colors.dart';
+import '../utils/chat_event_manager.dart';
 
 class ContactsPage extends StatefulWidget {
   final bool isDark;
@@ -157,93 +158,126 @@ class _ContactsPageState extends State<ContactsPage> {
             : RefreshIndicator(
                 onRefresh: _fetchContacts,
                 color: AppColors.primary(widget.isDark),
-                child: _contacts.isEmpty
-                    ? ListView(
-                        // 确保空状态也能触发下拉刷新
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        children: [
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.3,
-                          ),
-                          Center(
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.people_outline,
-                                  size: 80,
-                                  color: AppColors.primary(
-                                    widget.isDark,
-                                  ).withOpacity(0.5),
-                                ),
-                                const SizedBox(height: 20),
-                                Text(
-                                  '暂无好友',
-                                  style: TextStyle(
-                                    color: AppColors.textPrimary(widget.isDark),
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                Text(
-                                  '下拉刷新或点击右上角添加好友',
-                                  style: TextStyle(
-                                    color: AppColors.textSecondary(
-                                      widget.isDark,
-                                    ).withOpacity(0.7),
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.all(10),
-                        itemCount: _contacts.length,
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(height: 10),
-                        itemBuilder: (context, index) {
-                          final contact = _contacts[index];
-                          final contactId = contact.userId;
-                          return Container(
-                            decoration: BoxDecoration(
-                              color: AppColors.inputBackground(widget.isDark),
-                              borderRadius: BorderRadius.circular(15),
-                              border: Border.all(
-                                color: AppColors.glassBorder(widget.isDark),
-                              ),
-                            ),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: AppColors.primary(
-                                  widget.isDark,
-                                ).withOpacity(0.2),
-                                child: Icon(
-                                  Icons.person,
-                                  color: AppColors.primary(widget.isDark),
-                                ),
-                              ),
-                              title: Text(
-                                contactId,
-                                style: TextStyle(
-                                  color: AppColors.textPrimary(widget.isDark),
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              trailing: Icon(
-                                Icons.chevron_right,
-                                color: AppColors.textSecondary(widget.isDark),
-                              ),
-                              onTap: () {
-                                // 后续可以进入聊天页
-                              },
-                            ),
-                          );
-                        },
-                      ),
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(10),
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  // 列表项总数 = 好友数 + 1 (顶部固定项)
+                  itemCount: _contacts.length + 1,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    // 第一项固定为“好友申请”
+                    if (index == 0) {
+                      return _buildInvitationEntry(context);
+                    }
+
+                    // 后续为好友项
+                    final contact = _contacts[index - 1];
+                    final contactId = contact.userId;
+                    return _buildContactItem(contactId);
+                  },
+                ),
               ),
+      ),
+    );
+  }
+
+  // 构建好友申请入口
+  Widget _buildInvitationEntry(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.inputBackground(widget.isDark),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: AppColors.glassBorder(widget.isDark)),
+      ),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: AppColors.primary(widget.isDark).withOpacity(0.2),
+          child: Icon(
+            Icons.person_add,
+            color: AppColors.primary(widget.isDark),
+          ),
+        ),
+        title: Text(
+          '好友申请',
+          style: TextStyle(
+            color: AppColors.textPrimary(widget.isDark),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        trailing: ValueListenableBuilder<int>(
+          valueListenable: ChatEventManager.getInstance().friendRequestCount,
+          builder: (context, count, child) {
+            if (count == 0) {
+              return Icon(
+                Icons.chevron_right,
+                color: AppColors.textSecondary(widget.isDark),
+              );
+            }
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '$count',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Icon(
+                  Icons.chevron_right,
+                  color: AppColors.textSecondary(widget.isDark),
+                ),
+              ],
+            );
+          },
+        ),
+        onTap: () {
+          // 跳转至申请列表详情页
+        },
+      ),
+    );
+  }
+
+  // 构建普通好友项
+  Widget _buildContactItem(String contactId) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.inputBackground(widget.isDark),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: AppColors.glassBorder(widget.isDark)),
+      ),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: AppColors.primary(widget.isDark).withOpacity(0.2),
+          child: Icon(Icons.person, color: AppColors.primary(widget.isDark)),
+        ),
+        title: Text(
+          contactId,
+          style: TextStyle(
+            color: AppColors.textPrimary(widget.isDark),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        trailing: Icon(
+          Icons.chevron_right,
+          color: AppColors.textSecondary(widget.isDark),
+        ),
+        onTap: () {
+          // 后续可以进入聊天页
+        },
       ),
     );
   }
