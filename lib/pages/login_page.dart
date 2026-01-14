@@ -102,6 +102,7 @@ class _LoginPageState extends State<LoginPage> {
                         controller: _uidController,
                         hintText: 'UID',
                         icon: Icons.person_outline,
+                        textInputAction: TextInputAction.next,
                       ),
                       const SizedBox(height: 20),
 
@@ -111,6 +112,7 @@ class _LoginPageState extends State<LoginPage> {
                         hintText: 'Password',
                         icon: Icons.lock_outline,
                         isObscured: true,
+                        textInputAction: TextInputAction.done,
                       ),
                       const SizedBox(height: 30),
 
@@ -160,6 +162,7 @@ class _LoginPageState extends State<LoginPage> {
     required String hintText,
     required IconData icon,
     bool isObscured = false,
+    TextInputAction? textInputAction,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -170,6 +173,7 @@ class _LoginPageState extends State<LoginPage> {
       child: TextField(
         controller: controller,
         obscureText: isObscured,
+        textInputAction: textInputAction,
         style: const TextStyle(color: AppColors.textPrimary),
         decoration: InputDecoration(
           prefixIcon: Icon(icon, color: AppColors.textSecondary),
