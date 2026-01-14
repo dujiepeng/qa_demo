@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import 'package:qa_flutter/widgets/switch_alert.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
@@ -371,6 +372,50 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
         ),
       ),
     );
+  }
+
+  void _showMuteAllMuteAlert() async {
+    final room = await EMClient.getInstance.chatRoomManager
+        .fetchChatRoomInfoFromServer(_roomId);
+    if (mounted) {
+      showSwitchAlert(
+        context: context,
+        title: '全部禁言',
+        description: '确定要禁言所有成员吗？',
+        initialValue: room.isAllMemberMuted ?? false,
+        onChanged: (value) async {
+          try {
+            if (value) {
+              await EMClient.getInstance.chatRoomManager.muteAllChatRoomMembers(
+                _roomId,
+              );
+            } else {
+              await EMClient.getInstance.chatRoomManager
+                  .unMuteAllChatRoomMembers(_roomId);
+            }
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('设置成功'),
+                  backgroundColor: Colors.redAccent,
+                ),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('设置失败'),
+                  backgroundColor: Colors.redAccent,
+                ),
+              );
+            }
+            return false;
+          }
+          return true;
+        },
+      );
+    }
   }
 
   @override
@@ -807,6 +852,8 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                           _showWhiteListBottomSheet();
                         } else if (action['label'] == '禁言列表') {
                           _showMuteListBottomSheet();
+                        } else if (action['label'] == '全部禁言') {
+                          _showMuteAllMuteAlert();
                         } else {
                           _addLog('点击了${action['label']}');
                         }
