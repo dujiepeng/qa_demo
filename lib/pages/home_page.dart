@@ -16,16 +16,26 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = _settings.isDarkMode;
+
     final List<Widget> pages = [
-      const _PlaceholderPage(title: '会话', icon: Icons.chat_bubble_outline),
-      const _PlaceholderPage(title: '好友', icon: Icons.people_outline),
-      const _PlaceholderPage(title: '群组', icon: Icons.group_outlined),
-      const _PlaceholderPage(title: '聊天室', icon: Icons.meeting_room_outlined),
-      _buildSettingsTab(),
+      _PlaceholderPage(
+        title: '会话',
+        icon: Icons.chat_bubble_outline,
+        isDark: isDark,
+      ),
+      _PlaceholderPage(title: '好友', icon: Icons.people_outline, isDark: isDark),
+      _PlaceholderPage(title: '群组', icon: Icons.group_outlined, isDark: isDark),
+      _PlaceholderPage(
+        title: '聊天室',
+        icon: Icons.meeting_room_outlined,
+        isDark: isDark,
+      ),
+      _buildSettingsTab(isDark),
     ];
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundStart,
+      backgroundColor: AppColors.backgroundStart(isDark),
       body: IndexedStack(index: _currentIndex, children: pages),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -41,9 +51,9 @@ class _HomePageState extends State<HomePage> {
           currentIndex: _currentIndex,
           onTap: (index) => setState(() => _currentIndex = index),
           type: BottomNavigationBarType.fixed,
-          backgroundColor: AppColors.backgroundEnd,
-          selectedItemColor: AppColors.primary,
-          unselectedItemColor: AppColors.textSecondary,
+          backgroundColor: AppColors.backgroundEnd(isDark),
+          selectedItemColor: AppColors.primary(isDark),
+          unselectedItemColor: AppColors.textSecondary(isDark),
           showUnselectedLabels: true,
           selectedFontSize: 12,
           unselectedFontSize: 12,
@@ -79,27 +89,33 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildSettingsTab() {
+  Widget _buildSettingsTab(bool isDark) {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('设置', style: TextStyle(color: AppColors.textPrimary)),
+        title: Text(
+          '设置',
+          style: TextStyle(color: AppColors.textPrimary(isDark)),
+        ),
         centerTitle: true,
       ),
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [AppColors.backgroundStart, AppColors.backgroundEnd],
+            colors: [
+              AppColors.backgroundStart(isDark),
+              AppColors.backgroundEnd(isDark),
+            ],
           ),
         ),
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            _buildSettingSectionTitle('偏好设置'),
+            _buildSettingSectionTitle('偏好设置', isDark),
             _buildSwitchItem(
               title: '深色模式',
               icon: Icons.dark_mode_outlined,
@@ -108,13 +124,7 @@ class _HomePageState extends State<HomePage> {
                 setState(() => _settings.isDarkMode = val);
                 _settings.saveSettings();
               },
-            ),
-            const SizedBox(height: 20),
-            _buildSettingSectionTitle('高级配置'),
-            _buildNavigationItem(
-              title: '连接配置 (AppKey/Server)',
-              icon: Icons.settings_input_component_outlined,
-              onTap: () => Navigator.pushNamed(context, '/settings'),
+              isDark: isDark,
             ),
             const SizedBox(height: 40),
             ElevatedButton(
@@ -138,13 +148,13 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildSettingSectionTitle(String title) {
+  Widget _buildSettingSectionTitle(String title, bool isDark) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10, left: 5),
       child: Text(
         title,
-        style: const TextStyle(
-          color: AppColors.primary,
+        style: TextStyle(
+          color: AppColors.primary(isDark),
           fontSize: 14,
           fontWeight: FontWeight.bold,
         ),
@@ -157,57 +167,26 @@ class _HomePageState extends State<HomePage> {
     required IconData icon,
     required bool value,
     required ValueChanged<bool> onChanged,
+    required bool isDark,
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.inputBackground,
+        color: AppColors.inputBackground(isDark),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: AppColors.glassBorder),
+        border: Border.all(color: AppColors.glassBorder(isDark)),
       ),
       child: SwitchListTile(
         title: Row(
           children: [
-            Icon(icon, color: AppColors.textSecondary, size: 20),
+            Icon(icon, color: AppColors.textSecondary(isDark), size: 20),
             const SizedBox(width: 10),
-            Text(title, style: const TextStyle(color: AppColors.textPrimary)),
+            Text(title, style: TextStyle(color: AppColors.textPrimary(isDark))),
           ],
         ),
         value: value,
         onChanged: onChanged,
-        activeColor: AppColors.primary,
+        activeColor: AppColors.primary(isDark),
         contentPadding: const EdgeInsets.symmetric(horizontal: 15),
-      ),
-    );
-  }
-
-  Widget _buildNavigationItem({
-    required String title,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(15),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
-        decoration: BoxDecoration(
-          color: AppColors.inputBackground,
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: AppColors.glassBorder),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: AppColors.textSecondary, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(color: AppColors.textPrimary),
-              ),
-            ),
-            const Icon(Icons.chevron_right, color: AppColors.textSecondary),
-          ],
-        ),
       ),
     );
   }
@@ -216,8 +195,13 @@ class _HomePageState extends State<HomePage> {
 class _PlaceholderPage extends StatelessWidget {
   final String title;
   final IconData icon;
+  final bool isDark;
 
-  const _PlaceholderPage({required this.title, required this.icon});
+  const _PlaceholderPage({
+    required this.title,
+    required this.icon,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -228,28 +212,35 @@ class _PlaceholderPage extends StatelessWidget {
         elevation: 0,
         title: Text(
           title,
-          style: const TextStyle(color: AppColors.textPrimary),
+          style: TextStyle(color: AppColors.textPrimary(isDark)),
         ),
         centerTitle: true,
       ),
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [AppColors.backgroundStart, AppColors.backgroundEnd],
+            colors: [
+              AppColors.backgroundStart(isDark),
+              AppColors.backgroundEnd(isDark),
+            ],
           ),
         ),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 80, color: AppColors.primary.withOpacity(0.5)),
+              Icon(
+                icon,
+                size: 80,
+                color: AppColors.primary(isDark).withOpacity(0.5),
+              ),
               const SizedBox(height: 20),
               Text(
                 title,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: TextStyle(
+                  color: AppColors.textPrimary(isDark),
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
@@ -258,7 +249,7 @@ class _PlaceholderPage extends StatelessWidget {
               Text(
                 '正在开发中...',
                 style: TextStyle(
-                  color: AppColors.textSecondary.withOpacity(0.7),
+                  color: AppColors.textSecondary(isDark).withOpacity(0.7),
                   fontSize: 16,
                 ),
               ),

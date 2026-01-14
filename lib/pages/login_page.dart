@@ -14,6 +14,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _uidController = TextEditingController();
   final TextEditingController _pwdController = TextEditingController();
   bool _isLoading = false;
+  final _settings = AppSettings();
 
   Future<void> _handleLogin() async {
     final uid = _uidController.text.trim();
@@ -21,55 +22,49 @@ class _LoginPageState extends State<LoginPage> {
 
     if (uid.isEmpty || pwd.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter UID and Password')),
+        SnackBar(
+          content: Text(
+            'Please enter UID and Password',
+            style: TextStyle(
+              color: AppColors.textPrimary(_settings.isDarkMode),
+            ),
+          ),
+          backgroundColor: AppColors.primary(_settings.isDarkMode),
+        ),
       );
       return;
     }
 
     setState(() => _isLoading = true);
     try {
-      final settings = AppSettings();
-      // 如果配置发生变化，则重新初始化 SDK
-      if (settings.isDirty) {
-        String appKey = settings.useCustomAppKey
-            ? settings.appKey
-            : 'easemob#dutest';
-
+      // 暂时保留旧的 SDK 初始化逻辑，但 AppKey 和服务器配置已移除，使用默认值
+      if (_settings.isDirty) {
         EMOptions options = EMOptions.withAppKey(
-          appKey,
+          'easemob#dutest',
           autoLogin: false,
           debugMode: true,
         );
-
-        if (settings.useCustomServer) {
-          options = EMOptions.withAppKey(
-            appKey,
-            autoLogin: false,
-            debugMode: true,
-            imServer: settings.imServer,
-            imPort: settings.imPort,
-            restServer: settings.restServer,
-          );
-        }
-
         await EMClient.getInstance.init(options);
-        settings.isDirty = false;
+        _settings.isDirty = false;
       }
 
       await EMClient.getInstance.loginWithPassword(uid, pwd);
 
       // 更新登录状态并保存
-      settings.isLoggedIn = true;
-      await settings.saveSettings();
+      _settings.isLoggedIn = true;
+      await _settings.saveSettings();
 
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/home');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Login Failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Login Failed: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -78,112 +73,100 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = _settings.isDarkMode;
+
     return Scaffold(
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [AppColors.backgroundStart, AppColors.backgroundEnd],
+              colors: [
+                AppColors.backgroundStart(isDark),
+                AppColors.backgroundEnd(isDark),
+              ],
             ),
           ),
           child: SafeArea(
-            child: Stack(
-              children: [
-                // Settings Button
-                Positioned(
-                  top: 10,
-                  right: 10,
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.settings,
-                      color: AppColors.textPrimary,
-                    ),
-                    onPressed: () => Navigator.pushNamed(context, '/settings'),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 30),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Brand / Logo area
+                  Icon(
+                    Icons.flash_on,
+                    size: 80,
+                    color: AppColors.primary(isDark),
                   ),
-                ),
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 30),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Brand / Logo area
-                      const Icon(
-                        Icons.flash_on,
-                        size: 80,
-                        color: AppColors.primary,
+                  const SizedBox(height: 20),
+                  Center(
+                    child: Text(
+                      'QA FLUTTER',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary(isDark),
+                        letterSpacing: 2,
                       ),
-                      const SizedBox(height: 20),
-                      const Center(
-                        child: Text(
-                          'QA FLUTTER',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                            letterSpacing: 2,
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+
+                  // UID Input
+                  _buildTextField(
+                    controller: _uidController,
+                    hintText: 'UID',
+                    icon: Icons.person_outline,
+                    textInputAction: TextInputAction.next,
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Password Input
+                  _buildTextField(
+                    controller: _pwdController,
+                    hintText: 'Password',
+                    icon: Icons.lock_outline,
+                    isObscured: true,
+                    textInputAction: TextInputAction.done,
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: 30),
+
+                  // Login Button
+                  _isLoading
+                      ? Center(
+                          child: CircularProgressIndicator(
+                            color: AppColors.primary(isDark),
+                          ),
+                        )
+                      : ElevatedButton(
+                          onPressed: _handleLogin,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary(isDark),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            elevation: 5,
+                          ),
+                          child: const Text(
+                            'LOGIN',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 40),
 
-                      // UID Input
-                      _buildTextField(
-                        controller: _uidController,
-                        hintText: 'UID',
-                        icon: Icons.person_outline,
-                        textInputAction: TextInputAction.next,
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Password Input
-                      _buildTextField(
-                        controller: _pwdController,
-                        hintText: 'Password',
-                        icon: Icons.lock_outline,
-                        isObscured: true,
-                        textInputAction: TextInputAction.done,
-                      ),
-                      const SizedBox(height: 30),
-
-                      // Login Button
-                      _isLoading
-                          ? const Center(
-                              child: CircularProgressIndicator(
-                                color: AppColors.primary,
-                              ),
-                            )
-                          : ElevatedButton(
-                              onPressed: _handleLogin,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(15),
-                                ),
-                                elevation: 5,
-                              ),
-                              child: const Text(
-                                'LOGIN',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-
-                      const SizedBox(height: 50),
-                    ],
-                  ),
-                ),
-              ],
+                  const SizedBox(height: 50),
+                ],
+              ),
             ),
           ),
         ),
@@ -197,22 +180,23 @@ class _LoginPageState extends State<LoginPage> {
     required IconData icon,
     bool isObscured = false,
     TextInputAction? textInputAction,
+    required bool isDark,
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.inputBackground,
+        color: AppColors.inputBackground(isDark),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: AppColors.glassBorder),
+        border: Border.all(color: AppColors.glassBorder(isDark)),
       ),
       child: TextField(
         controller: controller,
         obscureText: isObscured,
         textInputAction: textInputAction,
-        style: const TextStyle(color: AppColors.textPrimary),
+        style: TextStyle(color: AppColors.textPrimary(isDark)),
         decoration: InputDecoration(
-          prefixIcon: Icon(icon, color: AppColors.textSecondary),
+          prefixIcon: Icon(icon, color: AppColors.textSecondary(isDark)),
           hintText: hintText,
-          hintStyle: const TextStyle(color: Colors.white38),
+          hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             vertical: 15,
