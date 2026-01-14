@@ -62,6 +62,8 @@ class _SettingsPageState extends State<SettingsPage> {
       _settings.imPort = imPort;
       _settings.restServer = _restServerController.text.trim();
       _settings.isDirty = true;
+      // 清理登录状态
+      _settings.isLoggedIn = false;
 
       await _settings.saveSettings();
 

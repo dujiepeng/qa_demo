@@ -99,7 +99,9 @@ class _MePageState extends State<MePage> {
             ElevatedButton(
               onPressed: () async {
                 // 调用环信退出
-                await EMClient.getInstance.logout();
+                try {
+                  await EMClient.getInstance.logout();
+                } catch (_) {}
                 // 清除内存登录状态
                 _settings.isLoggedIn = false;
                 await _settings.saveSettings();
