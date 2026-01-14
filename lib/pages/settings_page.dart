@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
 
@@ -55,7 +55,18 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             const SizedBox(height: 40),
             ElevatedButton(
-              onPressed: () => exit(0),
+              onPressed: () async {
+                // 调用环信退出
+                await EMClient.getInstance.logout();
+                // 清除内存登录状态
+                _settings.isLoggedIn = false;
+                // 跳转回登录页面
+                if (mounted) {
+                  Navigator.of(
+                    context,
+                  ).pushNamedAndRemoveUntil('/login', (route) => false);
+                }
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.withOpacity(0.8),
                 foregroundColor: Colors.white,
@@ -65,7 +76,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ),
               child: const Text(
-                '退出应用',
+                '退出登录',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
