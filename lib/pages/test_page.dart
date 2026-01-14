@@ -72,14 +72,14 @@ class _TestPageState extends State<TestPage> {
         child: Padding(
           padding: const EdgeInsets.only(
             top: kToolbarHeight + 40,
-            left: 15,
-            right: 15,
+            left: 10,
+            right: 10,
           ),
           child: GridView.builder(
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
-              mainAxisSpacing: 15,
-              crossAxisSpacing: 15,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
               childAspectRatio: 0.9,
             ),
             itemCount: _testItems.length,
