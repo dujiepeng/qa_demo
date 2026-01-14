@@ -30,7 +30,6 @@ class MyApp extends StatelessWidget {
       initialRoute: settings.isLoggedIn ? '/home' : '/login',
       routes: {
         '/login': (context) => const LoginPage(),
-        '/settings': (context) => const SettingsPage(),
         '/home': (context) => const HomePage(),
       },
     );
