@@ -1,5 +1,15 @@
 # Changelog
  
+## [1.22.0+23] - 2026-01-14
+
+### 修改内容
+- **[重构]** 简化申请列表数据结构:
+    - 将 `ChatEventManager` 中的 `friendInvitations` 由 `ValueNotifier` 改为普通 `List`。
+    - 优化了增删逻辑，减少了不必要的外部监听。
+    - 补全了之前丢失的自动清理逻辑，确保申请被处理后列表实时同步。
+    - 继续通过 `friendRequestCount` (ValueNotifier) 驱动 UI 上的数量 Badge 刷新。
+- **[版本]** 迭代项目版本号至 `1.22.0+23`。
+ 
 ## [1.21.0+22] - 2026-01-14
 
 ### 修改内容

@@ -12,9 +12,8 @@ class ChatEventManager {
 
   // 好友申请数量通知器
   final ValueNotifier<int> friendRequestCount = ValueNotifier<int>(0);
-  // 好友申请列表通知器 (存储 userId 和 reason 的 Map)
-  final ValueNotifier<List<Map<String, String>>> friendInvitations =
-      ValueNotifier<List<Map<String, String>>>([]);
+  // 好友申请列表 (存储 userId 和 reason 的 Map)
+  final List<Map<String, String>> friendInvitations = [];
 
   void init() {
     debugPrint('ChatEventManager: Initializing listeners...');
@@ -30,34 +29,43 @@ class ChatEventManager {
           debugPrint(
             'ChatEventManager: Received contact invitation from $userId, reason: $reason',
           );
-          // 增加好友申请计数，通知外部更新
-          friendRequestCount.value++;
           // 记录详细申请信息
-          final newList = List<Map<String, String>>.from(
-            friendInvitations.value,
-          );
-          newList.add({
+          friendInvitations.add({
             'userId': userId,
             'reason': reason ?? '',
             'time': DateTime.now().toString(),
           });
-          friendInvitations.value = newList;
+          // 更新好友申请计数，通知外部更新
+          friendRequestCount.value = friendInvitations.length;
         },
         onContactDeleted: (userId) {
           debugPrint('ChatEventManager: Contact deleted: $userId');
         },
         onContactAdded: (userId) {
           debugPrint('ChatEventManager: Contact added: $userId');
+          _removeInvitation(userId);
         },
         onFriendRequestAccepted: (userId) {
           debugPrint('ChatEventManager: Friend request accepted by $userId');
+          _removeInvitation(userId);
         },
         onFriendRequestDeclined: (userId) {
           debugPrint('ChatEventManager: Friend request declined by $userId');
+          _removeInvitation(userId);
         },
       ),
     );
     debugPrint('ChatEventManager: Contact event handler registered.');
+  }
+
+  // 移除特定用户的好友申请记录
+  void _removeInvitation(String userId) {
+    if (friendInvitations.any((inv) => inv['userId'] == userId)) {
+      friendInvitations.removeWhere((inv) => inv['userId'] == userId);
+      // 同步更新计数器
+      friendRequestCount.value = friendInvitations.length;
+      debugPrint('ChatEventManager: Removed invitation record for $userId');
+    }
   }
 
   void dispose() {
