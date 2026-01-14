@@ -1,5 +1,14 @@
 # Changelog
  
+## [1.20.0+21] - 2026-01-14
+
+### 修改内容
+- **[优化]** 好友申请列表自动清理机制:
+    - 在 `ChatEventManager` 中增加了 `_removeInvitation` 私有方法。
+    - 在 `onContactAdded`、`onFriendRequestAccepted` 和 `onFriendRequestDeclined` 事件发生时，会自动从 `friendInvitations` 列表中移除对应用户的申请记录。
+    - 确保 `friendRequestCount` 计数器与列表长度实时保持同步，解决了申请被处理后列表冗余的问题。
+- **[版本]** 迭代项目版本号至 `1.20.0+21`。
+ 
 ## [1.19.0+20] - 2026-01-14
 
 ### 修改内容
