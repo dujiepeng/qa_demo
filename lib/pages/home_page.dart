@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
 
@@ -24,7 +25,17 @@ class _HomePageState extends State<HomePage> {
         icon: Icons.chat_bubble_outline,
         isDark: isDark,
       ),
-      _PlaceholderPage(title: '好友', icon: Icons.people_outline, isDark: isDark),
+      _PlaceholderPage(
+        title: '好友',
+        icon: Icons.people_outline,
+        isDark: isDark,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () => _showAddContactDialog(context, isDark),
+          ),
+        ],
+      ),
       _PlaceholderPage(title: '群组', icon: Icons.group_outlined, isDark: isDark),
       _PlaceholderPage(
         title: '聊天室',
@@ -89,6 +100,74 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _showAddContactDialog(BuildContext context, bool isDark) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.backgroundEnd(isDark),
+        title: Text(
+          '添加好友',
+          style: TextStyle(color: AppColors.textPrimary(isDark)),
+        ),
+        content: TextField(
+          controller: controller,
+          style: TextStyle(color: AppColors.textPrimary(isDark)),
+          decoration: InputDecoration(
+            hintText: '请输入对方 UID',
+            hintStyle: TextStyle(
+              color: isDark ? Colors.white38 : Colors.black38,
+            ),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: AppColors.primary(isDark)),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              '取消',
+              style: TextStyle(color: AppColors.textSecondary(isDark)),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final userId = controller.text.trim();
+              if (userId.isEmpty) return;
+
+              Navigator.pop(context);
+              try {
+                await EMClient.getInstance.contactManager.addContact(userId);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('已发送好友请求给: $userId'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('添加失败: $e'),
+                      backgroundColor: Colors.redAccent,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary(isDark),
+            ),
+            child: const Text('发送', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSettingsTab(bool isDark) {
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -138,7 +217,7 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               child: const Text(
-                '彻底退出应用',
+                '退出应用',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
@@ -196,11 +275,13 @@ class _PlaceholderPage extends StatelessWidget {
   final String title;
   final IconData icon;
   final bool isDark;
+  final List<Widget>? actions;
 
   const _PlaceholderPage({
     required this.title,
     required this.icon,
     required this.isDark,
+    this.actions,
   });
 
   @override
@@ -215,6 +296,7 @@ class _PlaceholderPage extends StatelessWidget {
           style: TextStyle(color: AppColors.textPrimary(isDark)),
         ),
         centerTitle: true,
+        actions: actions,
       ),
       body: Container(
         decoration: BoxDecoration(

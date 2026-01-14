@@ -65,7 +65,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ),
               child: const Text(
-                '彻底退出应用',
+                '退出应用',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
