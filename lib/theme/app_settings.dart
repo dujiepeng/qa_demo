@@ -13,6 +13,8 @@ class AppSettings {
   int imPort = 6717;
   String restServer = '';
 
+  bool isDarkMode = true; // 默认开启深色模式
+
   bool isDirty = false;
 
   // 配置快照，用于对比
@@ -30,6 +32,7 @@ class AppSettings {
   static const String _keyImServer = 'im_server';
   static const String _keyImPort = 'im_port';
   static const String _keyRestServer = 'rest_server';
+  static const String _keyIsDarkMode = 'is_dark_mode';
 
   // 从本地加载存储的配置
   Future<void> loadSettings() async {
@@ -40,6 +43,7 @@ class AppSettings {
     imServer = prefs.getString(_keyImServer) ?? '';
     imPort = prefs.getInt(_keyImPort) ?? 6717;
     restServer = prefs.getString(_keyRestServer) ?? '';
+    isDarkMode = prefs.getBool(_keyIsDarkMode) ?? true;
 
     _updateSnapshot();
     isDirty = true;
@@ -64,12 +68,13 @@ class AppSettings {
     await prefs.setString(_keyImServer, imServer);
     await prefs.setInt(_keyImPort, imPort);
     await prefs.setString(_keyRestServer, restServer);
+    await prefs.setBool(_keyIsDarkMode, isDarkMode);
 
     _updateSnapshot();
     isDirty = true;
   }
 
-  // 检查当前内存状态是否与快照（进入页面时或上次保存时）不一致
+  // 检查当前内存状态是否与快照不一致
   bool hasChanged({
     required bool currentUseCustomAppKey,
     required String currentAppKey,
