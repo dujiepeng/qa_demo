@@ -41,17 +41,16 @@ class _LoginPageState extends State<LoginPage> {
       if (_settings.isDirty) {
         EMOptions options;
         if (_settings.useCustomServer) {
-          // 如果开启了自定义服务器配置，需要在构造时设置
-          options =
-              EMOptions.withAppKey(
-                  _settings.appKey,
-                  autoLogin: false,
-                  debugMode: true,
-                )
-                ..enableDNSConfig = false
-                ..imServer = _settings.imServer
-                ..imPort = _settings.imPort
-                ..restServer = _settings.restServer;
+          // 如果开启了自定义服务器配置，在构造时直接传入详细信息
+          options = EMOptions(
+            appKey: _settings.appKey,
+            autoLogin: false,
+            debugMode: true,
+            imServer: _settings.imServer,
+            imPort: _settings.imPort,
+            restServer: _settings.restServer,
+            enableDNSConfig: false,
+          );
 
           debugPrint(
             'LoginPage: Initializing with CUSTOM server: ${_settings.imServer}:${_settings.imPort}',
