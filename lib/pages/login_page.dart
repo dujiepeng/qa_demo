@@ -78,9 +78,9 @@ class _LoginPageState extends State<LoginPage> {
       // 初始化全局事件监听器
       ChatEventManager.getInstance().init();
 
-      // 更新登录状态并保存
-      _settings.isLoggedIn = true;
-      await _settings.saveSettings();
+      // // 更新登录状态并保存
+      // _settings.isLoggedIn = true;
+      // await _settings.saveSettings();
 
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/home');

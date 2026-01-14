@@ -12,6 +12,7 @@ import 'test_chat_room_members_page.dart';
 import 'test_chat_room_admins_page.dart';
 import 'test_chat_room_white_list_page.dart';
 import 'test_chat_room_mute_list_page.dart';
+import 'test_chat_room_change_owner_page.dart';
 
 /// 聊天室信息编辑类型
 enum RoomInfoEditType {
@@ -418,6 +419,33 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
     }
   }
 
+  void _showChangeOwnerBottomSheet() {
+    if (_roomId.isEmpty) {
+      _addLog('请先加入聊天室');
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.95,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) => Container(
+          decoration: BoxDecoration(
+            color: _settings.isDarkMode
+                ? const Color(0xFF1C1C1E)
+                : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: TestChatRoomChangeOwnerPage(roomId: _roomId),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = _settings.isDarkMode;
@@ -811,7 +839,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
       {'icon': Icons.verified_user_outlined, 'label': '白名单'},
       {'icon': Icons.mic_off_outlined, 'label': '禁言列表'},
       {'icon': Icons.voice_over_off_outlined, 'label': '全部禁言'},
-      {'icon': Icons.swap_horiz_outlined, 'label': '转移'},
+      {'icon': Icons.swap_horiz_outlined, 'label': '转移聊天室'},
     ];
 
     // 分组，每行6个
@@ -854,6 +882,8 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                           _showMuteListBottomSheet();
                         } else if (action['label'] == '全部禁言') {
                           _showMuteAllMuteAlert();
+                        } else if (action['label'] == '转移聊天室') {
+                          _showChangeOwnerBottomSheet();
                         } else {
                           _addLog('点击了${action['label']}');
                         }
