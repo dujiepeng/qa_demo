@@ -14,6 +14,7 @@ class AppSettings {
   String restServer = '';
 
   bool isDarkMode = true; // 默认开启深色模式
+  bool isLoggedIn = false; // 登录状态
 
   bool isDirty = false;
 
@@ -33,6 +34,7 @@ class AppSettings {
   static const String _keyImPort = 'im_port';
   static const String _keyRestServer = 'rest_server';
   static const String _keyIsDarkMode = 'is_dark_mode';
+  static const String _keyIsLoggedIn = 'is_logged_in';
 
   // 从本地加载存储的配置
   Future<void> loadSettings() async {
@@ -44,6 +46,7 @@ class AppSettings {
     imPort = prefs.getInt(_keyImPort) ?? 6717;
     restServer = prefs.getString(_keyRestServer) ?? '';
     isDarkMode = prefs.getBool(_keyIsDarkMode) ?? true;
+    isLoggedIn = prefs.getBool(_keyIsLoggedIn) ?? false;
 
     _updateSnapshot();
     isDirty = true;
@@ -69,6 +72,7 @@ class AppSettings {
     await prefs.setInt(_keyImPort, imPort);
     await prefs.setString(_keyRestServer, restServer);
     await prefs.setBool(_keyIsDarkMode, isDarkMode);
+    await prefs.setBool(_keyIsLoggedIn, isLoggedIn);
 
     _updateSnapshot();
     isDirty = true;

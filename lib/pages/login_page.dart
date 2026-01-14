@@ -57,6 +57,11 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       await EMClient.getInstance.loginWithPassword(uid, pwd);
+
+      // 更新登录状态并保存
+      settings.isLoggedIn = true;
+      await settings.saveSettings();
+
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/home');
       }
