@@ -30,7 +30,13 @@ class _TestPageState extends State<TestPage> {
   final List<TestGridItem> _testItems = [
     TestGridItem(title: '单聊', icon: Icons.person_outlined, onTap: () {}),
     TestGridItem(title: '群聊', icon: Icons.group_outlined, onTap: () {}),
-    TestGridItem(title: '聊天室', icon: Icons.forum_outlined, onTap: () {}),
+    TestGridItem(
+      title: '聊天室',
+      icon: Icons.forum_outlined,
+      onTap: () {
+        Navigator.pushNamed(context, '/test_chat_room');
+      },
+    ),
   ];
 
   @override

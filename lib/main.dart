@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'pages/home_page.dart';
 import 'pages/login_page.dart';
 import 'pages/settings_page.dart';
+import 'test_pages/test_chat_room_page.dart';
 import 'theme/app_settings.dart';
 
 void main() async {
@@ -31,6 +32,7 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginPage(),
         '/home': (context) => const HomePage(),
         '/settings': (context) => const SettingsPage(),
+        '/test_chat_room': (context) => const TestChatRoomPage(),
       },
     );
   }
