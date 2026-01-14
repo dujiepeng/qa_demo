@@ -1,6 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class AppSettings {
+class AppSettings extends ChangeNotifier {
   static final AppSettings _instance = AppSettings._internal();
   factory AppSettings() => _instance;
   AppSettings._internal();
@@ -13,8 +14,25 @@ class AppSettings {
   int imPort = 6717;
   String restServer = '';
 
-  bool isDarkMode = true; // 默认开启深色模式
+  bool _isDarkMode = true; // 默认开启深色模式
+  bool get isDarkMode => _isDarkMode;
+  set isDarkMode(bool value) {
+    if (_isDarkMode != value) {
+      _isDarkMode = value;
+      notifyListeners();
+    }
+  }
+
   bool isLoggedIn = false; // 登录状态
+
+  bool _isTestMode = false; // 测试模式
+  bool get isTestMode => _isTestMode;
+  set isTestMode(bool value) {
+    if (_isTestMode != value) {
+      _isTestMode = value;
+      notifyListeners();
+    }
+  }
 
   bool isDirty = false;
 
@@ -35,6 +53,7 @@ class AppSettings {
   static const String _keyRestServer = 'rest_server';
   static const String _keyIsDarkMode = 'is_dark_mode';
   static const String _keyIsLoggedIn = 'is_logged_in';
+  static const String _keyIsTestMode = 'is_test_mode';
 
   // 从本地加载存储的配置
   Future<void> loadSettings() async {
@@ -45,8 +64,9 @@ class AppSettings {
     imServer = prefs.getString(_keyImServer) ?? '';
     imPort = prefs.getInt(_keyImPort) ?? 6717;
     restServer = prefs.getString(_keyRestServer) ?? '';
-    isDarkMode = prefs.getBool(_keyIsDarkMode) ?? true;
+    _isDarkMode = prefs.getBool(_keyIsDarkMode) ?? true;
     isLoggedIn = prefs.getBool(_keyIsLoggedIn) ?? false;
+    _isTestMode = prefs.getBool(_keyIsTestMode) ?? false;
     _updateSnapshot();
     isDirty = true;
   }
@@ -70,8 +90,9 @@ class AppSettings {
     await prefs.setString(_keyImServer, imServer);
     await prefs.setInt(_keyImPort, imPort);
     await prefs.setString(_keyRestServer, restServer);
-    await prefs.setBool(_keyIsDarkMode, isDarkMode);
+    await prefs.setBool(_keyIsDarkMode, _isDarkMode);
     await prefs.setBool(_keyIsLoggedIn, isLoggedIn);
+    await prefs.setBool(_keyIsTestMode, _isTestMode);
 
     _updateSnapshot();
     isDirty = true;

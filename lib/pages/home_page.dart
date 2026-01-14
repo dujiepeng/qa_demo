@@ -22,38 +22,43 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final isDark = _settings.isDarkMode;
 
-    final List<Widget> pages = [
-      ConversationsPage(isDark: isDark),
-      ContactsPage(isDark: isDark),
-      GroupsPage(isDark: isDark),
-      RoomsPage(isDark: isDark),
-      MePage(isDark: isDark),
-    ];
+    return AnimatedBuilder(
+      animation: _settings,
+      builder: (context, _) {
+        final List<Widget> pages;
+        final List<BottomNavigationBarItem> items;
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundStart(isDark),
-      body: IndexedStack(index: _currentIndex, children: pages),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
+        if (_settings.isTestMode) {
+          pages = [
+            const Center(
+              child: Text(
+                '测试页面',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
             ),
-          ],
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: AppColors.backgroundEnd(isDark),
-          selectedItemColor: AppColors.primary(isDark),
-          unselectedItemColor: AppColors.textSecondary(isDark),
-          showUnselectedLabels: true,
-          selectedFontSize: 12,
-          unselectedFontSize: 12,
-          items: const [
+            MePage(isDark: isDark),
+          ];
+          items = const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.bug_report),
+              activeIcon: Icon(Icons.bug_report),
+              label: '测试',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person),
+              label: '我',
+            ),
+          ];
+        } else {
+          pages = [
+            ConversationsPage(isDark: isDark),
+            ContactsPage(isDark: isDark),
+            GroupsPage(isDark: isDark),
+            RoomsPage(isDark: isDark),
+            MePage(isDark: isDark),
+          ];
+          items = const [
             BottomNavigationBarItem(
               icon: Icon(Icons.chat_bubble_outline),
               activeIcon: Icon(Icons.chat_bubble),
@@ -79,9 +84,43 @@ class _HomePageState extends State<HomePage> {
               activeIcon: Icon(Icons.person),
               label: '我',
             ),
-          ],
-        ),
-      ),
+          ];
+        }
+
+        // 索引越界保护
+        int safeIndex = _currentIndex;
+        if (safeIndex >= pages.length) {
+          safeIndex = pages.length - 1;
+        }
+
+        return Scaffold(
+          backgroundColor: AppColors.backgroundStart(isDark),
+          body: IndexedStack(index: safeIndex, children: pages),
+          bottomNavigationBar: Container(
+            decoration: BoxDecoration(
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 10,
+                  offset: const Offset(0, -5),
+                ),
+              ],
+            ),
+            child: BottomNavigationBar(
+              currentIndex: safeIndex,
+              onTap: (index) => setState(() => _currentIndex = index),
+              type: BottomNavigationBarType.fixed,
+              backgroundColor: AppColors.backgroundEnd(isDark),
+              selectedItemColor: AppColors.primary(isDark),
+              unselectedItemColor: AppColors.textSecondary(isDark),
+              showUnselectedLabels: true,
+              selectedFontSize: 12,
+              unselectedFontSize: 12,
+              items: items,
+            ),
+          ),
+        );
+      },
     );
   }
 }
