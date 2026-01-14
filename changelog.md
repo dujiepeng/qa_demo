@@ -1,5 +1,13 @@
 # Changelog
  
+## [1.18.0+19] - 2026-01-14
+
+### 修改内容
+- **[新增]** 好友申请实时统计:
+    - 在 `ChatEventManager` 中引入了 `ValueNotifier<int>` 类型的 `friendRequestCount`。
+    - 在收到好友申请 (`onContactInvited`) 时自动增加计数值，支持外部 UI 使用 `ValueListenableBuilder` 进行实时响应。
+- **[版本]** 迭代项目版本号至 `1.18.0+19`。
+ 
 ## [1.17.0+18] - 2026-01-14
 
 ### 修改内容
