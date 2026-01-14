@@ -202,7 +202,7 @@ class ContactsPage extends StatefulWidget {
 }
 
 class _ContactsPageState extends State<ContactsPage> {
-  List<String> _contacts = [];
+  List<EMContact> _contacts = [];
   bool _isLoading = false;
 
   @override
@@ -385,7 +385,8 @@ class _ContactsPageState extends State<ContactsPage> {
                         separatorBuilder: (context, index) =>
                             const SizedBox(height: 10),
                         itemBuilder: (context, index) {
-                          final contactId = _contacts[index];
+                          final contact = _contacts[index];
+                          final contactId = contact.userId;
                           return Container(
                             decoration: BoxDecoration(
                               color: AppColors.inputBackground(widget.isDark),
