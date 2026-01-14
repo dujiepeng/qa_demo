@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_settings.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -27,6 +28,34 @@ class _LoginPageState extends State<LoginPage> {
 
     setState(() => _isLoading = true);
     try {
+      final settings = AppSettings();
+      // 如果配置发生变化，则重新初始化 SDK
+      if (settings.isDirty) {
+        String appKey = settings.useCustomAppKey
+            ? settings.appKey
+            : 'easemob#dutest';
+
+        EMOptions options = EMOptions.withAppKey(
+          appKey,
+          autoLogin: false,
+          debugMode: true,
+        );
+
+        if (settings.useCustomServer) {
+          options = EMOptions.withAppKey(
+            appKey,
+            autoLogin: false,
+            debugMode: true,
+            imServer: settings.imServer,
+            imPort: settings.imPort,
+            restServer: settings.restServer,
+          );
+        }
+
+        await EMClient.getInstance.init(options);
+        settings.isDirty = false;
+      }
+
       await EMClient.getInstance.loginWithPassword(uid, pwd);
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/home');
