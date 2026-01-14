@@ -76,6 +76,21 @@ class _LoginPageState extends State<LoginPage> {
     final isDark = _settings.isDarkMode;
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: Icon(
+              Icons.settings_outlined,
+              color: AppColors.textPrimary(isDark).withOpacity(0.8),
+            ),
+            onPressed: () => Navigator.pushNamed(context, '/settings'),
+          ),
+          const SizedBox(width: 10),
+        ],
+      ),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: Container(

@@ -54,6 +54,30 @@ class _SettingsTabPageState extends State<SettingsTabPage> {
               },
               isDark: isDark,
             ),
+            const SizedBox(height: 20),
+            _buildSettingSectionTitle('高级设置', isDark),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.inputBackground(isDark),
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: AppColors.glassBorder(isDark)),
+              ),
+              child: ListTile(
+                leading: Icon(
+                  Icons.admin_panel_settings_outlined,
+                  color: AppColors.textSecondary(isDark),
+                ),
+                title: Text(
+                  '服务器配置',
+                  style: TextStyle(color: AppColors.textPrimary(isDark)),
+                ),
+                trailing: Icon(
+                  Icons.chevron_right,
+                  color: AppColors.textSecondary(isDark),
+                ),
+                onTap: () => Navigator.pushNamed(context, '/settings'),
+              ),
+            ),
             const SizedBox(height: 40),
             ElevatedButton(
               onPressed: () async {
