@@ -70,11 +70,7 @@ class _TestPageState extends State<TestPage> {
           ),
         ),
         child: Padding(
-          padding: const EdgeInsets.only(
-            top: kToolbarHeight + 40,
-            left: 10,
-            right: 10,
-          ),
+          padding: const EdgeInsets.only(left: 10, right: 10),
           child: GridView.builder(
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
@@ -100,6 +96,8 @@ class _TestPageState extends State<TestPage> {
         clipBehavior: Clip.none,
         children: [
           Container(
+            width: double.infinity,
+            height: double.infinity,
             decoration: BoxDecoration(
               color: AppColors.inputBackground(isDark),
               borderRadius: BorderRadius.circular(15),
