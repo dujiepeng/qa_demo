@@ -50,7 +50,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
         ),
         child: Padding(
           padding: const EdgeInsets.only(
-            top: kToolbarHeight + 40,
+            top: kToolbarHeight + 60,
             left: 15,
             right: 15,
           ),
