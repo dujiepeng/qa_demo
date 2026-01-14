@@ -26,18 +26,37 @@ class TestPage extends StatefulWidget {
 
 class _TestPageState extends State<TestPage> {
   final _settings = AppSettings();
+  late final List<TestGridItem> _testItems;
 
-  final List<TestGridItem> _testItems = [
-    TestGridItem(title: '单聊', icon: Icons.person_outlined, onTap: () {}),
-    TestGridItem(title: '群聊', icon: Icons.group_outlined, onTap: () {}),
-    TestGridItem(
-      title: '聊天室',
-      icon: Icons.forum_outlined,
-      onTap: () {
-        Navigator.pushNamed(context, '/test_chat_room');
-      },
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _testItems = [
+      TestGridItem(
+        title: '单聊',
+        icon: Icons.person_outlined,
+        onTap: _noSupportYet,
+      ),
+      TestGridItem(
+        title: '群聊',
+        icon: Icons.group_outlined,
+        onTap: _noSupportYet,
+      ),
+      TestGridItem(
+        title: '聊天室',
+        icon: Icons.forum_outlined,
+        onTap: () {
+          Navigator.pushNamed(context, '/test_chat_room');
+        },
+      ),
+    ];
+  }
+
+  void _noSupportYet() {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('功能暂未支持')));
+  }
 
   @override
   Widget build(BuildContext context) {
