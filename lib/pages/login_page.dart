@@ -37,15 +37,40 @@ class _LoginPageState extends State<LoginPage> {
 
     setState(() => _isLoading = true);
     try {
-      // 暂时保留旧的 SDK 初始化逻辑，但 AppKey 和服务器配置已移除，使用默认值
+      // 使用设置中的服务器配置进行初始化
       if (_settings.isDirty) {
-        EMOptions options = EMOptions.withAppKey(
-          'easemob#dutest',
-          autoLogin: false,
-          debugMode: true,
-        );
+        EMOptions options;
+        if (_settings.useCustomServer) {
+          // 如果开启了自定义服务器配置，需要在构造时设置
+          options =
+              EMOptions.withAppKey(
+                  _settings.appKey,
+                  autoLogin: false,
+                  debugMode: true,
+                )
+                ..enableDNSConfig = false
+                ..imServer = _settings.imServer
+                ..imPort = _settings.imPort
+                ..restServer = _settings.restServer;
+
+          debugPrint(
+            'LoginPage: Initializing with CUSTOM server: ${_settings.imServer}:${_settings.imPort}',
+          );
+        } else {
+          // 默认配置
+          options = EMOptions.withAppKey(
+            _settings.appKey,
+            autoLogin: false,
+            debugMode: true,
+          );
+          debugPrint('LoginPage: Initializing with DEFAULT server');
+        }
+
         await EMClient.getInstance.init(options);
         _settings.isDirty = false;
+        debugPrint(
+          'LoginPage: SDK Initialized with AppKey: ${_settings.appKey}',
+        );
       }
 
       await EMClient.getInstance.loginWithPassword(uid, pwd);
