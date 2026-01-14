@@ -376,6 +376,10 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
   }
 
   void _showMuteAllMuteAlert() async {
+    if (_roomId.isEmpty) {
+      _addLog('请先加入聊天室');
+      return;
+    }
     final room = await EMClient.getInstance.chatRoomManager
         .fetchChatRoomInfoFromServer(_roomId);
     if (mounted) {
