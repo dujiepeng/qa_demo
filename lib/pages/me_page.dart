@@ -3,15 +3,15 @@ import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
 
-class SettingsTabPage extends StatefulWidget {
+class MePage extends StatefulWidget {
   final bool isDark;
-  const SettingsTabPage({super.key, required this.isDark});
+  const MePage({super.key, required this.isDark});
 
   @override
-  State<SettingsTabPage> createState() => _SettingsTabPageState();
+  State<MePage> createState() => _MePageState();
 }
 
-class _SettingsTabPageState extends State<SettingsTabPage> {
+class _MePageState extends State<MePage> {
   final _settings = AppSettings();
 
   @override
@@ -24,7 +24,7 @@ class _SettingsTabPageState extends State<SettingsTabPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          '设置',
+          '我',
           style: TextStyle(color: AppColors.textPrimary(isDark)),
         ),
         centerTitle: true,

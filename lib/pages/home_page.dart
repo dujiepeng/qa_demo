@@ -5,7 +5,7 @@ import 'conversations_page.dart';
 import 'contacts_page.dart';
 import 'groups_page.dart';
 import 'rooms_page.dart';
-import 'settings_tab_page.dart';
+import 'me_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -27,7 +27,7 @@ class _HomePageState extends State<HomePage> {
       ContactsPage(isDark: isDark),
       GroupsPage(isDark: isDark),
       RoomsPage(isDark: isDark),
-      SettingsTabPage(isDark: isDark),
+      MePage(isDark: isDark),
     ];
 
     return Scaffold(
@@ -75,9 +75,9 @@ class _HomePageState extends State<HomePage> {
               label: '聊天室',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.settings_outlined),
-              activeIcon: Icon(Icons.settings),
-              label: '设置',
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person),
+              label: '我',
             ),
           ],
         ),
