@@ -23,8 +23,10 @@ class _ContactsPageState extends State<ContactsPage> {
   Future<void> _fetchContacts() async {
     setState(() => _isLoading = true);
     try {
+      debugPrint('ContactsPage: Fetching contacts...');
       final contacts = await EMClient.getInstance.contactManager
           .fetchAllContacts();
+      debugPrint('ContactsPage: Fetched ${contacts.length} contacts.');
       setState(() {
         _contacts = contacts;
       });
@@ -154,7 +156,8 @@ class _ContactsPageState extends State<ContactsPage> {
                 color: AppColors.primary(widget.isDark),
                 child: _contacts.isEmpty
                     ? ListView(
-                        // 使空状态也能触发下拉刷新
+                        // 确保空状态也能触发下拉刷新
+                        physics: const AlwaysScrollableScrollPhysics(),
                         children: [
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.3,
