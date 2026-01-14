@@ -28,18 +28,9 @@ class _TestPageState extends State<TestPage> {
   final _settings = AppSettings();
 
   final List<TestGridItem> _testItems = [
-    TestGridItem(
-      title: '接口测试',
-      icon: Icons.api_outlined,
-      badgeCount: 2,
-      onTap: () {},
-    ),
-    TestGridItem(title: '性能监控', icon: Icons.speed_outlined, onTap: () {}),
-    TestGridItem(title: '日志查看', icon: Icons.assignment_outlined, onTap: () {}),
-    TestGridItem(title: 'UI 实验室', badgeCount: 1, onTap: () {}),
-    TestGridItem(title: '网络监听', icon: Icons.network_check, onTap: () {}),
-    TestGridItem(title: '数据库', icon: Icons.storage_outlined, onTap: () {}),
-    TestGridItem(title: '极客模式', onTap: () {}),
+    TestGridItem(title: '单聊', icon: Icons.person_outlined, onTap: () {}),
+    TestGridItem(title: '群聊', icon: Icons.group_outlined, onTap: () {}),
+    TestGridItem(title: '聊天室', icon: Icons.forum_outlined, onTap: () {}),
   ];
 
   @override
