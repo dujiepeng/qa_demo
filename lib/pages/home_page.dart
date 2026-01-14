@@ -220,6 +220,7 @@ class _ContactsPageState extends State<ContactsPage> {
         _contacts = contacts;
       });
     } catch (e) {
+      debugPrint('ContactsPage Error: _fetchContacts error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -281,6 +282,10 @@ class _ContactsPageState extends State<ContactsPage> {
                   ),
                 );
               } catch (e) {
+                // 打印错误到控制台
+                debugPrint(
+                  'ContactsPage Error: _showAddContactDialog addContact error: $e',
+                );
                 messenger.showSnackBar(
                   SnackBar(
                     content: Text('添加失败: $e'),

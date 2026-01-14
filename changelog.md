@@ -6,6 +6,7 @@
 - **[修复]** 好友列表类型不匹配: 
     - 修复了 `ContactsPage` 中 `_contacts` 列表类型从 `List<String>` 改为 `List<EMContact>` 导致的 UI 冲突。
     - 确保好友列表正确提取 `EMContact.userId` 进行展示。
+- **[新增]** 控制台日志增强: 在 `ContactsPage` 的错误处理逻辑中增加了 `debugPrint`，确保异常信息能实时输出到开发者控制台。
 - **[精简]** 代码清理: 
     - 移除了 `main.dart` 中对 `login_page.dart` 的重复导入。
     - 优化了好友页面的数据处理流程，直接操作 SDK 返回的对象。
