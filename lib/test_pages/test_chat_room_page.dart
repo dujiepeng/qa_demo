@@ -28,8 +28,8 @@ enum RoomInfoEditType {
 }
 
 class TestChatRoomPage extends StatefulWidget {
-  const TestChatRoomPage({super.key});
-
+  const TestChatRoomPage({super.key, this.roomId});
+  final String? roomId;
   @override
   State<TestChatRoomPage> createState() => _TestChatRoomPageState();
 }
@@ -44,6 +44,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
 
   @override
   void initState() {
+    _roomIdController.text = widget.roomId ?? '';
     super.initState();
     _addListener();
   }

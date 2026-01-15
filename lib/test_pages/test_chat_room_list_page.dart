@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
+import 'package:qa_flutter/test_pages/test_chat_room_page.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
 
@@ -77,10 +78,16 @@ class _TestChatRoomListPageState extends State<TestChatRoomListPage> {
               TextButton(
                 child: Text(
                   'Join',
-                  style: TextStyle(color: AppColors.textPrimary(isDark)),
+                  style: TextStyle(
+                    color: AppColors.textPrimary(isDark),
+                    fontSize: 14,
+                  ),
                 ),
                 onPressed: () {
-                  Navigator.pushNamed(context, '/test_chat_room');
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => TestChatRoomPage()),
+                  );
                 },
               ),
             ],
@@ -187,9 +194,16 @@ class _TestChatRoomListPageState extends State<TestChatRoomListPage> {
                                       Icons.chevron_right,
                                       color: AppColors.textSecondary(isDark),
                                     ),
-                                    // TODO: 点击进入聊天室详情或聊天页面
                                     onTap: () {
-                                      // 暂时可以跳转到详情页或者不做操作
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              TestChatRoomPage(
+                                                roomId: room.roomId,
+                                              ),
+                                        ),
+                                      );
                                     },
                                   ),
                                 ),
