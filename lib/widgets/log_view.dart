@@ -1,15 +1,31 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
+/// 日志条目模型，包含内容、时间戳和可选背景色
+class LogEntry {
+  final String content;
+  final String timestamp;
+  final Color? color;
+
+  LogEntry({required this.content, required this.timestamp, this.color});
+}
+
 /// 日志控制器，用于管理日志数据的增加、清空和监听
 class LogController extends ChangeNotifier {
-  final List<String> _logs = [];
+  final List<LogEntry> _logs = [];
 
-  List<String> get logs => List.unmodifiable(_logs);
+  List<LogEntry> get logs => List.unmodifiable(_logs);
 
   /// 添加一条日志
-  void addLog(String message) {
-    _logs.insert(0, message); // 新日志放在最前面
+  void addLog(String message, {Color? color}) {
+    final now = DateTime.now();
+    final timeStr =
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}.${now.millisecond.toString().padLeft(3, '0')}';
+
+    _logs.insert(
+      0,
+      LogEntry(content: message, timestamp: timeStr, color: color),
+    );
     notifyListeners();
   }
 
@@ -92,13 +108,19 @@ class LogView extends StatelessWidget {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemBuilder: (context, index) {
-                        return Padding(
+                        final entry = controller.logs[index];
+                        return Container(
+                          margin: const EdgeInsets.symmetric(vertical: 2),
                           padding: const EdgeInsets.symmetric(
                             vertical: 4,
                             horizontal: 8,
                           ),
+                          decoration: BoxDecoration(
+                            color: entry.color ?? Colors.transparent,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
                           child: Text(
-                            controller.logs[index],
+                            '${entry.timestamp}: ${entry.content}',
                             style: TextStyle(
                               color: AppColors.textPrimary(isDark),
                               fontSize: 12,
