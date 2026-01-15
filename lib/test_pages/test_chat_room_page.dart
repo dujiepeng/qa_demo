@@ -495,70 +495,71 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
             ],
           ),
         ),
-        child: Padding(
-          padding: const EdgeInsets.only(
-            top: kToolbarHeight + 60,
-            left: 15,
-            right: 15,
-            bottom: 15,
-          ),
-          child: Column(
-            children: [
-              _buildInputRow(
-                controller: _roomIdController,
-                hintText: '输入聊天室 ID',
-                buttonText: 'Join',
-                onPressed: () async {
-                  String showMsg = '';
-                  try {
-                    await EMClient.getInstance.chatRoomManager.joinChatRoom(
-                      _roomIdController.text.trim(),
-                    );
-                    _roomId = _roomIdController.text;
-                    showMsg = "加入成功";
-                  } catch (e) {
-                    showMsg = '加入 ${_roomIdController.text} 失败：${e.toString()}';
-                  } finally {
-                    _addLog(showMsg);
-                  }
-                },
-                isDark: isDark,
-              ),
-              const SizedBox(height: 20),
-              _buildInputRow(
-                controller: _messageController,
-                hintText: '输入消息内容',
-                buttonText: 'Send',
-                onPressed: () async {
-                  String text = _messageController.text.trim();
-                  if (text.isEmpty) return;
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.only(
+              top: kToolbarHeight + 60,
+              left: 15,
+              right: 15,
+              bottom: 30, // 增加底部间距
+            ),
+            child: Column(
+              children: [
+                _buildInputRow(
+                  controller: _roomIdController,
+                  hintText: '输入聊天室 ID',
+                  buttonText: 'Join',
+                  onPressed: () async {
+                    String showMsg = '';
+                    try {
+                      await EMClient.getInstance.chatRoomManager.joinChatRoom(
+                        _roomIdController.text.trim(),
+                      );
+                      _roomId = _roomIdController.text;
+                      showMsg = "加入成功";
+                    } catch (e) {
+                      showMsg =
+                          '加入 ${_roomIdController.text} 失败：${e.toString()}';
+                    } finally {
+                      _addLog(showMsg);
+                    }
+                  },
+                  isDark: isDark,
+                ),
+                const SizedBox(height: 20),
+                _buildInputRow(
+                  controller: _messageController,
+                  hintText: '输入消息内容',
+                  buttonText: 'Send',
+                  onPressed: () async {
+                    String text = _messageController.text.trim();
+                    if (text.isEmpty) return;
 
-                  final msg = EMMessage.createTxtSendMessage(
-                    targetId: _roomId,
-                    content: text,
-                    chatType: ChatType.ChatRoom,
-                  );
-                  try {
-                    await EMClient.getInstance.chatManager.sendMessage(msg);
-                  } catch (e) {
-                    _addLog('发送失败: ${e.toString()}');
-                  }
-                  _messageController.clear();
-                },
-                isDark: isDark,
-              ),
-              const SizedBox(height: 20),
-              _buildSectionTitle('消息', isDark),
-              const SizedBox(height: 10),
-              _buildMessageTypeButtons(isDark),
-              const SizedBox(height: 20),
-              _buildSectionTitle('控制', isDark),
-              const SizedBox(height: 10),
-              _buildChatRoomManagementButtons(isDark),
-              const SizedBox(height: 20),
-              // 日志显示区域
-              Expanded(
-                child: Container(
+                    final msg = EMMessage.createTxtSendMessage(
+                      targetId: _roomId,
+                      content: text,
+                      chatType: ChatType.ChatRoom,
+                    );
+                    try {
+                      await EMClient.getInstance.chatManager.sendMessage(msg);
+                    } catch (e) {
+                      _addLog('发送失败: ${e.toString()}');
+                    }
+                    _messageController.clear();
+                  },
+                  isDark: isDark,
+                ),
+                const SizedBox(height: 20),
+                _buildSectionTitle('消息', isDark),
+                const SizedBox(height: 10),
+                _buildMessageTypeButtons(isDark),
+                const SizedBox(height: 20),
+                _buildSectionTitle('控制', isDark),
+                const SizedBox(height: 10),
+                _buildChatRoomManagementButtons(isDark),
+                const SizedBox(height: 20),
+                // 日志显示区域
+                Container(
                   decoration: BoxDecoration(
                     color: AppColors.inputBackground(isDark),
                     borderRadius: BorderRadius.circular(12),
@@ -616,6 +617,9 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                             : ListView.builder(
                                 padding: const EdgeInsets.all(8),
                                 itemCount: _logs.length,
+                                shrinkWrap: true, // 嵌套在滚动视图中需要 shrinkWrap
+                                physics:
+                                    const NeverScrollableScrollPhysics(), // 由外层 SingleChildScrollView 处理滚动
                                 itemBuilder: (context, index) {
                                   return Padding(
                                     padding: const EdgeInsets.symmetric(
@@ -637,8 +641,8 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                     ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
