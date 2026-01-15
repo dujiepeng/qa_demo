@@ -4,12 +4,16 @@ import 'pages/login_page.dart';
 import 'pages/settings_page.dart';
 import 'test_pages/test_chat_room_page.dart';
 import 'theme/app_settings.dart';
+import 'utils/version_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 加载持久化配置
   await AppSettings().loadSettings();
+
+  // 启动后台版本检查
+  VersionManager().checkVersion();
 
   runApp(const MyApp());
 }

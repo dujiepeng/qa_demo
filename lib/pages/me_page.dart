@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
+import '../utils/version_manager.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
 import '../config/app_config.dart';
@@ -103,22 +104,52 @@ class _MePageState extends State<MePage> {
                 borderRadius: BorderRadius.circular(15),
                 border: Border.all(color: AppColors.glassBorder(isDark)),
               ),
-              child: ListTile(
-                leading: Icon(
-                  Icons.info_outline,
-                  color: AppColors.textSecondary(isDark),
-                ),
-                title: Text(
-                  '当前版本',
-                  style: TextStyle(color: AppColors.textPrimary(isDark)),
-                ),
-                trailing: Text(
-                  AppConfig.appVersion,
-                  style: TextStyle(
-                    color: AppColors.textSecondary(isDark),
-                    fontSize: 14,
-                  ),
-                ),
+              child: ListenableBuilder(
+                listenable: VersionManager(),
+                builder: (context, _) {
+                  return ListTile(
+                    leading: Icon(
+                      Icons.info_outline,
+                      color: AppColors.textSecondary(isDark),
+                    ),
+                    title: Text(
+                      '当前版本',
+                      style: TextStyle(color: AppColors.textPrimary(isDark)),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (VersionManager().hasNewVersion)
+                          Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Text(
+                              'NEW',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        Text(
+                          AppConfig.appVersion,
+                          style: TextStyle(
+                            color: AppColors.textSecondary(isDark),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(height: 40),

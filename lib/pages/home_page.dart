@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
+import '../utils/version_manager.dart';
 import 'conversations_page.dart';
 import 'contacts_page.dart';
 import 'groups_page.dart';
@@ -98,17 +99,66 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
-            child: BottomNavigationBar(
-              currentIndex: safeIndex,
-              onTap: (index) => setState(() => _currentIndex = index),
-              type: BottomNavigationBarType.fixed,
-              backgroundColor: AppColors.backgroundEnd(isDark),
-              selectedItemColor: AppColors.primary(isDark),
-              unselectedItemColor: AppColors.textSecondary(isDark),
-              showUnselectedLabels: true,
-              selectedFontSize: 12,
-              unselectedFontSize: 12,
-              items: items,
+            child: ListenableBuilder(
+              listenable: VersionManager(),
+              builder: (context, _) {
+                return BottomNavigationBar(
+                  currentIndex: safeIndex,
+                  onTap: (index) => setState(() => _currentIndex = index),
+                  type: BottomNavigationBarType.fixed,
+                  backgroundColor: AppColors.backgroundEnd(isDark),
+                  selectedItemColor: AppColors.primary(isDark),
+                  unselectedItemColor: AppColors.textSecondary(isDark),
+                  showUnselectedLabels: true,
+                  selectedFontSize: 12,
+                  unselectedFontSize: 12,
+                  items: items.map((item) {
+                    // 为“我”的 Tab (label == '我') 添加红点
+                    if (item.label == '我' && VersionManager().hasNewVersion) {
+                      return BottomNavigationBarItem(
+                        icon: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            item.icon,
+                            Positioned(
+                              right: -2,
+                              top: -2,
+                              child: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        activeIcon: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            item.activeIcon,
+                            Positioned(
+                              right: -2,
+                              top: -2,
+                              child: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        label: item.label,
+                      );
+                    }
+                    return item;
+                  }).toList(),
+                );
+              },
             ),
           ),
         );
