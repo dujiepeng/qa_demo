@@ -410,7 +410,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('设置失败'),
+                  content: Text(e.toString()),
                   backgroundColor: Colors.redAccent,
                 ),
               );
@@ -565,6 +565,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: AppColors.glassBorder(isDark)),
                   ),
+                  constraints: const BoxConstraints(minHeight: 300),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
