@@ -47,7 +47,23 @@ class VersionManager extends ChangeNotifier {
         if (_compareVersions(remoteVersion, localVersion) > 0) {
           _hasNewVersion = true;
           _latestVersion = remoteVersion;
-          _releaseNotes = data['body'] ?? '';
+
+          try {
+            final changelogResponse = await http.get(
+              Uri.parse(
+                'https://raw.githubusercontent.com/dujiepeng/qa_demo/main/changelog.md',
+              ),
+            );
+            if (changelogResponse.statusCode == 200) {
+              _releaseNotes = utf8.decode(changelogResponse.bodyBytes);
+            } else {
+              _releaseNotes = data['body'] ?? '';
+            }
+          } catch (e) {
+            _releaseNotes = data['body'] ?? '';
+            debugPrint('Failed to fetch changelog: $e');
+          }
+
           notifyListeners();
         }
       }
