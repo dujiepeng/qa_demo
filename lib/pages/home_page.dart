@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart' as flutter_markdown;
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
 import '../utils/version_manager.dart';
+import '../widgets/update_dialog.dart';
 import 'conversations_page.dart';
 import 'contacts_page.dart';
 import 'groups_page.dart';
@@ -41,44 +41,7 @@ class _HomePageState extends State<HomePage> {
     // 如果有新版本，且还没弹过窗（这里可以优化为每天弹一次，或者基于版本存SP，目前简单处理）
     if (VersionManager().hasNewVersion && !_hasShownUpdateDialog) {
       _hasShownUpdateDialog = true;
-      showDialog(
-        context: context,
-        builder: (context) {
-          final isDark = _settings.isDarkMode;
-          return AlertDialog(
-            backgroundColor: AppColors.backgroundEnd(isDark),
-            title: Text(
-              '发现新版本 ${VersionManager().latestVersion}',
-              style: TextStyle(color: AppColors.textPrimary(isDark)),
-            ),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: SingleChildScrollView(
-                child: flutter_markdown.MarkdownBody(
-                  data: VersionManager().releaseNotes,
-                  styleSheet: flutter_markdown.MarkdownStyleSheet(
-                    p: TextStyle(color: AppColors.textPrimary(isDark)),
-                    listBullet: TextStyle(color: AppColors.textPrimary(isDark)),
-                  ),
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('稍后'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  // TODO: 跳转到更新页面或下载链接
-                },
-                child: const Text('立即更新'),
-              ),
-            ],
-          );
-        },
-      );
+      UpdateDialog.show(context);
     }
   }
 

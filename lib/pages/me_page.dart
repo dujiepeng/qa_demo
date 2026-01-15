@@ -4,6 +4,7 @@ import '../utils/version_manager.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
 import '../config/app_config.dart';
+import '../widgets/update_dialog.dart';
 
 class MePage extends StatefulWidget {
   final bool isDark;
@@ -148,6 +149,11 @@ class _MePageState extends State<MePage> {
                         ),
                       ],
                     ),
+                    onTap: () {
+                      if (VersionManager().hasNewVersion) {
+                        UpdateDialog.show(context);
+                      }
+                    },
                   );
                 },
               ),
