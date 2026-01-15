@@ -72,6 +72,9 @@ class _LoginPageState extends State<LoginPage> {
           'LoginPage: SDK Initialized with AppKey: ${_settings.appKey}',
         );
       }
+      try {
+        await EMClient.getInstance.logout();
+      } catch (_) {}
 
       await EMClient.getInstance.loginWithPassword(uid, pwd);
 

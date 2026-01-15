@@ -603,41 +603,39 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                         ),
                       ),
                       Divider(height: 1, color: AppColors.glassBorder(isDark)),
-                      Expanded(
-                        child: _logs.isEmpty
-                            ? Center(
-                                child: Text(
-                                  '暂无日志',
-                                  style: TextStyle(
-                                    color: AppColors.textSecondary(isDark),
-                                    fontSize: 12,
-                                  ),
+                      _logs.isEmpty
+                          ? Center(
+                              child: Text(
+                                '暂无日志',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary(isDark),
+                                  fontSize: 12,
                                 ),
-                              )
-                            : ListView.builder(
-                                padding: const EdgeInsets.all(8),
-                                itemCount: _logs.length,
-                                shrinkWrap: true, // 嵌套在滚动视图中需要 shrinkWrap
-                                physics:
-                                    const NeverScrollableScrollPhysics(), // 由外层 SingleChildScrollView 处理滚动
-                                itemBuilder: (context, index) {
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 4,
-                                      horizontal: 8,
-                                    ),
-                                    child: Text(
-                                      _logs[index],
-                                      style: TextStyle(
-                                        color: AppColors.textPrimary(isDark),
-                                        fontSize: 12,
-                                        fontFamily: 'monospace',
-                                      ),
-                                    ),
-                                  );
-                                },
                               ),
-                      ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.all(8),
+                              itemCount: _logs.length,
+                              shrinkWrap: true, // 嵌套在滚动视图中需要 shrinkWrap
+                              physics:
+                                  const NeverScrollableScrollPhysics(), // 由外层 SingleChildScrollView 处理滚动
+                              itemBuilder: (context, index) {
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 4,
+                                    horizontal: 8,
+                                  ),
+                                  child: Text(
+                                    _logs[index],
+                                    style: TextStyle(
+                                      color: AppColors.textPrimary(isDark),
+                                      fontSize: 12,
+                                      fontFamily: 'monospace',
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                     ],
                   ),
                 ),
