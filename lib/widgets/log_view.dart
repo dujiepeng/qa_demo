@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 
 /// 日志条目模型，包含内容、时间戳和可选背景色
@@ -109,22 +110,58 @@ class LogView extends StatelessWidget {
                       physics: const NeverScrollableScrollPhysics(),
                       itemBuilder: (context, index) {
                         final entry = controller.logs[index];
-                        return Container(
-                          margin: const EdgeInsets.symmetric(vertical: 2),
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 4,
-                            horizontal: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: entry.color ?? Colors.transparent,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            '${entry.timestamp}: ${entry.content}',
-                            style: TextStyle(
-                              color: AppColors.textPrimary(isDark),
-                              fontSize: 12,
-                              fontFamily: 'monospace',
+                        return GestureDetector(
+                          onLongPressStart: (details) async {
+                            final position = details.globalPosition;
+                            final value = await showMenu<String>(
+                              context: context,
+                              position: RelativeRect.fromLTRB(
+                                position.dx,
+                                position.dy,
+                                position.dx,
+                                position.dy,
+                              ),
+                              items: [
+                                const PopupMenuItem(
+                                  value: 'copy',
+                                  child: Text('复制'),
+                                ),
+                              ],
+                            );
+
+                            if (value == 'copy') {
+                              final text =
+                                  '${entry.timestamp}: ${entry.content}';
+                              await Clipboard.setData(
+                                ClipboardData(text: text),
+                              );
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('已复制到剪贴板'),
+                                    duration: Duration(milliseconds: 500),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 4,
+                              horizontal: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: entry.color ?? Colors.transparent,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              '${entry.timestamp}: ${entry.content}',
+                              style: TextStyle(
+                                color: AppColors.textPrimary(isDark),
+                                fontSize: 12,
+                                fontFamily: 'monospace',
+                              ),
                             ),
                           ),
                         );

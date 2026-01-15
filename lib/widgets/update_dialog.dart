@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_settings.dart';
+
 import '../utils/version_manager.dart';
 
 class UpdateDialog extends StatelessWidget {
@@ -28,8 +28,8 @@ class UpdateDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final settings = AppSettings();
-    final isDark = settings.isDarkMode;
+    // final settings = AppSettings();
+    final isDark = false;
 
     return AlertDialog(
       backgroundColor: AppColors.backgroundEnd(isDark),
