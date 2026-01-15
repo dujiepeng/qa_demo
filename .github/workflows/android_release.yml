@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build APK
@@ -31,7 +34,7 @@ jobs:
         run: flutter pub get
 
       - name: Build APK (arm64-v8a)
-        run: flutter build apk --release --target-platform android-arm64 --no-tree-shake-icons
+        run: flutter build apk --release --target-platform android-arm64 --no-tree-shake-icons -v
 
       - name: Rename APK
         run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
