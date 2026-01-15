@@ -13,6 +13,7 @@ import 'test_chat_room_admins_page.dart';
 import 'test_chat_room_white_list_page.dart';
 import 'test_chat_room_mute_list_page.dart';
 import 'test_chat_room_change_owner_page.dart';
+import '../widgets/log_view.dart';
 
 /// 聊天室信息编辑类型
 enum RoomInfoEditType {
@@ -38,7 +39,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
   final _settings = AppSettings();
   final _roomIdController = TextEditingController();
   final _messageController = TextEditingController();
-  final List<String> _logs = [];
+  final _logController = LogController();
   String _roomId = '';
 
   @override
@@ -158,12 +159,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
   }
 
   void _addLog(String content) {
-    setState(() {
-      final now = DateTime.now();
-      final timeStr =
-          '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}.${now.millisecond.toString().padLeft(3, '0')}';
-      _logs.insert(0, '$timeStr: $content');
-    });
+    _logController.addLog(content);
   }
 
   Future<String> _getAssetFilePath(String assetPath) async {
@@ -563,96 +559,9 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                       const SizedBox(height: 10),
                       _buildChatRoomManagementButtons(isDark),
                       const SizedBox(height: 20),
+                      const SizedBox(height: 20),
                       // 日志显示区域
-                      Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.inputBackground(isDark),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: AppColors.glassBorder(isDark),
-                          ),
-                        ),
-                        constraints: const BoxConstraints(minHeight: 200),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    '操作日志',
-                                    style: TextStyle(
-                                      color: AppColors.textPrimary(isDark),
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.refresh,
-                                      size: 20,
-                                      color: AppColors.textSecondary(isDark),
-                                    ),
-                                    tooltip: '清空日志',
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    onPressed: () {
-                                      setState(() {
-                                        _logs.clear();
-                                      });
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Divider(
-                              height: 1,
-                              color: AppColors.glassBorder(isDark),
-                            ),
-                            _logs.isEmpty
-                                ? Center(
-                                    child: Text(
-                                      '暂无日志',
-                                      style: TextStyle(
-                                        color: AppColors.textSecondary(isDark),
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  )
-                                : ListView.builder(
-                                    padding: const EdgeInsets.all(8),
-                                    itemCount: _logs.length,
-                                    shrinkWrap: true, // 嵌套在滚动视图中需要 shrinkWrap
-                                    physics:
-                                        const NeverScrollableScrollPhysics(), // 由外层 SingleChildScrollView 处理滚动
-                                    itemBuilder: (context, index) {
-                                      return Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 4,
-                                          horizontal: 8,
-                                        ),
-                                        child: Text(
-                                          _logs[index],
-                                          style: TextStyle(
-                                            color: AppColors.textPrimary(
-                                              isDark,
-                                            ),
-                                            fontSize: 12,
-                                            fontFamily: 'monospace',
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                          ],
-                        ),
-                      ),
+                      LogView(controller: _logController, isDark: isDark),
                     ],
                   ),
                 ),

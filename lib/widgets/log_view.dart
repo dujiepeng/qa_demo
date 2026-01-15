@@ -1,0 +1,117 @@
+import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
+
+/// 日志控制器，用于管理日志数据的增加、清空和监听
+class LogController extends ChangeNotifier {
+  final List<String> _logs = [];
+
+  List<String> get logs => List.unmodifiable(_logs);
+
+  /// 添加一条日志
+  void addLog(String message) {
+    _logs.insert(0, message); // 新日志放在最前面
+    notifyListeners();
+  }
+
+  /// 清空所有日志
+  void clearLogs() {
+    _logs.clear();
+    notifyListeners();
+  }
+}
+
+/// 独立的日志视图组件
+class LogView extends StatelessWidget {
+  final LogController controller;
+  final bool isDark;
+
+  const LogView({super.key, required this.controller, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) {
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.inputBackground(isDark),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.glassBorder(isDark)),
+          ),
+          constraints: const BoxConstraints(minHeight: 600),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '操作日志',
+                      style: TextStyle(
+                        color: AppColors.textPrimary(isDark),
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        Icons.refresh,
+                        size: 20,
+                        color: AppColors.textSecondary(isDark),
+                      ),
+                      tooltip: '清空日志',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () => controller.clearLogs(),
+                    ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: AppColors.glassBorder(isDark)),
+              controller.logs.isEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Text(
+                          '暂无日志',
+                          style: TextStyle(
+                            color: AppColors.textSecondary(isDark),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(8),
+                      itemCount: controller.logs.length,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemBuilder: (context, index) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 4,
+                            horizontal: 8,
+                          ),
+                          child: Text(
+                            controller.logs[index],
+                            style: TextStyle(
+                              color: AppColors.textPrimary(isDark),
+                              fontSize: 12,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
