@@ -1,5 +1,16 @@
 # Changelog
  
+## [1.35.0+45] - 2026-01-15
+
+### 修改内容
+- **[CI/CD]** 新增自动构建发布流程:
+    - 创建 GitHub Action Workflow (`.github/workflows/android_release.yml`)。
+    - 配置在 push tag 时自动触发。
+    - 仅构建 `arm64-v8a` 架构 APK，显著减小包体积。
+    - 启用 Gradle 与 Flutter 双重缓存，加快构建速度。
+    - 自动创建 GitHub Release 并上传 APK 产物。
+- **[版本]** 迭代项目版本号至 `1.35.0+45`。
+
 ## [1.35.0+44] - 2026-01-15
 
 ### 修改内容

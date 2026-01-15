@@ -158,7 +158,9 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
           );
         },
         onSpecificationChanged: (room) {
-          _addReceiveLog('onSpecificationChanged: $room');
+          _addReceiveLog(
+            'onSpecificationChanged: name: ${room.name}, description: ${room.description}',
+          );
         },
       ),
     );
@@ -734,7 +736,13 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                   await EMClient.getInstance.chatManager.sendMessage(msg);
                 }
                 if (type['label'] == '自定义') {
-                  _addSendLog('暂不支持');
+                  final msg = EMMessage.createCustomSendMessage(
+                    targetId: _roomId,
+                    event: 'eventValue',
+                    params: {'paramsKey': 'paramsValue'},
+                    chatType: ChatType.ChatRoom,
+                  );
+                  await EMClient.getInstance.chatManager.sendMessage(msg);
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -781,7 +789,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
       {'icon': Icons.verified_user_outlined, 'label': '白名单'},
       {'icon': Icons.mic_off_outlined, 'label': '禁言列表'},
       {'icon': Icons.voice_over_off_outlined, 'label': '全部禁言'},
-      {'icon': Icons.swap_horiz_outlined, 'label': '转移聊天室'},
+      {'icon': Icons.swap_horiz_outlined, 'label': '转移'},
     ];
 
     // 分组，每行6个
