@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
+import '../config/app_config.dart';
 
 class MePage extends StatefulWidget {
   final bool isDark;
@@ -94,6 +95,31 @@ class _MePageState extends State<MePage> {
                 _settings.saveSettings();
               },
               isDark: isDark,
+            ),
+            const SizedBox(height: 10),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.inputBackground(isDark),
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: AppColors.glassBorder(isDark)),
+              ),
+              child: ListTile(
+                leading: Icon(
+                  Icons.info_outline,
+                  color: AppColors.textSecondary(isDark),
+                ),
+                title: Text(
+                  '当前版本',
+                  style: TextStyle(color: AppColors.textPrimary(isDark)),
+                ),
+                trailing: Text(
+                  AppConfig.appVersion,
+                  style: TextStyle(
+                    color: AppColors.textSecondary(isDark),
+                    fontSize: 14,
+                  ),
+                ),
+              ),
             ),
             const SizedBox(height: 40),
             ElevatedButton(
