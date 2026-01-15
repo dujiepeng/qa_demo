@@ -60,10 +60,10 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
       _eventKey,
       ChatMessageEvent(
         onSuccess: (msgId, msg) {
-          _addLog('${msg.from}: ${msg.toJson().toString()}');
+          _addSendLog('${msg.from}: ${msg.toJson().toString()}');
         },
         onError: (msgId, msg, error) {
-          _addLog('发送失败: ${error.toString()}');
+          _addSendLog('发送失败: ${error.toString()}');
         },
       ),
     );
@@ -73,7 +73,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
       EMChatEventHandler(
         onMessagesReceived: (messages) {
           for (var msg in messages) {
-            _addLog('${msg.from}: ${msg.toJson().toString()}');
+            _addReceiveLog('${msg.from}: ${msg.toJson().toString()}');
           }
         },
       ),
@@ -83,83 +83,93 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
       _eventKey,
       EMChatRoomEventHandler(
         onAdminAddedFromChatRoom: (roomId, admin) {
-          _addLog('onAdminAddedFromChatRoom: roomId: $roomId, admin: $admin');
+          _addReceiveLog(
+            'onAdminAddedFromChatRoom: roomId: $roomId, admin: $admin',
+          );
         },
         onAdminRemovedFromChatRoom: (roomId, admin) {
-          _addLog('onAdminRemovedFromChatRoom: roomId: $roomId, admin: $admin');
+          _addReceiveLog(
+            'onAdminRemovedFromChatRoom: roomId: $roomId, admin: $admin',
+          );
         },
         onAllChatRoomMemberMuteStateChanged: (roomId, isAllMuted) {
-          _addLog(
+          _addReceiveLog(
             'onAllChatRoomMemberMuteStateChanged: roomId: $roomId, isAllMuted: $isAllMuted',
           );
         },
         onAllowListAddedFromChatRoom: (roomId, members) {
-          _addLog(
+          _addReceiveLog(
             'onAllowListAddedFromChatRoom: roomId: $roomId, members: $members',
           );
         },
         onAllowListRemovedFromChatRoom: (roomId, members) {
-          _addLog(
+          _addReceiveLog(
             'onAllowListRemovedFromChatRoom: roomId: $roomId, members: $members',
           );
         },
         onAnnouncementChangedFromChatRoom: (roomId, announcement) {
-          _addLog(
+          _addReceiveLog(
             'onAnnouncementChangedFromChatRoom: roomId: $roomId, announcement: $announcement',
           );
         },
         onAttributesRemoved: (roomId, removedKeys, from) {
-          _addLog(
+          _addReceiveLog(
             'onAttributesRemoved: roomId: $roomId, removedKeys: $removedKeys, from: $from',
           );
         },
         onAttributesUpdated: (roomId, attributes, from) {
-          _addLog(
+          _addReceiveLog(
             'onAttributesUpdated: roomId: $roomId, attributes: $attributes, from: $from',
           );
         },
         onChatRoomDestroyed: (roomId, roomName) {
-          _addLog('onChatRoomDestroyed: roomId: $roomId, roomName: $roomName');
+          _addReceiveLog(
+            'onChatRoomDestroyed: roomId: $roomId, roomName: $roomName',
+          );
         },
         onMemberExitedFromChatRoom: (roomId, roomName, participant) {
-          _addLog(
+          _addReceiveLog(
             'onMemberExitedFromChatRoom: roomId: $roomId, roomName: $roomName, participant: $participant',
           );
         },
         onMemberJoinedFromChatRoom: (roomId, participant, ext) {
-          _addLog(
+          _addReceiveLog(
             'onMemberJoinedFromChatRoom: roomId: $roomId, participant: $participant, ext: $ext',
           );
         },
         onMuteListAddedFromChatRoom: (roomId, mutes) {
-          _addLog(
+          _addReceiveLog(
             'onMuteListAddedFromChatRoom: roomId: $roomId, mutes: $mutes',
           );
         },
         onMuteListRemovedFromChatRoom: (roomId, mutes) {
-          _addLog(
+          _addReceiveLog(
             'onMuteListRemovedFromChatRoom: roomId: $roomId, mutes: $mutes',
           );
         },
         onOwnerChangedFromChatRoom: (roomId, newOwner, oldOwner) {
-          _addLog(
+          _addReceiveLog(
             'onOwnerChangedFromChatRoom: roomId: $roomId, newOwner: $newOwner, oldOwner: $oldOwner',
           );
         },
         onRemovedFromChatRoom: (roomId, roomName, participant, reason) {
-          _addLog(
+          _addReceiveLog(
             'onRemovedFromChatRoom: roomId: $roomId, roomName: $roomName, participant: $participant, reason: $reason',
           );
         },
         onSpecificationChanged: (room) {
-          _addLog('onSpecificationChanged: $room');
+          _addReceiveLog('onSpecificationChanged: $room');
         },
       ),
     );
   }
 
-  void _addLog(String content) {
-    _logController.addLog(content);
+  void _addSendLog(String content) {
+    _logController.addLog(content, color: Colors.green);
+  }
+
+  void _addReceiveLog(String content) {
+    _logController.addLog(content, color: Colors.blue);
   }
 
   Future<String> _getAssetFilePath(String assetPath) async {
@@ -173,7 +183,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
 
   Future<void> _showRoomInfoDialog(RoomInfoEditType type) async {
     if (_roomId.isEmpty) {
-      _addLog('请先加入聊天室');
+      _addSendLog('请先加入聊天室');
       return;
     }
 
@@ -244,28 +254,28 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
               _roomId,
               newValue,
             );
-            _addLog('修改聊天室名称成功');
+            _addSendLog('修改聊天室名称成功');
             break;
           case RoomInfoEditType.description:
             await EMClient.getInstance.chatRoomManager
                 .changeChatRoomDescription(_roomId, newValue);
-            _addLog('修改聊天室描述成功');
+            _addSendLog('修改聊天室描述成功');
             break;
           case RoomInfoEditType.announcement:
             await EMClient.getInstance.chatRoomManager
                 .updateChatRoomAnnouncement(_roomId, newValue);
-            _addLog('修改聊天室公告成功');
+            _addSendLog('修改聊天室公告成功');
             break;
         }
       }
     } catch (e) {
-      _addLog('获取聊天室信息失败: ${e.toString()}');
+      _addSendLog('获取聊天室信息失败: ${e.toString()}');
     }
   }
 
   void _showMembersBottomSheet() {
     if (_roomId.isEmpty) {
-      _addLog('请先加入聊天室');
+      _addSendLog('请先加入聊天室');
       return;
     }
 
@@ -292,7 +302,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
 
   void _showAdminsBottomSheet() {
     if (_roomId.isEmpty) {
-      _addLog('请先加入聊天室');
+      _addSendLog('请先加入聊天室');
       return;
     }
 
@@ -319,7 +329,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
 
   void _showWhiteListBottomSheet() {
     if (_roomId.isEmpty) {
-      _addLog('请先加入聊天室');
+      _addSendLog('请先加入聊天室');
       return;
     }
 
@@ -346,7 +356,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
 
   void _showMuteListBottomSheet() {
     if (_roomId.isEmpty) {
-      _addLog('请先加入聊天室');
+      _addSendLog('请先加入聊天室');
       return;
     }
 
@@ -373,7 +383,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
 
   void _showMuteAllMuteAlert() async {
     if (_roomId.isEmpty) {
-      _addLog('请先加入聊天室');
+      _addSendLog('请先加入聊天室');
       return;
     }
     final room = await EMClient.getInstance.chatRoomManager
@@ -421,7 +431,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
 
   void _showChangeOwnerBottomSheet() {
     if (_roomId.isEmpty) {
-      _addLog('请先加入聊天室');
+      _addSendLog('请先加入聊天室');
       return;
     }
 
@@ -472,9 +482,9 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                   _roomId,
                 );
                 _roomId = '';
-                _addLog('退出成功');
+                _addSendLog('退出成功');
               } catch (e) {
-                _addLog('退出失败: ${e.toString()}');
+                _addSendLog('退出失败: ${e.toString()}');
               }
             },
           ),
@@ -520,7 +530,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                             showMsg =
                                 '加入 ${_roomIdController.text} 失败：${e.toString()}';
                           } finally {
-                            _addLog(showMsg);
+                            _addSendLog(showMsg);
                           }
                         },
                         isDark: isDark,
@@ -544,7 +554,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                               msg,
                             );
                           } catch (e) {
-                            _addLog('发送失败: ${e.toString()}');
+                            _addSendLog('发送失败: ${e.toString()}');
                           }
                           _messageController.clear();
                         },
@@ -674,7 +684,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                     );
                     await EMClient.getInstance.chatManager.sendMessage(msg);
                   } catch (e) {
-                    _addLog('发送图片失败: ${e.toString()}');
+                    _addSendLog('发送图片失败: ${e.toString()}');
                   }
                 }
                 if (type['label'] == '视频') {
@@ -724,7 +734,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                   await EMClient.getInstance.chatManager.sendMessage(msg);
                 }
                 if (type['label'] == '自定义') {
-                  _addLog('暂不支持');
+                  _addSendLog('暂不支持');
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -817,7 +827,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                         } else if (action['label'] == '转移聊天室') {
                           _showChangeOwnerBottomSheet();
                         } else {
-                          _addLog('点击了${action['label']}');
+                          _addSendLog('点击了${action['label']}');
                         }
                       },
                       style: ElevatedButton.styleFrom(
