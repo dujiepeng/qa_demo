@@ -565,7 +565,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: AppColors.glassBorder(isDark)),
                   ),
-                  constraints: const BoxConstraints(minHeight: 300),
+                  constraints: const BoxConstraints(minHeight: 200),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
