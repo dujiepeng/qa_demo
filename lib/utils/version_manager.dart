@@ -14,6 +14,9 @@ class VersionManager extends ChangeNotifier {
   String _latestVersion = '';
   String get latestVersion => _latestVersion;
 
+  String _releaseNotes = '';
+  String get releaseNotes => _releaseNotes;
+
   // 检查频率限制，避免频繁请求
   DateTime? _lastCheckTime;
   static const Duration _checkInterval = Duration(minutes: 10);
@@ -44,6 +47,7 @@ class VersionManager extends ChangeNotifier {
         if (_compareVersions(remoteVersion, localVersion) > 0) {
           _hasNewVersion = true;
           _latestVersion = remoteVersion;
+          _releaseNotes = data['body'] ?? '';
           notifyListeners();
         }
       }
