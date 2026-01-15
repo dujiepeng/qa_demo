@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:qa_flutter/test_pages/test_chat_room_list_page.dart';
 import 'pages/home_page.dart';
 import 'pages/login_page.dart';
 import 'pages/settings_page.dart';
@@ -37,6 +38,7 @@ class MyApp extends StatelessWidget {
         '/home': (context) => const HomePage(),
         '/settings': (context) => const SettingsPage(),
         '/test_chat_room': (context) => const TestChatRoomPage(),
+        '/test_chat_room_list': (context) => const TestChatRoomListPage(),
       },
     );
   }

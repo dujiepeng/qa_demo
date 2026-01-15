@@ -44,9 +44,9 @@ class _TestPageState extends State<TestPage> {
       // ),
       TestGridItem(
         title: '聊天室',
-        icon: Icons.forum_outlined,
+        icon: Icons.list_alt_outlined,
         onTap: () {
-          Navigator.pushNamed(context, '/test_chat_room');
+          Navigator.pushNamed(context, '/test_chat_room_list');
         },
       ),
     ];
