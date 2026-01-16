@@ -50,7 +50,26 @@ class VersionManager extends ChangeNotifier {
         if (_compareVersions(remoteVersion, localVersion) > 0) {
           _hasNewVersion = true;
           _latestVersion = remoteVersion;
-          _downloadUrl = data['html_url'] ?? '';
+
+          // 优先通过 assets 获取 .apk 的下载地址
+          String? downloadUrl;
+          if (data['assets'] != null && data['assets'] is List) {
+            final List assets = data['assets'];
+            // 尝试寻找 apk 文件
+            final apkAsset = assets.firstWhere(
+              (asset) => (asset['name'] as String).endsWith('.apk'),
+              orElse: () => null,
+            );
+
+            if (apkAsset != null) {
+              downloadUrl = apkAsset['browser_download_url'];
+            } else if (assets.isNotEmpty) {
+              // 如果没有 apk，取第一个 asset
+              downloadUrl = assets.first['browser_download_url'];
+            }
+          }
+
+          _downloadUrl = downloadUrl ?? data['html_url'] ?? '';
 
           try {
             final changelogResponse = await http.get(
