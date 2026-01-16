@@ -14,6 +14,7 @@ import 'test_chat_room_white_list_page.dart';
 import 'test_chat_room_mute_list_page.dart';
 import 'test_chat_room_change_owner_page.dart';
 import '../widgets/log_view.dart';
+import '../widgets/grid_action_menu.dart';
 
 /// 聊天室信息编辑类型
 enum RoomInfoEditType {
@@ -74,6 +75,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
       EMChatEventHandler(
         onMessagesReceived: (messages) {
           for (var msg in messages) {
+            if (msg.from != _roomId) return;
             _addReceiveLog('${msg.from}: ${msg.toJson().toString()}');
           }
         },
@@ -660,15 +662,14 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                         },
                         isDark: isDark,
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 10),
                       _buildSectionTitle('消息', isDark),
                       const SizedBox(height: 10),
                       _buildMessageTypeButtons(isDark),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 10),
                       _buildSectionTitle('控制', isDark),
                       const SizedBox(height: 10),
                       _buildChatRoomManagementButtons(isDark),
-                      const SizedBox(height: 20),
                       const SizedBox(height: 20),
                       // 日志显示区域
                       LogView(controller: _logController, isDark: isDark),
@@ -764,262 +765,190 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
   }
 
   Widget _buildMessageTypeButtons(bool isDark) {
-    final messageTypes = [
-      {'icon': Icons.image_outlined, 'label': '图片'},
-      {'icon': Icons.videocam_outlined, 'label': '视频'},
-      {'icon': Icons.mic_outlined, 'label': '语音'},
-      {'icon': Icons.description_outlined, 'label': '文件'},
-      {'icon': Icons.location_on_outlined, 'label': '位置'},
-      {'icon': Icons.extension_outlined, 'label': '自定义'},
+    final items = [
+      GridActionItem(
+        icon: Icons.image_outlined,
+        label: '图片',
+        onTap: () async {
+          try {
+            final filePath = await _getAssetFilePath('assets/image.jpg');
+            final msg = EMMessage.createImageSendMessage(
+              targetId: _roomId,
+              filePath: filePath,
+              width: 1920,
+              height: 1080,
+              fileSize: 111916,
+              chatType: ChatType.ChatRoom,
+            );
+            await sendMessage(msg);
+          } catch (e) {
+            _addAppErrLog('发送图片失败: ${e.toString()}');
+          }
+        },
+      ),
+      GridActionItem(
+        icon: Icons.videocam_outlined,
+        label: '视频',
+        onTap: () async {
+          try {
+            final filePath = await _getAssetFilePath('assets/video.mp4');
+            final thumb = await _getAssetFilePath('assets/image.jpg');
+            final msg = EMMessage.createVideoSendMessage(
+              targetId: _roomId,
+              filePath: filePath,
+              thumbnailLocalPath: thumb,
+              width: 1920,
+              height: 1080,
+              duration: 10,
+              fileSize: 4006696,
+              chatType: ChatType.ChatRoom,
+            );
+            await sendMessage(msg);
+          } catch (e) {
+            _addAppErrLog('发送视频失败: ${e.toString()}');
+          }
+        },
+      ),
+      GridActionItem(
+        icon: Icons.mic_outlined,
+        label: '语音',
+        onTap: () async {
+          try {
+            final filePath = await _getAssetFilePath('assets/voice.mp3');
+            final msg = EMMessage.createVoiceSendMessage(
+              targetId: _roomId,
+              filePath: filePath,
+              duration: 10,
+              fileSize: 111916,
+              chatType: ChatType.ChatRoom,
+            );
+            await sendMessage(msg);
+          } catch (e) {
+            _addAppErrLog('发送语音失败: ${e.toString()}');
+          }
+        },
+      ),
+      GridActionItem(
+        icon: Icons.description_outlined,
+        label: '文件',
+        onTap: () async {
+          try {
+            final filePath = await _getAssetFilePath('assets/voice.mp3');
+            final msg = EMMessage.createFileSendMessage(
+              targetId: _roomId,
+              filePath: filePath,
+              fileSize: 111916,
+              chatType: ChatType.ChatRoom,
+            );
+            await sendMessage(msg);
+          } catch (e) {
+            _addAppErrLog('发送文件失败: ${e.toString()}');
+          }
+        },
+      ),
+      GridActionItem(
+        icon: Icons.location_on_outlined,
+        label: '位置',
+        onTap: () async {
+          try {
+            final msg = EMMessage.createLocationSendMessage(
+              targetId: _roomId,
+              latitude: 39.9042,
+              longitude: 116.4074,
+              address: '北京市海淀区中关村',
+              chatType: ChatType.ChatRoom,
+            );
+            await sendMessage(msg);
+          } catch (e) {
+            _addAppErrLog('发送位置失败: ${e.toString()}');
+          }
+        },
+      ),
+      GridActionItem(
+        icon: Icons.extension_outlined,
+        label: '自定义',
+        onTap: () async {
+          try {
+            final msg = EMMessage.createCustomSendMessage(
+              targetId: _roomId,
+              event: 'eventValue',
+              params: {'paramsKey': 'paramsValue'},
+              chatType: ChatType.ChatRoom,
+            );
+            await sendMessage(msg);
+          } catch (e) {
+            _addAppErrLog('发送自定义失败: ${e.toString()}');
+          }
+        },
+      ),
     ];
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: messageTypes.map((type) {
-        return Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: ElevatedButton(
-              onPressed: () async {
-                if (type['label'] == '图片') {
-                  try {
-                    final filePath = await _getAssetFilePath(
-                      'assets/image.jpg',
-                    );
-                    final msg = EMMessage.createImageSendMessage(
-                      targetId: _roomId,
-                      filePath: filePath,
-                      width: 1920,
-                      height: 1080,
-                      fileSize: 111916,
-                      chatType: ChatType.ChatRoom,
-                    );
-                    await sendMessage(msg);
-                  } catch (e) {
-                    _addAppErrLog('发送图片失败: ${e.toString()}');
-                  }
-                }
-                if (type['label'] == '视频') {
-                  try {
-                    final filePath = await _getAssetFilePath(
-                      'assets/video.mp4',
-                    );
-                    final thumb = await _getAssetFilePath('assets/image.jpg');
-                    final msg = EMMessage.createVideoSendMessage(
-                      targetId: _roomId,
-                      filePath: filePath,
-                      thumbnailLocalPath: thumb,
-                      width: 1920,
-                      height: 1080,
-                      duration: 10,
-                      fileSize: 4006696,
-                      chatType: ChatType.ChatRoom,
-                    );
-                    await sendMessage(msg);
-                  } catch (e) {
-                    _addAppErrLog('发送视频失败: ${e.toString()}');
-                  }
-                }
-                if (type['label'] == '语音') {
-                  try {
-                    final filePath = await _getAssetFilePath(
-                      'assets/voice.mp3',
-                    );
-                    final msg = EMMessage.createVoiceSendMessage(
-                      targetId: _roomId,
-                      filePath: filePath,
-                      duration: 10,
-                      fileSize: 111916,
-                      chatType: ChatType.ChatRoom,
-                    );
-                    await sendMessage(msg);
-                  } catch (e) {
-                    _addAppErrLog('发送语音失败: ${e.toString()}');
-                  }
-                }
-                if (type['label'] == '文件') {
-                  try {
-                    final filePath = await _getAssetFilePath(
-                      'assets/voice.mp3',
-                    );
-                    final msg = EMMessage.createFileSendMessage(
-                      targetId: _roomId,
-                      filePath: filePath,
-                      fileSize: 111916,
-                      chatType: ChatType.ChatRoom,
-                    );
-                    await sendMessage(msg);
-                  } catch (e) {
-                    _addAppErrLog('发送文件失败: ${e.toString()}');
-                  }
-                }
-                if (type['label'] == '位置') {
-                  try {
-                    final msg = EMMessage.createLocationSendMessage(
-                      targetId: _roomId,
-                      latitude: 39.9042,
-                      longitude: 116.4074,
-                      address: '北京市海淀区中关村',
-                      chatType: ChatType.ChatRoom,
-                    );
-                    await sendMessage(msg);
-                  } catch (e) {
-                    _addAppErrLog('发送位置失败: ${e.toString()}');
-                  }
-                }
-                if (type['label'] == '自定义') {
-                  try {
-                    final msg = EMMessage.createCustomSendMessage(
-                      targetId: _roomId,
-                      event: 'eventValue',
-                      params: {'paramsKey': 'paramsValue'},
-                      chatType: ChatType.ChatRoom,
-                    );
-                    await sendMessage(msg);
-                  } catch (e) {
-                    _addAppErrLog('发送自定义失败: ${e.toString()}');
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.inputBackground(isDark),
-                foregroundColor: AppColors.textPrimary(isDark),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: AppColors.glassBorder(isDark)),
-                ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    type['icon'] as IconData,
-                    color: AppColors.primary(isDark),
-                    size: 24,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    type['label'] as String,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textSecondary(isDark),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      }).toList(),
+    return GridActionMenu(
+      items: items,
+      isDark: isDark,
+      itemWidth: MediaQuery.of(context).size.width / 6 - 8,
     );
   }
 
   Widget _buildChatRoomManagementButtons(bool isDark) {
-    final managementActions = [
-      {'icon': Icons.assignment_outlined, 'label': '详情'},
-      {'icon': Icons.drive_file_rename_outline, 'label': '名称'},
-      {'icon': Icons.subject, 'label': '描述'},
-      {'icon': Icons.campaign_outlined, 'label': '公告'},
-      {'icon': Icons.group_outlined, 'label': '成员'},
-      {'icon': Icons.admin_panel_settings_outlined, 'label': '管理员'},
-      {'icon': Icons.verified_user_outlined, 'label': '白名单'},
-      {'icon': Icons.mic_off_outlined, 'label': '禁言列表'},
-      {'icon': Icons.voice_over_off_outlined, 'label': '全部禁言'},
-      {'icon': Icons.swap_horiz_outlined, 'label': '转移'},
+    final items = [
+      GridActionItem(
+        icon: Icons.assignment_outlined,
+        label: '详情',
+        onTap: _showChatRoomDetails,
+      ),
+      GridActionItem(
+        icon: Icons.drive_file_rename_outline,
+        label: '名称',
+        onTap: () => _showRoomInfoDialog(RoomInfoEditType.name),
+      ),
+      GridActionItem(
+        icon: Icons.subject,
+        label: '描述',
+        onTap: () => _showRoomInfoDialog(RoomInfoEditType.description),
+      ),
+      GridActionItem(
+        icon: Icons.campaign_outlined,
+        label: '公告',
+        onTap: () => _showRoomInfoDialog(RoomInfoEditType.announcement),
+      ),
+      GridActionItem(
+        icon: Icons.group_outlined,
+        label: '成员',
+        onTap: _showMembersBottomSheet,
+      ),
+      GridActionItem(
+        icon: Icons.admin_panel_settings_outlined,
+        label: '管理员',
+        onTap: _showAdminsBottomSheet,
+      ),
+      GridActionItem(
+        icon: Icons.verified_user_outlined,
+        label: '白名单',
+        onTap: _showWhiteListBottomSheet,
+      ),
+      GridActionItem(
+        icon: Icons.mic_off_outlined,
+        label: '禁言列表',
+        onTap: _showMuteListBottomSheet,
+      ),
+      GridActionItem(
+        icon: Icons
+            .voice_over_off_outlined, // 修正：使用正确的图标常量，如果 voice_over_off 不存在可能需要换一个
+        label: '全部禁言',
+        onTap: _showMuteAllMuteAlert,
+      ),
+      GridActionItem(
+        icon: Icons.swap_horiz_outlined,
+        label: '转移',
+        onTap: _showChangeOwnerBottomSheet,
+      ),
     ];
 
-    // 分组，每行6个
-    List<List<Map<String, dynamic>>> rows = [];
-    for (int i = 0; i < managementActions.length; i += 6) {
-      rows.add(
-        managementActions.sublist(
-          i,
-          i + 6 > managementActions.length ? managementActions.length : i + 6,
-        ),
-      );
-    }
-
-    return Column(
-      children: rows.map((rowActions) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              ...rowActions.map((action) {
-                return Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: ElevatedButton(
-                      onPressed: () {
-                        if (action['label'] == '详情') {
-                          _showChatRoomDetails();
-                        } else if (action['label'] == '名称') {
-                          _showRoomInfoDialog(RoomInfoEditType.name);
-                        } else if (action['label'] == '描述') {
-                          _showRoomInfoDialog(RoomInfoEditType.description);
-                        } else if (action['label'] == '公告') {
-                          _showRoomInfoDialog(RoomInfoEditType.announcement);
-                        } else if (action['label'] == '成员') {
-                          _showMembersBottomSheet();
-                        } else if (action['label'] == '管理员') {
-                          _showAdminsBottomSheet();
-                        } else if (action['label'] == '白名单') {
-                          _showWhiteListBottomSheet();
-                        } else if (action['label'] == '禁言列表') {
-                          _showMuteListBottomSheet();
-                        } else if (action['label'] == '全部禁言') {
-                          _showMuteAllMuteAlert();
-                        } else if (action['label'] == '转移聊天室') {
-                          _showChangeOwnerBottomSheet();
-                        } else {
-                          _addSendLog('点击了${action['label']}');
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.inputBackground(isDark),
-                        foregroundColor: AppColors.textPrimary(isDark),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(
-                            color: AppColors.glassBorder(isDark),
-                          ),
-                        ),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            action['icon'] as IconData,
-                            color: AppColors.primary(isDark),
-                            size: 24,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            action['label'] as String,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: AppColors.textSecondary(isDark),
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }),
-              // 如果这一行不满6个，添加空白占位
-              ...List.generate(
-                6 - rowActions.length,
-                (index) => Expanded(child: SizedBox()),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
+    return GridActionMenu(
+      items: items,
+      isDark: isDark,
+      itemWidth: MediaQuery.of(context).size.width / 6 - 8,
     );
   }
 }

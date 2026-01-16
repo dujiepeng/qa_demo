@@ -3,7 +3,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
 import '../utils/version_manager.dart';
 import '../widgets/update_dialog.dart';
-import '../utils/chat_event_manager.dart';
+import '../utils/chat_event_widget.dart';
 import 'conversations_page.dart';
 import 'contacts_page.dart';
 import 'groups_page.dart';
@@ -112,7 +112,7 @@ class _HomePageState extends State<HomePage> {
           safeIndex = pages.length - 1;
         }
 
-        return ChatEventManager(
+        return ChatEventWidget(
           child: Scaffold(
             backgroundColor: AppColors.backgroundStart(isDark),
             body: IndexedStack(index: safeIndex, children: pages),

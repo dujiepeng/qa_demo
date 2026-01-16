@@ -1,5 +1,13 @@
 # Changelog
  
+## [1.35.0+58] - 2026-01-16
+
+### 修改内容
+- **[重构]** 提取 `GridActionMenu` 组件:
+    - 创建 `GridActionMenu` 通用网格菜单组件 (lib/widgets/grid_action_menu.dart)。
+    - 重构 `TestChatRoomPage` 使用该组件替代原有 GridView/Row 实现。
+- **[版本]** 迭代项目版本号至 `1.35.0+58`。
+
 ## [1.35.0+57] - 2026-01-16
 
 ### 修改内容

@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 
-class ChatEventManager extends StatefulWidget {
+class ChatEventWidget extends StatefulWidget {
   final Widget child;
-  const ChatEventManager({super.key, required this.child});
+  const ChatEventWidget({super.key, required this.child});
 
   @override
-  State<ChatEventManager> createState() => _ChatEventManagerState();
+  State<ChatEventWidget> createState() => _ChatEventWidgetState();
 }
 
-class _ChatEventManagerState extends State<ChatEventManager> {
+class _ChatEventWidgetState extends State<ChatEventWidget> {
   final String _eventKey = 'GLOBAL_EVENT_MANAGER';
 
   @override
