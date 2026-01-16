@@ -132,82 +132,88 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
           child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 30),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Brand / Logo area
-                  Icon(
-                    Icons.flash_on,
-                    size: 80,
-                    color: AppColors.primary(isDark),
-                  ),
-                  const SizedBox(height: 20),
-                  Center(
-                    child: Text(
-                      'QA DEMO',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary(isDark),
-                        letterSpacing: 2,
+            child: Center(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 30),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Brand / Logo area
+                      Icon(
+                        Icons.flash_on,
+                        size: 80,
+                        color: AppColors.primary(isDark),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-
-                  // UID Input
-                  _buildTextField(
-                    controller: _uidController,
-                    hintText: 'UID',
-                    icon: Icons.person_outline,
-                    textInputAction: TextInputAction.next,
-                    isDark: isDark,
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Password Input
-                  _buildTextField(
-                    controller: _pwdController,
-                    hintText: 'Password',
-                    icon: Icons.lock_outline,
-                    isObscured: true,
-                    textInputAction: TextInputAction.done,
-                    isDark: isDark,
-                  ),
-                  const SizedBox(height: 30),
-
-                  // Login Button
-                  _isLoading
-                      ? Center(
-                          child: CircularProgressIndicator(
-                            color: AppColors.primary(isDark),
-                          ),
-                        )
-                      : ElevatedButton(
-                          onPressed: _handleLogin,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary(isDark),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15),
-                            ),
-                            elevation: 5,
-                          ),
-                          child: const Text(
-                            'LOGIN',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
+                      const SizedBox(height: 20),
+                      Center(
+                        child: Text(
+                          'QA DEMO',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary(isDark),
+                            letterSpacing: 2,
                           ),
                         ),
+                      ),
+                      const SizedBox(height: 40),
 
-                  const SizedBox(height: 50),
-                ],
+                      // UID Input
+                      _buildTextField(
+                        controller: _uidController,
+                        hintText: 'UID',
+                        icon: Icons.person_outline,
+                        textInputAction: TextInputAction.next,
+                        isDark: isDark,
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Password Input
+                      _buildTextField(
+                        controller: _pwdController,
+                        hintText: 'Password',
+                        icon: Icons.lock_outline,
+                        isObscured: true,
+                        textInputAction: TextInputAction.done,
+                        isDark: isDark,
+                      ),
+                      const SizedBox(height: 30),
+
+                      // Login Button
+                      _isLoading
+                          ? Center(
+                              child: CircularProgressIndicator(
+                                color: AppColors.primary(isDark),
+                              ),
+                            )
+                          : ElevatedButton(
+                              onPressed: _handleLogin,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary(isDark),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                ),
+                                elevation: 5,
+                              ),
+                              child: const Text(
+                                'LOGIN',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+
+                      const SizedBox(height: 50),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
