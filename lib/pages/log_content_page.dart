@@ -14,11 +14,18 @@ class LogContentPage extends StatefulWidget {
 class _LogContentPageState extends State<LogContentPage> {
   String _content = 'Loading...';
   bool _isLoading = true;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _loadLogContent();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadLogContent() async {
@@ -61,14 +68,19 @@ class _LogContentPageState extends State<LogContentPage> {
       backgroundColor: AppColors.backgroundStart(isDark),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: SelectableText(
-                _content,
-                style: TextStyle(
-                  fontFamily: 'Courier',
-                  fontSize: 12,
-                  color: AppColors.textPrimary(isDark),
+          : Scrollbar(
+              controller: _scrollController,
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                padding: const EdgeInsets.all(16.0),
+                child: SelectableText(
+                  _content,
+                  style: TextStyle(
+                    fontFamily: 'Courier',
+                    fontSize: 12,
+                    color: AppColors.textPrimary(isDark),
+                  ),
                 ),
               ),
             ),
