@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class AppSettings extends ChangeNotifier {
   static final AppSettings _instance = AppSettings._internal();
@@ -67,6 +68,15 @@ class AppSettings extends ChangeNotifier {
     _isDarkMode = prefs.getBool(_keyIsDarkMode) ?? true;
     isLoggedIn = prefs.getBool(_keyIsLoggedIn) ?? false;
     _isTestMode = prefs.getBool(_keyIsTestMode) ?? false;
+
+    // 加载历史记录
+    final historyJson = prefs.getStringList(_keyConfigHistory);
+    if (historyJson != null) {
+      configHistory = historyJson
+          .map((e) => ServerConfig.fromJson(jsonDecode(e)))
+          .toList();
+    }
+
     _updateSnapshot();
     isDirty = true;
   }
@@ -94,6 +104,12 @@ class AppSettings extends ChangeNotifier {
     await prefs.setBool(_keyIsLoggedIn, isLoggedIn);
     await prefs.setBool(_keyIsTestMode, _isTestMode);
 
+    // 保存历史记录
+    final historyJson = configHistory
+        .map((e) => jsonEncode(e.toJson()))
+        .toList();
+    await prefs.setStringList(_keyConfigHistory, historyJson);
+
     _updateSnapshot();
     isDirty = true;
   }
@@ -113,5 +129,83 @@ class AppSettings extends ChangeNotifier {
         currentImServer != _origImServer ||
         currentImPort != _origImPort ||
         currentRestServer != _origRestServer;
+  }
+
+  // 配置历史相关
+  List<ServerConfig> configHistory = [];
+  static const String _keyConfigHistory = 'config_history';
+
+  void addCurrentConfigToHistory() {
+    final newConfig = ServerConfig(
+      appKey: appKey,
+      useCustomAppKey: useCustomAppKey,
+      useCustomServer: useCustomServer,
+      imServer: imServer,
+      imPort: imPort,
+      restServer: restServer,
+    );
+
+    // 如果已存在相同的 AppKey，先移除旧的
+    configHistory.removeWhere((config) => config.appKey == appKey);
+    // 插入到头部
+    configHistory.insert(0, newConfig);
+    // 限制历史记录数量，例如 20 条
+    if (configHistory.length > 20) {
+      configHistory = configHistory.sublist(0, 20);
+    }
+  }
+
+  void removeConfigFromHistory(String targetAppKey) {
+    configHistory.removeWhere((config) => config.appKey == targetAppKey);
+    isDirty = true;
+    saveSettings(); // 这里直接保存一下，避免删除后重启又回来了
+  }
+
+  void applyConfig(ServerConfig config) {
+    useCustomAppKey = config.useCustomAppKey;
+    appKey = config.appKey;
+    useCustomServer = config.useCustomServer;
+    imServer = config.imServer;
+    imPort = config.imPort;
+    restServer = config.restServer;
+    notifyListeners();
+  }
+}
+
+class ServerConfig {
+  final String appKey;
+  final bool useCustomAppKey;
+  final bool useCustomServer;
+  final String imServer;
+  final int imPort;
+  final String restServer;
+
+  ServerConfig({
+    required this.appKey,
+    required this.useCustomAppKey,
+    required this.useCustomServer,
+    required this.imServer,
+    required this.imPort,
+    required this.restServer,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'appKey': appKey,
+    'useCustomAppKey': useCustomAppKey,
+    'useCustomServer': useCustomServer,
+    'imServer': imServer,
+    'imPort': imPort,
+    'restServer': restServer,
+  };
+
+  factory ServerConfig.fromJson(Map<String, dynamic> json) {
+    return ServerConfig(
+      appKey: json['appKey'] as String,
+      useCustomAppKey: json['useCustomAppKey'] as bool,
+      useCustomServer: json['useCustomServer'] as bool,
+      imServer: json['imServer'] as String,
+      imPort: json['imPort'] as int,
+      restServer: json['restServer'] as String,
+    );
   }
 }
