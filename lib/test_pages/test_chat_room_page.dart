@@ -280,6 +280,54 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
     }
   }
 
+  Future<void> _showChatRoomDetails() async {
+    if (_roomId.isEmpty) {
+      _addSendLog('请先加入聊天室');
+      return;
+    }
+    try {
+      final room = await EMClient.getInstance.chatRoomManager
+          .fetchChatRoomInfoFromServer(_roomId);
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: Text(room.name ?? '聊天室详情'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('ID: ${room.roomId}'),
+                    const SizedBox(height: 8),
+                    Text('Name: ${room.name}'),
+                    const SizedBox(height: 8),
+                    Text('Description: ${room.description}'),
+                    const SizedBox(height: 8),
+                    Text('Owner: ${room.owner}'),
+                    const SizedBox(height: 8),
+                    Text('Max Users: ${room.maxUsers}'),
+                    const SizedBox(height: 8),
+                    Text('Member Count: ${room.memberCount}'),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('关闭'),
+                ),
+              ],
+            );
+          },
+        );
+      }
+    } catch (e) {
+      _addSendLog('获取详情失败: $e');
+    }
+  }
+
   void _showMembersBottomSheet() {
     if (_roomId.isEmpty) {
       _addSendLog('请先加入聊天室');
@@ -830,8 +878,9 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
 
   Widget _buildChatRoomManagementButtons(bool isDark) {
     final managementActions = [
-      {'icon': Icons.info_outline, 'label': '名称'},
-      {'icon': Icons.info_outline, 'label': '描述'},
+      {'icon': Icons.assignment_outlined, 'label': '详情'},
+      {'icon': Icons.drive_file_rename_outline, 'label': '名称'},
+      {'icon': Icons.subject, 'label': '描述'},
       {'icon': Icons.campaign_outlined, 'label': '公告'},
       {'icon': Icons.group_outlined, 'label': '成员'},
       {'icon': Icons.admin_panel_settings_outlined, 'label': '管理员'},
@@ -865,7 +914,9 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: ElevatedButton(
                       onPressed: () {
-                        if (action['label'] == '名称') {
+                        if (action['label'] == '详情') {
+                          _showChatRoomDetails();
+                        } else if (action['label'] == '名称') {
                           _showRoomInfoDialog(RoomInfoEditType.name);
                         } else if (action['label'] == '描述') {
                           _showRoomInfoDialog(RoomInfoEditType.description);
