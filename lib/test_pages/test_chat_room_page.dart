@@ -171,6 +171,10 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
     _logController.addLog(content);
   }
 
+  void _addAppErrLog(String content) {
+    _logController.addLog(content, color: Colors.red);
+  }
+
   void _addSendLog(String content) {
     _logController.addLog(content, color: Colors.green);
   }
@@ -642,20 +646,17 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                         onPressed: () async {
                           String text = _messageController.text.trim();
                           if (text.isEmpty) return;
-
-                          final msg = EMMessage.createTxtSendMessage(
-                            targetId: _roomId,
-                            content: text,
-                            chatType: ChatType.ChatRoom,
-                          );
                           try {
-                            await EMClient.getInstance.chatManager.sendMessage(
-                              msg,
+                            final msg = EMMessage.createTxtSendMessage(
+                              targetId: _roomId,
+                              content: text,
+                              chatType: ChatType.ChatRoom,
                             );
+                            await sendMessage(msg);
+                            _messageController.clear();
                           } catch (e) {
-                            _addSendLog('发送失败: ${e.toString()}');
+                            _addAppErrLog('发送文字失败: ${e.toString()}');
                           }
-                          _messageController.clear();
                         },
                         isDark: isDark,
                       ),
@@ -680,6 +681,18 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
         ),
       ),
     );
+  }
+
+  Future<void> sendMessage(msg) async {
+    try {
+      msg.attributes = {
+        'extKey1': 'extValue1',
+        'date': DateTime.now().toString(),
+      };
+      await EMClient.getInstance.chatManager.sendMessage(msg);
+    } catch (e) {
+      rethrow;
+    }
   }
 
   Widget _buildInputRow({
@@ -781,65 +794,91 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                       fileSize: 111916,
                       chatType: ChatType.ChatRoom,
                     );
-                    await EMClient.getInstance.chatManager.sendMessage(msg);
+                    await sendMessage(msg);
                   } catch (e) {
-                    _addSendLog('发送图片失败: ${e.toString()}');
+                    _addAppErrLog('发送图片失败: ${e.toString()}');
                   }
                 }
                 if (type['label'] == '视频') {
-                  final filePath = await _getAssetFilePath('assets/video.mp4');
-                  final thumb = await _getAssetFilePath('assets/image.jpg');
-                  final msg = EMMessage.createVideoSendMessage(
-                    targetId: _roomId,
-                    filePath: filePath,
-                    thumbnailLocalPath: thumb,
-                    width: 1920,
-                    height: 1080,
-                    duration: 10,
-                    fileSize: 4006696,
-                    chatType: ChatType.ChatRoom,
-                  );
-                  await EMClient.getInstance.chatManager.sendMessage(msg);
+                  try {
+                    final filePath = await _getAssetFilePath(
+                      'assets/video.mp4',
+                    );
+                    final thumb = await _getAssetFilePath('assets/image.jpg');
+                    final msg = EMMessage.createVideoSendMessage(
+                      targetId: _roomId,
+                      filePath: filePath,
+                      thumbnailLocalPath: thumb,
+                      width: 1920,
+                      height: 1080,
+                      duration: 10,
+                      fileSize: 4006696,
+                      chatType: ChatType.ChatRoom,
+                    );
+                    await sendMessage(msg);
+                  } catch (e) {
+                    _addAppErrLog('发送视频失败: ${e.toString()}');
+                  }
                 }
                 if (type['label'] == '语音') {
-                  final filePath = await _getAssetFilePath('assets/voice.mp3');
-                  final msg = EMMessage.createVoiceSendMessage(
-                    targetId: _roomId,
-                    filePath: filePath,
-                    duration: 10,
-                    fileSize: 111916,
-                    chatType: ChatType.ChatRoom,
-                  );
-                  await EMClient.getInstance.chatManager.sendMessage(msg);
+                  try {
+                    final filePath = await _getAssetFilePath(
+                      'assets/voice.mp3',
+                    );
+                    final msg = EMMessage.createVoiceSendMessage(
+                      targetId: _roomId,
+                      filePath: filePath,
+                      duration: 10,
+                      fileSize: 111916,
+                      chatType: ChatType.ChatRoom,
+                    );
+                    await sendMessage(msg);
+                  } catch (e) {
+                    _addAppErrLog('发送语音失败: ${e.toString()}');
+                  }
                 }
                 if (type['label'] == '文件') {
-                  final filePath = await _getAssetFilePath('assets/voice.mp3');
-                  final msg = EMMessage.createFileSendMessage(
-                    targetId: _roomId,
-                    filePath: filePath,
-                    fileSize: 111916,
-                    chatType: ChatType.ChatRoom,
-                  );
-                  await EMClient.getInstance.chatManager.sendMessage(msg);
+                  try {
+                    final filePath = await _getAssetFilePath(
+                      'assets/voice.mp3',
+                    );
+                    final msg = EMMessage.createFileSendMessage(
+                      targetId: _roomId,
+                      filePath: filePath,
+                      fileSize: 111916,
+                      chatType: ChatType.ChatRoom,
+                    );
+                    await sendMessage(msg);
+                  } catch (e) {
+                    _addAppErrLog('发送文件失败: ${e.toString()}');
+                  }
                 }
                 if (type['label'] == '位置') {
-                  final msg = EMMessage.createLocationSendMessage(
-                    targetId: _roomId,
-                    latitude: 39.9042,
-                    longitude: 116.4074,
-                    address: '北京市海淀区中关村',
-                    chatType: ChatType.ChatRoom,
-                  );
-                  await EMClient.getInstance.chatManager.sendMessage(msg);
+                  try {
+                    final msg = EMMessage.createLocationSendMessage(
+                      targetId: _roomId,
+                      latitude: 39.9042,
+                      longitude: 116.4074,
+                      address: '北京市海淀区中关村',
+                      chatType: ChatType.ChatRoom,
+                    );
+                    await sendMessage(msg);
+                  } catch (e) {
+                    _addAppErrLog('发送位置失败: ${e.toString()}');
+                  }
                 }
                 if (type['label'] == '自定义') {
-                  final msg = EMMessage.createCustomSendMessage(
-                    targetId: _roomId,
-                    event: 'eventValue',
-                    params: {'paramsKey': 'paramsValue'},
-                    chatType: ChatType.ChatRoom,
-                  );
-                  await EMClient.getInstance.chatManager.sendMessage(msg);
+                  try {
+                    final msg = EMMessage.createCustomSendMessage(
+                      targetId: _roomId,
+                      event: 'eventValue',
+                      params: {'paramsKey': 'paramsValue'},
+                      chatType: ChatType.ChatRoom,
+                    );
+                    await sendMessage(msg);
+                  } catch (e) {
+                    _addAppErrLog('发送自定义失败: ${e.toString()}');
+                  }
                 }
               },
               style: ElevatedButton.styleFrom(

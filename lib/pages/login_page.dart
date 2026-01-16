@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
-import '../utils/chat_event_manager.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -77,9 +76,6 @@ class _LoginPageState extends State<LoginPage> {
       } catch (_) {}
 
       await EMClient.getInstance.loginWithPassword(uid, pwd);
-
-      // 初始化全局事件监听器
-      ChatEventManager.getInstance().init();
 
       // // 更新登录状态并保存
       // _settings.isLoggedIn = true;

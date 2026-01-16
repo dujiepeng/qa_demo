@@ -3,6 +3,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
 import '../utils/version_manager.dart';
 import '../widgets/update_dialog.dart';
+import '../utils/chat_event_manager.dart';
 import 'conversations_page.dart';
 import 'contacts_page.dart';
 import 'groups_page.dart';
@@ -111,79 +112,81 @@ class _HomePageState extends State<HomePage> {
           safeIndex = pages.length - 1;
         }
 
-        return Scaffold(
-          backgroundColor: AppColors.backgroundStart(isDark),
-          body: IndexedStack(index: safeIndex, children: pages),
-          bottomNavigationBar: Container(
-            decoration: BoxDecoration(
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
-                  blurRadius: 10,
-                  offset: const Offset(0, -5),
-                ),
-              ],
-            ),
-            child: ListenableBuilder(
-              listenable: VersionManager(),
-              builder: (context, _) {
-                return BottomNavigationBar(
-                  currentIndex: safeIndex,
-                  onTap: (index) => setState(() => _currentIndex = index),
-                  type: BottomNavigationBarType.fixed,
-                  backgroundColor: AppColors.backgroundEnd(isDark),
-                  selectedItemColor: AppColors.primary(isDark),
-                  unselectedItemColor: AppColors.textSecondary(isDark),
-                  showUnselectedLabels: true,
-                  selectedFontSize: 12,
-                  unselectedFontSize: 12,
-                  items: items.map((item) {
-                    // 为“我”的 Tab (label == '我') 添加红点
-                    if (item.label == '我' && VersionManager().hasNewVersion) {
-                      return BottomNavigationBarItem(
-                        icon: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            item.icon,
-                            Positioned(
-                              right: -2,
-                              top: -2,
-                              child: Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
+        return ChatEventManager(
+          child: Scaffold(
+            backgroundColor: AppColors.backgroundStart(isDark),
+            body: IndexedStack(index: safeIndex, children: pages),
+            bottomNavigationBar: Container(
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, -5),
+                  ),
+                ],
+              ),
+              child: ListenableBuilder(
+                listenable: VersionManager(),
+                builder: (context, _) {
+                  return BottomNavigationBar(
+                    currentIndex: safeIndex,
+                    onTap: (index) => setState(() => _currentIndex = index),
+                    type: BottomNavigationBarType.fixed,
+                    backgroundColor: AppColors.backgroundEnd(isDark),
+                    selectedItemColor: AppColors.primary(isDark),
+                    unselectedItemColor: AppColors.textSecondary(isDark),
+                    showUnselectedLabels: true,
+                    selectedFontSize: 12,
+                    unselectedFontSize: 12,
+                    items: items.map((item) {
+                      // 为“我”的 Tab (label == '我') 添加红点
+                      if (item.label == '我' && VersionManager().hasNewVersion) {
+                        return BottomNavigationBarItem(
+                          icon: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              item.icon,
+                              Positioned(
+                                right: -2,
+                                top: -2,
+                                child: Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        activeIcon: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            item.activeIcon,
-                            Positioned(
-                              right: -2,
-                              top: -2,
-                              child: Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
+                            ],
+                          ),
+                          activeIcon: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              item.activeIcon,
+                              Positioned(
+                                right: -2,
+                                top: -2,
+                                child: Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        label: item.label,
-                      );
-                    }
-                    return item;
-                  }).toList(),
-                );
-              },
+                            ],
+                          ),
+                          label: item.label,
+                        );
+                      }
+                      return item;
+                    }).toList(),
+                  );
+                },
+              ),
             ),
           ),
         );
