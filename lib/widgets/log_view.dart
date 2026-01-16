@@ -120,6 +120,8 @@ class _LogViewState extends State<LogView> {
                     : Scrollbar(
                         controller: _scrollController,
                         thumbVisibility: true,
+                        thickness: 12.0,
+                        radius: const Radius.circular(6.0),
                         child: ListView.builder(
                           controller: _scrollController,
                           padding: const EdgeInsets.all(8),
