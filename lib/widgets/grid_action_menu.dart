@@ -15,6 +15,7 @@ class GridActionItem {
 
 class GridActionMenu extends StatelessWidget {
   final List<GridActionItem> items;
+  final int? columns; // 新增列数参数
   final double? itemWidth;
   final double itemHeight;
   final double spacing;
@@ -25,6 +26,7 @@ class GridActionMenu extends StatelessWidget {
     super.key,
     required this.items,
     this.itemWidth,
+    this.columns,
     this.itemHeight = 60,
     this.spacing = 8,
     this.runSpacing = 8,
@@ -35,9 +37,17 @@ class GridActionMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Calculate item width if not provided to fit roughly 4 items per row by default, or use fixed width
-        final double width =
-            itemWidth ?? (constraints.maxWidth - spacing * 5) / 4;
+        double width;
+        if (columns != null && columns! > 0) {
+          // 如果指定了列数，计算每列的宽度 (优先于 itemWidth)
+          // 总间距 = (列数 - 1) * spacing
+          width = (constraints.maxWidth - (columns! - 1) * spacing) / columns!;
+        } else if (itemWidth != null) {
+          width = itemWidth!;
+        } else {
+          // 默认每行4个
+          width = (constraints.maxWidth - 3 * spacing) / 4;
+        }
 
         return Wrap(
           spacing: spacing,

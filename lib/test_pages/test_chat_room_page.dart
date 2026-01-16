@@ -883,10 +883,9 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
       ),
     ];
 
-    return GridActionMenu(
-      items: items,
-      isDark: isDark,
-      itemWidth: MediaQuery.of(context).size.width / 6 - 8,
+    return SizedBox(
+      width: MediaQuery.of(context).size.width,
+      child: GridActionMenu(items: items, isDark: isDark, itemWidth: 50),
     );
   }
 
@@ -945,10 +944,9 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
       ),
     ];
 
-    return GridActionMenu(
-      items: items,
-      isDark: isDark,
-      itemWidth: MediaQuery.of(context).size.width / 6 - 8,
+    return SizedBox(
+      width: MediaQuery.of(context).size.width,
+      child: GridActionMenu(items: items, isDark: isDark, columns: 6),
     );
   }
 }
