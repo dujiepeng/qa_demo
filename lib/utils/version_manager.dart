@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
@@ -48,8 +47,7 @@ class VersionManager extends ChangeNotifier {
         final remoteVersion = tagName.replaceAll('v', '');
         final localVersion = AppConfig.appVersion.replaceAll('v', '');
 
-        if (Platform.isAndroid &&
-            _compareVersions(remoteVersion, localVersion) > 0) {
+        if (_compareVersions(remoteVersion, localVersion) > 0) {
           _hasNewVersion = true;
           _latestVersion = remoteVersion;
 

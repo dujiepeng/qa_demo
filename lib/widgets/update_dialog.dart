@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -59,6 +60,13 @@ class UpdateDialog extends StatelessWidget {
         ),
         ElevatedButton(
           onPressed: () async {
+            if (!Platform.isAndroid) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('只支持安卓系统')));
+              return;
+            }
+
             Navigator.of(context).pop();
             final uri = Uri.parse(downloadUrl);
             if (await canLaunchUrl(uri)) {
