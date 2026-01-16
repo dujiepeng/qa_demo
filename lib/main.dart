@@ -3,7 +3,6 @@ import 'package:qa_flutter/test_pages/test_chat_room_list_page.dart';
 import 'pages/home_page.dart';
 import 'pages/login_page.dart';
 import 'pages/settings_page.dart';
-import 'test_pages/test_chat_room_page.dart';
 import 'theme/app_settings.dart';
 import 'utils/version_manager.dart';
 

@@ -167,6 +167,10 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
     );
   }
 
+  void _addLog(String content) {
+    _logController.addLog(content);
+  }
+
   void _addSendLog(String content) {
     _logController.addLog(content, color: Colors.green);
   }
@@ -477,6 +481,58 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
         centerTitle: true,
         actions: [
           IconButton(
+            icon: const Icon(Icons.info),
+            onPressed: () async {
+              if (_roomId.isEmpty) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('请先加入聊天室')));
+                return;
+              }
+              try {
+                final room = await EMClient.getInstance.chatRoomManager
+                    .fetchChatRoomInfoFromServer(_roomId);
+                if (context.mounted) {
+                  showDialog(
+                    context: context,
+                    builder: (context) {
+                      return AlertDialog(
+                        title: Text(room.name ?? '聊天室详情'),
+                        content: SingleChildScrollView(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('ID: ${room.roomId}'),
+                              const SizedBox(height: 8),
+                              Text('Name: ${room.name}'),
+                              const SizedBox(height: 8),
+                              Text('Description: ${room.description}'),
+                              const SizedBox(height: 8),
+                              Text('Owner: ${room.owner}'),
+                              const SizedBox(height: 8),
+                              Text('Max Users: ${room.maxUsers}'),
+                              const SizedBox(height: 8),
+                              Text('Member Count: ${room.memberCount}'),
+                            ],
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('关闭'),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                }
+              } catch (e) {
+                _addLog('获取详情失败: $e');
+              }
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.exit_to_app),
             tooltip: '退出聊天室',
             onPressed: () async {
@@ -484,10 +540,10 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                 await EMClient.getInstance.chatRoomManager.leaveChatRoom(
                   _roomId,
                 );
+                _addLog('退出 $_roomId 成功');
                 _roomId = '';
-                _addSendLog('退出成功');
               } catch (e) {
-                _addSendLog('退出失败: ${e.toString()}');
+                _addLog('退出 $_roomId 失败: ${e.toString()}');
               }
             },
           ),
@@ -528,12 +584,13 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                             await EMClient.getInstance.chatRoomManager
                                 .joinChatRoom(_roomIdController.text.trim());
                             _roomId = _roomIdController.text;
-                            showMsg = "加入成功";
+                            showMsg =
+                                "加入成功， roomId: ${_roomIdController.text.trim()} ";
                           } catch (e) {
                             showMsg =
                                 '加入 ${_roomIdController.text} 失败：${e.toString()}';
                           } finally {
-                            _addSendLog(showMsg);
+                            _addLog(showMsg);
                           }
                         },
                         isDark: isDark,
