@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
 import '../utils/version_manager.dart';
 
 class UpdateDialog extends StatelessWidget {
   final String version;
   final String releaseNotes;
+  final String downloadUrl;
 
   const UpdateDialog({
     super.key,
     required this.version,
     required this.releaseNotes,
+    required this.downloadUrl,
   });
 
   static void show(BuildContext context) {
@@ -21,6 +24,7 @@ class UpdateDialog extends StatelessWidget {
       builder: (context) => UpdateDialog(
         version: VersionManager().latestVersion,
         releaseNotes: VersionManager().releaseNotes,
+        downloadUrl: VersionManager().downloadUrl,
       ),
     );
   }
@@ -54,9 +58,12 @@ class UpdateDialog extends StatelessWidget {
           child: const Text('稍后'),
         ),
         ElevatedButton(
-          onPressed: () {
+          onPressed: () async {
             Navigator.of(context).pop();
-            // TODO: 跳转到更新页面或下载链接
+            final uri = Uri.parse(downloadUrl);
+            if (await canLaunchUrl(uri)) {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
           },
           child: const Text('立即更新'),
         ),
