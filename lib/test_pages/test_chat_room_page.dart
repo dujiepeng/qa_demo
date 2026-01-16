@@ -482,54 +482,45 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.info),
-            onPressed: () async {
-              if (_roomId.isEmpty) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text('请先加入聊天室')));
-                return;
-              }
-              try {
-                final room = await EMClient.getInstance.chatRoomManager
-                    .fetchChatRoomInfoFromServer(_roomId);
-                if (context.mounted) {
-                  showDialog(
-                    context: context,
-                    builder: (context) {
-                      return AlertDialog(
-                        title: Text(room.name ?? '聊天室详情'),
-                        content: SingleChildScrollView(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('ID: ${room.roomId}'),
-                              const SizedBox(height: 8),
-                              Text('Name: ${room.name}'),
-                              const SizedBox(height: 8),
-                              Text('Description: ${room.description}'),
-                              const SizedBox(height: 8),
-                              Text('Owner: ${room.owner}'),
-                              const SizedBox(height: 8),
-                              Text('Max Users: ${room.maxUsers}'),
-                              const SizedBox(height: 8),
-                              Text('Member Count: ${room.memberCount}'),
-                            ],
+            onPressed: () {
+              final settings = AppSettings();
+              showDialog(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    title: const Text('SDK Configuration'),
+                    content: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('AppKey: ${settings.appKey}'),
+                          Text(
+                            'Use Custom AppKey: ${settings.useCustomAppKey}',
                           ),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: const Text('关闭'),
+                          const Divider(),
+                          Text(
+                            'Use Custom Server: ${settings.useCustomServer}',
                           ),
+                          if (settings.useCustomServer) ...[
+                            Text('IM Server: ${settings.imServer}'),
+                            Text('IM Port: ${settings.imPort}'),
+                            Text('REST Server: ${settings.restServer}'),
+                          ],
+                          const Divider(),
+                          Text('Test Mode: ${settings.isTestMode}'),
                         ],
-                      );
-                    },
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('关闭'),
+                      ),
+                    ],
                   );
-                }
-              } catch (e) {
-                _addLog('获取详情失败: $e');
-              }
+                },
+              );
             },
           ),
           IconButton(
