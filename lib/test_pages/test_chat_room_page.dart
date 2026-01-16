@@ -670,6 +670,10 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                       _buildSectionTitle('控制', isDark),
                       const SizedBox(height: 10),
                       _buildChatRoomManagementButtons(isDark),
+                      const SizedBox(height: 10),
+                      _buildSectionTitle('工具', isDark),
+                      const SizedBox(height: 10),
+                      _buildItemsButtons(isDark),
                       const SizedBox(height: 20),
                       // 日志显示区域
                       LogView(controller: _logController, isDark: isDark),
@@ -932,8 +936,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
         onTap: _showMuteListBottomSheet,
       ),
       GridActionItem(
-        icon: Icons
-            .voice_over_off_outlined, // 修正：使用正确的图标常量，如果 voice_over_off 不存在可能需要换一个
+        icon: Icons.voice_over_off_outlined,
         label: '全部禁言',
         onTap: _showMuteAllMuteAlert,
       ),
@@ -946,7 +949,25 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
 
     return SizedBox(
       width: MediaQuery.of(context).size.width,
-      child: GridActionMenu(items: items, isDark: isDark, columns: 6),
+      child: GridActionMenu(items: items, isDark: isDark, itemWidth: 50),
+    );
+  }
+
+  Widget _buildItemsButtons(bool isDark) {
+    final items = [
+      GridActionItem(
+        icon: Icons.article_outlined,
+        label: '日志',
+        onTap: () {
+          // TODO: Implement Log action
+          _addAppErrLog('点击了日志按钮');
+        },
+      ),
+    ];
+
+    return SizedBox(
+      width: MediaQuery.of(context).size.width,
+      child: GridActionMenu(items: items, isDark: isDark, itemWidth: 50),
     );
   }
 }
