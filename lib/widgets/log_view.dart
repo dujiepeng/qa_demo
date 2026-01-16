@@ -38,24 +38,37 @@ class LogController extends ChangeNotifier {
 }
 
 /// 独立的日志视图组件
-class LogView extends StatelessWidget {
+class LogView extends StatefulWidget {
   final LogController controller;
   final bool isDark;
 
   const LogView({super.key, required this.controller, required this.isDark});
 
   @override
+  State<LogView> createState() => _LogViewState();
+}
+
+class _LogViewState extends State<LogView> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: controller,
+      listenable: widget.controller,
       builder: (context, _) {
         return Container(
+          height: 400,
           decoration: BoxDecoration(
-            color: AppColors.inputBackground(isDark),
+            color: AppColors.inputBackground(widget.isDark),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.glassBorder(isDark)),
+            border: Border.all(color: AppColors.glassBorder(widget.isDark)),
           ),
-          constraints: const BoxConstraints(minHeight: 600),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -70,7 +83,7 @@ class LogView extends StatelessWidget {
                     Text(
                       '操作日志',
                       style: TextStyle(
-                        color: AppColors.textPrimary(isDark),
+                        color: AppColors.textPrimary(widget.isDark),
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
@@ -79,94 +92,99 @@ class LogView extends StatelessWidget {
                       icon: Icon(
                         Icons.refresh,
                         size: 20,
-                        color: AppColors.textSecondary(isDark),
+                        color: AppColors.textSecondary(widget.isDark),
                       ),
                       tooltip: '清空日志',
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
-                      onPressed: () => controller.clearLogs(),
+                      onPressed: () => widget.controller.clearLogs(),
                     ),
                   ],
                 ),
               ),
-              Divider(height: 1, color: AppColors.glassBorder(isDark)),
-              controller.logs.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20.0),
-                        child: Text(
-                          '暂无日志',
-                          style: TextStyle(
-                            color: AppColors.textSecondary(isDark),
-                            fontSize: 12,
+              Divider(height: 1, color: AppColors.glassBorder(widget.isDark)),
+              Expanded(
+                child: widget.controller.logs.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Text(
+                            '暂无日志',
+                            style: TextStyle(
+                              color: AppColors.textSecondary(widget.isDark),
+                              fontSize: 12,
+                            ),
                           ),
                         ),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(8),
-                      itemCount: controller.logs.length,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemBuilder: (context, index) {
-                        final entry = controller.logs[index];
-                        return GestureDetector(
-                          onLongPressStart: (details) async {
-                            final position = details.globalPosition;
-                            final value = await showMenu<String>(
-                              context: context,
-                              position: RelativeRect.fromLTRB(
-                                position.dx,
-                                position.dy,
-                                position.dx,
-                                position.dy,
-                              ),
-                              items: [
-                                const PopupMenuItem(
-                                  value: 'copy',
-                                  child: Text('复制'),
-                                ),
-                              ],
-                            );
-
-                            if (value == 'copy') {
-                              final text =
-                                  '${entry.timestamp}: ${entry.content}';
-                              await Clipboard.setData(
-                                ClipboardData(text: text),
-                              );
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('已复制到剪贴板'),
-                                    duration: Duration(milliseconds: 500),
+                      )
+                    : Scrollbar(
+                        controller: _scrollController,
+                        thumbVisibility: true,
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.all(8),
+                          itemCount: widget.controller.logs.length,
+                          itemBuilder: (context, index) {
+                            final entry = widget.controller.logs[index];
+                            return GestureDetector(
+                              onLongPressStart: (details) async {
+                                final position = details.globalPosition;
+                                final value = await showMenu<String>(
+                                  context: context,
+                                  position: RelativeRect.fromLTRB(
+                                    position.dx,
+                                    position.dy,
+                                    position.dx,
+                                    position.dy,
                                   ),
+                                  items: [
+                                    const PopupMenuItem(
+                                      value: 'copy',
+                                      child: Text('复制'),
+                                    ),
+                                  ],
                                 );
-                              }
-                            }
-                          },
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(vertical: 2),
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 4,
-                              horizontal: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: entry.color ?? Colors.transparent,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              '${entry.timestamp}: ${entry.content}',
-                              style: TextStyle(
-                                color: AppColors.textPrimary(isDark),
-                                fontSize: 12,
-                                fontFamily: 'monospace',
+
+                                if (value == 'copy') {
+                                  final text =
+                                      '${entry.timestamp}: ${entry.content}';
+                                  await Clipboard.setData(
+                                    ClipboardData(text: text),
+                                  );
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('已复制到剪贴板'),
+                                        duration: Duration(milliseconds: 500),
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 4,
+                                  horizontal: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: entry.color ?? Colors.transparent,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  '${entry.timestamp}: ${entry.content}',
+                                  style: TextStyle(
+                                    color: AppColors.textPrimary(widget.isDark),
+                                    fontSize: 12,
+                                    fontFamily: 'monospace',
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                            );
+                          },
+                        ),
+                      ),
+              ),
             ],
           ),
         );
