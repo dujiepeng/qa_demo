@@ -1,5 +1,12 @@
 # Changelog
  
+## [1.35.0+66] - 2026-01-16
+
+### 修改内容
+- **[配置]** 修复 iOS 无法调用 `canLaunchUrl` 的问题:
+    - 在 `ios/Runner/Info.plist` 中添加了 `LSApplicationQueriesSchemes`，配置了 (`https`, `http`) 白名单。
+- **[版本]** 迭代项目版本号至 `1.35.0+66`。
+
 ## [1.35.0+65] - 2026-01-16
 
 ### 修改内容
