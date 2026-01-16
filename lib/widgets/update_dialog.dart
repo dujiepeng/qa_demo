@@ -68,11 +68,10 @@ class UpdateDialog extends StatelessWidget {
             }
 
             Navigator.of(context).pop();
-            // final uri = Uri.parse(downloadUrl);
-            final uri = Uri.parse(downloadUrl);
-            if (await canLaunchUrl(uri)) {
-              await launchUrl(uri, mode: LaunchMode.externalApplication);
-            }
+            final uri = Uri.parse(
+              'https://github.com/dujiepeng/qa_demo/releases',
+            );
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
           },
           child: const Text('立即更新'),
         ),
