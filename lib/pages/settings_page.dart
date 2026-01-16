@@ -55,27 +55,35 @@ class _SettingsPageState extends State<SettingsPage> {
     );
 
     if (hasChanged) {
-      _settings.useCustomAppKey = _useCustomAppKey;
-      _settings.appKey = _appKeyController.text.trim();
-      _settings.useCustomServer = _useCustomServer;
-      _settings.imServer = _imServerController.text.trim();
-      _settings.imPort = imPort;
-      _settings.restServer = _restServerController.text.trim();
-      _settings.isDirty = true;
-      // 清理登录状态
-      _settings.isLoggedIn = false;
-
-      await _settings.saveSettings();
-
       if (mounted) {
         showDialog(
           context: context,
           barrierDismissible: false,
           builder: (context) => AlertDialog(
-            title: const Text('配置已更新'),
-            content: const Text('服务器配置已变更，应用需要重启以使配置生效。'),
+            title: const Text('是否更新配置?'),
+            content: const Text('更新服务器配置需要重启app后才生效。'),
             actions: [
-              TextButton(onPressed: () => exit(0), child: const Text('确认重启')),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('取消'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  _settings.useCustomAppKey = _useCustomAppKey;
+                  _settings.appKey = _appKeyController.text.trim();
+                  _settings.useCustomServer = _useCustomServer;
+                  _settings.imServer = _imServerController.text.trim();
+                  _settings.imPort = imPort;
+                  _settings.restServer = _restServerController.text.trim();
+                  _settings.isDirty = true;
+                  // 清理登录状态
+                  _settings.isLoggedIn = false;
+
+                  await _settings.saveSettings();
+                  exit(0);
+                },
+                child: const Text('确认重启'),
+              ),
             ],
           ),
         );
