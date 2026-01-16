@@ -1,5 +1,13 @@
 # Changelog
  
+## [1.35.0+70] - 2026-01-16
+
+### 修改内容
+- **[配置]** Android 权限完善:
+    - `AndroidManifest.xml` 增加 `android.permission.INTERNET` 权限（虽然通常 Debug 默认有，但 Release 必须）。
+    - 增加 `<queries>` 标签配置 `http` 和 `https` 的 Scheme，适配 Android 11+ 对 `url_launcher` 的可见性要求。
+- **[版本]** 迭代项目版本号至 `1.35.0+70`。
+
 ## [1.35.0+69] - 2026-01-16
 
 ### 修改内容

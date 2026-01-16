@@ -68,6 +68,7 @@ class UpdateDialog extends StatelessWidget {
             }
 
             Navigator.of(context).pop();
+            // final uri = Uri.parse(downloadUrl);
             final uri = Uri.parse(downloadUrl);
             if (await canLaunchUrl(uri)) {
               await launchUrl(uri, mode: LaunchMode.externalApplication);
