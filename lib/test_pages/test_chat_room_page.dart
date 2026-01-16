@@ -958,9 +958,10 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
       GridActionItem(
         icon: Icons.article_outlined,
         label: '日志',
-        onTap: () {
-          // TODO: Implement Log action
-          _addAppErrLog('点击了日志按钮');
+        onTap: () async {
+          final logZipPath = await EMClient.getInstance.compressLogs();
+          final logPath = logZipPath.replaceFirst('log.gz', 'easemob.log');
+          _addAppErrLog('点击了日志按钮，日志文件路径: $logPath');
         },
       ),
     ];
