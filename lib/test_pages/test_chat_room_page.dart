@@ -15,6 +15,7 @@ import 'test_chat_room_mute_list_page.dart';
 import 'test_chat_room_change_owner_page.dart';
 import '../widgets/log_view.dart';
 import '../widgets/grid_action_menu.dart';
+import '../pages/log_content_page.dart';
 
 /// 聊天室信息编辑类型
 enum RoomInfoEditType {
@@ -962,6 +963,14 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
           final logZipPath = await EMClient.getInstance.compressLogs();
           final logPath = logZipPath.replaceFirst('log.gz', 'easemob.log');
           _addAppErrLog('点击了日志按钮，日志文件路径: $logPath');
+
+          if (mounted) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => LogContentPage(logPath: logPath),
+              ),
+            );
+          }
         },
       ),
     ];
