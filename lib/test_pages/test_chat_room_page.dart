@@ -538,46 +538,10 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
           IconButton(
             icon: const Icon(Icons.info),
             onPressed: () {
-              final settings = AppSettings();
-              showDialog(
-                context: context,
-                builder: (context) {
-                  return AlertDialog(
-                    title: const Text('SDK Configuration'),
-                    content: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('AppKey: ${settings.appKey}'),
-                          Text(
-                            'Use Custom AppKey: ${settings.useCustomAppKey}',
-                          ),
-                          const Divider(),
-                          Text(
-                            'Use Custom Server: ${settings.useCustomServer}',
-                          ),
-                          if (settings.useCustomServer) ...[
-                            Text('IM Server: ${settings.imServer}'),
-                            Text('IM Port: ${settings.imPort}'),
-                            Text('REST Server: ${settings.restServer}'),
-                          ],
-                          const Divider(),
-                          Text('Test Mode: ${settings.isTestMode}'),
-                        ],
-                      ),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('关闭'),
-                      ),
-                    ],
-                  );
-                },
-              );
+              Navigator.of(context).pushNamed('/settings');
             },
           ),
+
           IconButton(
             icon: const Icon(Icons.exit_to_app),
             tooltip: '退出聊天室',
