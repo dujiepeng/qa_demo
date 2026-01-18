@@ -8,12 +8,12 @@ class AppSettings extends ChangeNotifier {
   AppSettings._internal();
 
   bool useCustomAppKey = false;
-  String appKey = 'easemob#dutest';
+  String appKey = 'easemob-demo#sdk111';
 
   bool useCustomServer = false;
-  String imServer = '';
-  int imPort = 6717;
-  String restServer = '';
+  String imServer = '81.70.142.13';
+  int imPort = 4300;
+  String restServer = 'https://a1-hsb.easemob.com';
 
   bool _isDarkMode = true; // 默认开启深色模式
   bool get isDarkMode => _isDarkMode;
@@ -60,11 +60,12 @@ class AppSettings extends ChangeNotifier {
   Future<void> loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     useCustomAppKey = prefs.getBool(_keyUseCustomAppKey) ?? false;
-    appKey = prefs.getString(_keyAppKey) ?? 'easemob#dutest';
+    appKey = prefs.getString(_keyAppKey) ?? 'easemob-demo#sdk111';
     useCustomServer = prefs.getBool(_keyUseCustomServer) ?? false;
-    imServer = prefs.getString(_keyImServer) ?? '';
-    imPort = prefs.getInt(_keyImPort) ?? 6717;
-    restServer = prefs.getString(_keyRestServer) ?? '';
+    imServer = prefs.getString(_keyImServer) ?? '81.70.142.13';
+    imPort = prefs.getInt(_keyImPort) ?? 4300;
+    restServer =
+        prefs.getString(_keyRestServer) ?? 'https://a1-hsb.easemob.com';
     _isDarkMode = prefs.getBool(_keyIsDarkMode) ?? true;
     isLoggedIn = prefs.getBool(_keyIsLoggedIn) ?? false;
     _isTestMode = prefs.getBool(_keyIsTestMode) ?? false;

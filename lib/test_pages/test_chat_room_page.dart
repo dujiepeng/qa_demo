@@ -49,6 +49,9 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
     _roomIdController.text = widget.roomId ?? '';
     super.initState();
     _addListener();
+    _roomIdController.addListener(() {
+      setState(() {});
+    });
   }
 
   @override
@@ -76,7 +79,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
       EMChatEventHandler(
         onMessagesReceived: (messages) {
           for (var msg in messages) {
-            if (msg.from != _roomId) return;
+            if (msg.conversationId != _roomId) return;
             _addReceiveLog('${msg.from}: ${msg.toJson().toString()}');
           }
         },
@@ -540,6 +543,23 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
               Navigator.of(context).pushNamed('/settings');
             },
           ),
+          IconButton(
+            icon: const Icon(Icons.exit_to_app),
+            tooltip: '退出聊天室',
+            onPressed: () async {
+              try {
+                await EMClient.getInstance.chatRoomManager.leaveChatRoom(
+                  _roomId,
+                );
+                _addLog('退出 $_roomId 成功');
+                setState(() {
+                  _roomId = '';
+                });
+              } catch (e) {
+                _addLog('退出 $_roomId 失败: ${e.toString()}');
+              }
+            },
+          ),
         ],
       ),
       body: Container(
@@ -570,27 +590,40 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                       _buildInputRow(
                         controller: _roomIdController,
                         hintText: '输入聊天室 ID',
-                        buttonText: _roomId.isNotEmpty ? 'Leave' : 'Join',
+                        buttonText:
+                            _roomId.isNotEmpty &&
+                                _roomIdController.text == _roomId
+                            ? 'Leave'
+                            : 'Join',
                         onPressed: () async {
-                          String showMsg = '';
-                          try {
-                            if (_roomId.isNotEmpty) {
+                          final inputId = _roomIdController.text.trim();
+                          if (_roomId.isNotEmpty && _roomId == inputId) {
+                            // Leave
+                            try {
                               await EMClient.getInstance.chatRoomManager
                                   .leaveChatRoom(_roomId);
-                              showMsg = '退出 $_roomId 成功';
-                              _roomId = '';
-                            } else {
-                              await EMClient.getInstance.chatRoomManager
-                                  .joinChatRoom(_roomIdController.text.trim());
-                              _roomId = _roomIdController.text;
-                              showMsg =
-                                  "加入成功，roomId: ${_roomIdController.text.trim()} ";
+                              _addLog('退出 $_roomId 成功');
+                              setState(() {
+                                _roomId = '';
+                              });
+                            } catch (e) {
+                              _addLog('退出 $_roomId 失败: ${e.toString()}');
                             }
-                          } catch (e) {
-                            showMsg = '操作失败';
-                          } finally {
-                            _addLog(showMsg);
-                            setState(() {});
+                          } else {
+                            // Join
+                            String showMsg = '';
+                            try {
+                              await EMClient.getInstance.chatRoomManager
+                                  .joinChatRoom(inputId);
+                              setState(() {
+                                _roomId = inputId;
+                              });
+                              showMsg = "加入成功， roomId: $inputId ";
+                            } catch (e) {
+                              showMsg = '加入 $inputId 失败：${e.toString()}';
+                            } finally {
+                              _addLog(showMsg);
+                            }
                           }
                         },
                         isDark: isDark,
@@ -649,6 +682,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
         'extKey1': 'extValue1',
         'date': DateTime.now().toString(),
       };
+      _addSendLog('开始发送消息');
       await EMClient.getInstance.chatManager.sendMessage(msg);
     } catch (e) {
       rethrow;
