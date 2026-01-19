@@ -3,7 +3,7 @@ import '../theme/app_colors.dart';
 
 class RoomsPage extends StatelessWidget {
   final bool isDark;
-  const RoomsPage({super.key, required this.isDark});
+  const RoomsPage({super.key, this.isDark = true});
 
   @override
   Widget build(BuildContext context) {

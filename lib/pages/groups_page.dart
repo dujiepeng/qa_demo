@@ -3,7 +3,7 @@ import '../theme/app_colors.dart';
 
 class GroupsPage extends StatelessWidget {
   final bool isDark;
-  const GroupsPage({super.key, required this.isDark});
+  const GroupsPage({super.key, this.isDark = true});
 
   @override
   Widget build(BuildContext context) {

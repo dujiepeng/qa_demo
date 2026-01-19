@@ -24,35 +24,23 @@ class _HomePageState extends State<HomePage> {
   final _settings = AppSettings();
 
   // 缓存页面实例，避免每次 build 都重新创建
-  late final Widget _conversationsPageLight;
-  late final Widget _conversationsPageDark;
-  late final Widget _contactsPageLight;
-  late final Widget _contactsPageDark;
-  late final Widget _groupsPageLight;
-  late final Widget _groupsPageDark;
-  late final Widget _roomsPageLight;
-  late final Widget _roomsPageDark;
-  late final Widget _mePageLight;
-  late final Widget _mePageDark;
-  late final Widget _testPageLight;
-  late final Widget _testPageDark;
+  late final Widget _conversationsPage;
+  late final Widget _contactsPage;
+  late final Widget _groupsPage;
+  late final Widget _roomsPage;
+  late final Widget _mePage;
+  late final Widget _testPage;
 
   @override
   void initState() {
     super.initState();
-    // 初始化所有页面实例（亮色和暗色主题各一份）
-    _conversationsPageLight = ConversationsPage(isDark: false);
-    _conversationsPageDark = ConversationsPage(isDark: true);
-    _contactsPageLight = ContactsPage(isDark: false);
-    _contactsPageDark = ContactsPage(isDark: true);
-    _groupsPageLight = GroupsPage(isDark: false);
-    _groupsPageDark = GroupsPage(isDark: true);
-    _roomsPageLight = RoomsPage(isDark: false);
-    _roomsPageDark = RoomsPage(isDark: true);
-    _mePageLight = MePage(isDark: false);
-    _mePageDark = MePage(isDark: true);
-    _testPageLight = TestPage(isDark: false);
-    _testPageDark = TestPage(isDark: true);
+    // 初始化所有页面实例
+    _conversationsPage = const ConversationsPage();
+    _contactsPage = const ContactsPage();
+    _groupsPage = const GroupsPage();
+    _roomsPage = const RoomsPage();
+    _mePage = const MePage();
+    _testPage = const TestPage();
 
     VersionManager().addListener(_checkAndShowUpdateDialog);
   }
@@ -85,10 +73,7 @@ class _HomePageState extends State<HomePage> {
         final List<BottomNavigationBarItem> items;
 
         if (_settings.isTestMode) {
-          pages = [
-            isDark ? _testPageDark : _testPageLight,
-            isDark ? _mePageDark : _mePageLight,
-          ];
+          pages = [_testPage, _mePage];
           items = const [
             BottomNavigationBarItem(
               icon: Icon(Icons.bug_report),
@@ -102,12 +87,13 @@ class _HomePageState extends State<HomePage> {
             ),
           ];
         } else {
+
           pages = [
-            isDark ? _conversationsPageDark : _conversationsPageLight,
-            isDark ? _contactsPageDark : _contactsPageLight,
-            isDark ? _groupsPageDark : _groupsPageLight,
-            isDark ? _roomsPageDark : _roomsPageLight,
-            isDark ? _mePageDark : _mePageLight,
+            _conversationsPage,
+            _contactsPage,
+            _groupsPage,
+            _roomsPage,
+            _mePage,
           ];
           items = const [
             BottomNavigationBarItem(
@@ -186,7 +172,7 @@ class _HomePageState extends State<HomePage> {
                                   width: 8,
                                   height: 8,
                                   decoration: const BoxDecoration(
-                                    color: Colors.red,
+                                    color: Colors.red,v
                                     shape: BoxShape.circle,
                                   ),
                                 ),

@@ -4,7 +4,7 @@ import '../theme/app_colors.dart';
 
 class ContactsPage extends StatefulWidget {
   final bool isDark;
-  const ContactsPage({super.key, required this.isDark});
+  const ContactsPage({super.key, this.isDark = true});
 
   @override
   State<ContactsPage> createState() => _ContactsPageState();

@@ -4,7 +4,7 @@ import '../theme/app_colors.dart';
 
 class ConversationsPage extends StatefulWidget {
   final bool isDark;
-  const ConversationsPage({super.key, required this.isDark});
+  const ConversationsPage({super.key, this.isDark = true});
 
   @override
   State<ConversationsPage> createState() => _ConversationsPageState();

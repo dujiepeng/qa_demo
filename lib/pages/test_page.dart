@@ -18,7 +18,7 @@ class TestGridItem {
 
 class TestPage extends StatefulWidget {
   final bool isDark;
-  const TestPage({super.key, required this.isDark});
+  const TestPage({super.key, this.isDark = true});
 
   @override
   State<TestPage> createState() => _TestPageState();

@@ -8,7 +8,7 @@ import '../widgets/update_dialog.dart';
 
 class MePage extends StatefulWidget {
   final bool isDark;
-  const MePage({super.key, required this.isDark});
+  const MePage({super.key, this.isDark = true});
 
   @override
   State<MePage> createState() => _MePageState();
