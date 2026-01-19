@@ -494,6 +494,26 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
     }
   }
 
+  void _setCustomExt() async {
+    if (_roomId.isEmpty) {
+      _addSendLog('请先加入聊天室');
+      return;
+    }
+
+    try {
+      _addSendLog('开始设置');
+      final value = 'att_${DateTime.now().toString()}';
+      await EMClient.getInstance.chatRoomManager.addAttributes(
+        _roomId,
+        attributes: {'attKey': value},
+        overwrite: true,
+      );
+      _addSendLog('设置成功: key: attKey, value: $value');
+    } catch (e) {
+      _addAppErrLog('设置失败: ${e.toString()}');
+    }
+  }
+
   void _showChangeOwnerBottomSheet() {
     if (_roomId.isEmpty) {
       _addSendLog('请先加入聊天室');
@@ -913,11 +933,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
         label: '全部禁言',
         onTap: _showMuteAllMuteAlert,
       ),
-      GridActionItem(
-        icon: Icons.tune,
-        label: '自定义',
-        onTap: _showChangeOwnerBottomSheet,
-      ),
+      GridActionItem(icon: Icons.tune, label: '自定义', onTap: _setCustomExt),
       GridActionItem(
         icon: Icons.swap_horiz_outlined,
         label: '转移',
@@ -943,6 +959,42 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => LogContentPage(logPath: logPath),
+              ),
+            );
+          }
+        },
+      ),
+      GridActionItem(
+        icon: Icons.info_outline,
+        label: '信息',
+        onTap: () async {
+          if (_roomId.isEmpty) {
+            _addSendLog('请先加入聊天室');
+            return;
+          }
+          final currentUser = await EMClient.getInstance.getCurrentUserId();
+          final info = await EMClient.getInstance.chatRoomManager
+              .fetchChatRoomInfoFromServer(_roomId);
+          if (mounted) {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('个人信息'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('当前用户: $currentUser'),
+                    const SizedBox(height: 8),
+                    Text('房间权限: ${info.permissionType.name}'),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('确定'),
+                  ),
+                ],
               ),
             );
           }

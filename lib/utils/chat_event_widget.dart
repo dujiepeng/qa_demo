@@ -53,6 +53,7 @@ class _ChatEventWidgetState extends State<ChatEventWidget> {
         },
       ),
     );
+    EMClient.getInstance.startCallback();
   }
 
   @override
