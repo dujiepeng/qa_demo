@@ -90,84 +90,116 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
       _eventKey,
       EMChatRoomEventHandler(
         onAdminAddedFromChatRoom: (roomId, admin) {
-          _addReceiveLog(
-            'onAdminAddedFromChatRoom: roomId: $roomId, admin: $admin',
-          );
+          if (roomId == _roomId) {
+            _addReceiveLog(
+              'onAdminAddedFromChatRoom: roomId: $roomId, admin: $admin',
+            );
+          }
         },
         onAdminRemovedFromChatRoom: (roomId, admin) {
-          _addReceiveLog(
-            'onAdminRemovedFromChatRoom: roomId: $roomId, admin: $admin',
-          );
+          if (roomId == _roomId) {
+            _addReceiveLog(
+              'onAdminRemovedFromChatRoom: roomId: $roomId, admin: $admin',
+            );
+          }
         },
         onAllChatRoomMemberMuteStateChanged: (roomId, isAllMuted) {
-          _addReceiveLog(
-            'onAllChatRoomMemberMuteStateChanged: roomId: $roomId, isAllMuted: $isAllMuted',
-          );
+          if (roomId == _roomId) {
+            _addReceiveLog(
+              'onAllChatRoomMemberMuteStateChanged: roomId: $roomId, isAllMuted: $isAllMuted',
+            );
+          }
         },
         onAllowListAddedFromChatRoom: (roomId, members) {
-          _addReceiveLog(
-            'onAllowListAddedFromChatRoom: roomId: $roomId, members: $members',
-          );
+          if (roomId == _roomId) {
+            _addReceiveLog(
+              'onAllowListAddedFromChatRoom: roomId: $roomId, members: $members',
+            );
+          }
         },
         onAllowListRemovedFromChatRoom: (roomId, members) {
-          _addReceiveLog(
-            'onAllowListRemovedFromChatRoom: roomId: $roomId, members: $members',
-          );
+          if (roomId == _roomId) {
+            _addReceiveLog(
+              'onAllowListRemovedFromChatRoom: roomId: $roomId, members: $members',
+            );
+          }
         },
         onAnnouncementChangedFromChatRoom: (roomId, announcement) {
-          _addReceiveLog(
-            'onAnnouncementChangedFromChatRoom: roomId: $roomId, announcement: $announcement',
-          );
+          if (roomId == _roomId) {
+            _addReceiveLog(
+              'onAnnouncementChangedFromChatRoom: roomId: $roomId, announcement: $announcement',
+            );
+          }
         },
         onAttributesRemoved: (roomId, removedKeys, from) {
-          _addReceiveLog(
-            'onAttributesRemoved: roomId: $roomId, removedKeys: $removedKeys, from: $from',
-          );
+          if (roomId == _roomId) {
+            _addReceiveLog(
+              'onAttributesRemoved: roomId: $roomId, removedKeys: $removedKeys, from: $from',
+            );
+          }
         },
         onAttributesUpdated: (roomId, attributes, from) {
-          _addReceiveLog(
-            'onAttributesUpdated: roomId: $roomId, attributes: $attributes, from: $from',
-          );
+          if (roomId == _roomId) {
+            _addReceiveLog(
+              'onAttributesUpdated: roomId: $roomId, attributes: $attributes, from: $from',
+            );
+          }
         },
         onChatRoomDestroyed: (roomId, roomName) {
-          _addReceiveLog(
-            'onChatRoomDestroyed: roomId: $roomId, roomName: $roomName',
-          );
+          if (roomId == _roomId) {
+            _addReceiveLog(
+              'onChatRoomDestroyed: roomId: $roomId, roomName: $roomName',
+            );
+          }
         },
         onMemberExitedFromChatRoom: (roomId, roomName, participant) {
-          _addReceiveLog(
-            'onMemberExitedFromChatRoom: roomId: $roomId, roomName: $roomName, participant: $participant',
-          );
+          if (roomId == _roomId) {
+            _addReceiveLog(
+              'onMemberExitedFromChatRoom: roomId: $roomId, roomName: $roomName, participant: $participant',
+            );
+          }
         },
         onMemberJoinedFromChatRoom: (roomId, participant, ext) {
-          _addReceiveLog(
-            'onMemberJoinedFromChatRoom: roomId: $roomId, participant: $participant, ext: $ext',
-          );
+          if (roomId == _roomId) {
+            _addReceiveLog(
+              'onMemberJoinedFromChatRoom: roomId: $roomId, participant: $participant, ext: $ext',
+            );
+          }
         },
         onMuteListAddedFromChatRoom: (roomId, mutes) {
-          _addReceiveLog(
-            'onMuteListAddedFromChatRoom: roomId: $roomId, mutes: $mutes',
-          );
+          if (roomId == _roomId) {
+            _addReceiveLog(
+              'onMuteListAddedFromChatRoom: roomId: $roomId, mutes: $mutes',
+            );
+          }
         },
         onMuteListRemovedFromChatRoom: (roomId, mutes) {
-          _addReceiveLog(
-            'onMuteListRemovedFromChatRoom: roomId: $roomId, mutes: $mutes',
-          );
+          if (roomId == _roomId) {
+            _addReceiveLog(
+              'onMuteListRemovedFromChatRoom: roomId: $roomId, mutes: $mutes',
+            );
+          }
         },
         onOwnerChangedFromChatRoom: (roomId, newOwner, oldOwner) {
-          _addReceiveLog(
-            'onOwnerChangedFromChatRoom: roomId: $roomId, newOwner: $newOwner, oldOwner: $oldOwner',
-          );
+          if (roomId == _roomId) {
+            _addReceiveLog(
+              'onOwnerChangedFromChatRoom: roomId: $roomId, newOwner: $newOwner, oldOwner: $oldOwner',
+            );
+          }
         },
         onRemovedFromChatRoom: (roomId, roomName, participant, reason) {
-          _addReceiveLog(
-            'onRemovedFromChatRoom: roomId: $roomId, roomName: $roomName, participant: $participant, reason: $reason',
-          );
+          if (roomId == _roomId) {
+            _addReceiveLog(
+              'onRemovedFromChatRoom: roomId: $roomId, roomName: $roomName, participant: $participant, reason: $reason',
+            );
+          }
         },
         onSpecificationChanged: (room) {
-          _addReceiveLog(
-            'onSpecificationChanged: name: ${room.name}, description: ${room.description}',
-          );
+          if (room.roomId == _roomId) {
+            _addReceiveLog(
+              'onSpecificationChanged: name: ${room.name}, description: ${room.description}',
+            );
+          }
         },
       ),
     );
@@ -681,6 +713,10 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
   }
 
   Future<void> sendMessage(msg) async {
+    if (_roomId.isEmpty) {
+      _addSendLog('请先加入聊天室');
+      return;
+    }
     try {
       msg.attributes = {
         'extKey1': 'extValue1',

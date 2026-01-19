@@ -20,7 +20,7 @@ class _TestChatRoomListPageState extends State<TestChatRoomListPage> {
   bool _isFetchingMore = false;
   bool _hasMore = true;
   int _pageNum = 1;
-  static const int _pageSize = 20;
+  static const int _pageSize = 50;
 
   @override
   void initState() {

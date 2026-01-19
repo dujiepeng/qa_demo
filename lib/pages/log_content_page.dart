@@ -57,6 +57,29 @@ class _LogContentPageState extends State<LogContentPage> {
     }
   }
 
+  Future<void> _clearLog() async {
+    try {
+      final file = File(widget.logPath);
+      if (await file.exists()) {
+        await file.writeAsString('');
+        if (mounted) {
+          setState(() {
+            _content = '';
+          });
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('日志已清空')));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('清空日志失败: $e')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = MediaQuery.of(context).platformBrightness == Brightness.dark;
@@ -64,6 +87,36 @@ class _LogContentPageState extends State<LogContentPage> {
       appBar: AppBar(
         title: const Text('Log Content'),
         backgroundColor: AppColors.backgroundStart(isDark),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_sweep_outlined),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('清理日志'),
+                  content: const Text('确定要清空所有日志内容吗？'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('取消'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _clearLog();
+                      },
+                      child: const Text(
+                        '确定',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
       ),
       backgroundColor: AppColors.backgroundStart(isDark),
       body: _isLoading
