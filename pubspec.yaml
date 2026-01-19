@@ -44,9 +44,9 @@ dependencies:
 
 
 dependency_overrides: 
-  shared_preferences: ^2.5.4
-  path_provider: ^2.1.5
-  im_flutter_sdk: ^4.17.0
+  # shared_preferences: ^2.5.4
+  # path_provider: ^2.1.5
+  # im_flutter_sdk: ^4.17.0
 
 dev_dependencies:
   flutter_test:
