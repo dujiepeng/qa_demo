@@ -102,7 +102,6 @@ class _HomePageState extends State<HomePage> {
             ),
           ];
         } else {
-
           pages = [
             isDark ? _conversationsPageDark : _conversationsPageLight,
             isDark ? _contactsPageDark : _contactsPageLight,
@@ -187,7 +186,7 @@ class _HomePageState extends State<HomePage> {
                                   width: 8,
                                   height: 8,
                                   decoration: const BoxDecoration(
-                                    color: Colors.red,v
+                                    color: Colors.red,
                                     shape: BoxShape.circle,
                                   ),
                                 ),
