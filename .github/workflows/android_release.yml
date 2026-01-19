@@ -34,7 +34,19 @@ jobs:
         run: flutter pub get
 
       - name: Build APK (arm64-v8a)
-        run: flutter build apk --release --target-platform android-arm64 --no-tree-shake-icons -v
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+        run: |
+          echo $KEYSTORE_BASE64 | base64 -d > android/release.jks
+          echo "storePassword=$STORE_PASSWORD" > android/key.properties
+          echo "keyPassword=$KEY_PASSWORD" >> android/key.properties
+          echo "keyAlias=$KEY_ALIAS" >> android/key.properties
+          echo "storeFile=../release.jks" >> android/key.properties
+          flutter build apk --release --target-platform android-arm64 --no-tree-shake-icons -v
+          rm android/release.jks android/key.properties
 
       - name: Rename APK
         run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
