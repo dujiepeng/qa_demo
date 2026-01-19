@@ -255,17 +255,28 @@ class _SettingsPageState extends State<SettingsPage> {
                     title: '使用自定义 AppKey',
                     icon: Icons.key_outlined,
                     value: _useCustomAppKey,
-                    onChanged: (val) => setState(() => _useCustomAppKey = val),
+                    onChanged: (val) {
+                      setState(() {
+                        _useCustomAppKey = val;
+                        // 切换时根据模式更新显示的值
+                        if (val) {
+                          _appKeyController.text = _settings.useCustomAppKey
+                              ? _settings.appKey
+                              : AppSettings.defaultCustomAppKey;
+                        } else {
+                          _appKeyController.text = AppSettings.defaultAppKey;
+                        }
+                      });
+                    },
                     isDark: isDark,
                   ),
-                  if (_useCustomAppKey) ...[
-                    const SizedBox(height: 10),
-                    _buildInputItem(
-                      controller: _appKeyController,
-                      hintText: '输入 AppKey',
-                      isDark: isDark,
-                    ),
-                  ],
+                  const SizedBox(height: 10),
+                  _buildInputItem(
+                    controller: _appKeyController,
+                    hintText: '输入 AppKey',
+                    isDark: isDark,
+                    enabled: _useCustomAppKey,
+                  ),
                   const SizedBox(height: 30),
                   _buildSectionTitle('服务器配置', isDark),
                   _buildSwitchItem(
@@ -384,6 +395,7 @@ class _SettingsPageState extends State<SettingsPage> {
     required String hintText,
     TextInputType? keyboardType,
     required bool isDark,
+    bool enabled = true,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -394,6 +406,7 @@ class _SettingsPageState extends State<SettingsPage> {
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
+        enabled: enabled,
         style: TextStyle(color: AppColors.textPrimary(isDark)),
         decoration: InputDecoration(
           hintText: hintText,

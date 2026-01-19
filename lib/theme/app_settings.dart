@@ -7,8 +7,20 @@ class AppSettings extends ChangeNotifier {
   factory AppSettings() => _instance;
   AppSettings._internal();
 
+  // AppKey 相关
+  static const String defaultAppKey = 'easemob#dutest'; // 默认 AppKey（不可修改）
+  static const String defaultCustomAppKey = 'easemob-demo#sdk111'; // 自定义模式默认值
+
   bool useCustomAppKey = false;
-  String appKey = 'easemob-demo#sdk111';
+  String _customAppKey = defaultCustomAppKey; // 存储用户自定义的 AppKey
+
+  // 根据 useCustomAppKey 返回对应的 AppKey
+  String get appKey => useCustomAppKey ? _customAppKey : defaultAppKey;
+  set appKey(String value) {
+    if (useCustomAppKey) {
+      _customAppKey = value;
+    }
+  }
 
   bool useCustomServer = false;
   String imServer = '81.70.142.13';
@@ -60,7 +72,7 @@ class AppSettings extends ChangeNotifier {
   Future<void> loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     useCustomAppKey = prefs.getBool(_keyUseCustomAppKey) ?? false;
-    appKey = prefs.getString(_keyAppKey) ?? 'easemob-demo#sdk111';
+    _customAppKey = prefs.getString(_keyAppKey) ?? defaultCustomAppKey;
     useCustomServer = prefs.getBool(_keyUseCustomServer) ?? false;
     imServer = prefs.getString(_keyImServer) ?? '81.70.142.13';
     imPort = prefs.getInt(_keyImPort) ?? 4300;
@@ -96,7 +108,7 @@ class AppSettings extends ChangeNotifier {
   Future<void> saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyUseCustomAppKey, useCustomAppKey);
-    await prefs.setString(_keyAppKey, appKey);
+    await prefs.setString(_keyAppKey, _customAppKey); // 保存自定义 AppKey
     await prefs.setBool(_keyUseCustomServer, useCustomServer);
     await prefs.setString(_keyImServer, imServer);
     await prefs.setInt(_keyImPort, imPort);

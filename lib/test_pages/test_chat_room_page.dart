@@ -543,23 +543,6 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
               Navigator.of(context).pushNamed('/settings');
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.exit_to_app),
-            tooltip: '退出聊天室',
-            onPressed: () async {
-              try {
-                await EMClient.getInstance.chatRoomManager.leaveChatRoom(
-                  _roomId,
-                );
-                _addLog('退出 $_roomId 成功');
-                setState(() {
-                  _roomId = '';
-                });
-              } catch (e) {
-                _addLog('退出 $_roomId 失败: ${e.toString()}');
-              }
-            },
-          ),
         ],
       ),
       body: Container(
@@ -598,7 +581,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                         onPressed: () async {
                           final inputId = _roomIdController.text.trim();
                           if (_roomId.isNotEmpty && _roomId == inputId) {
-                            // Leave
+                            _addLog('开始离开 $_roomId');
                             try {
                               await EMClient.getInstance.chatRoomManager
                                   .leaveChatRoom(_roomId);
@@ -611,6 +594,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                             }
                           } else {
                             // Join
+                            _addLog('开始加入 $inputId');
                             String showMsg = '';
                             try {
                               await EMClient.getInstance.chatRoomManager
@@ -928,6 +912,11 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
         icon: Icons.voice_over_off_outlined,
         label: '全部禁言',
         onTap: _showMuteAllMuteAlert,
+      ),
+      GridActionItem(
+        icon: Icons.tune,
+        label: '自定义',
+        onTap: _showChangeOwnerBottomSheet,
       ),
       GridActionItem(
         icon: Icons.swap_horiz_outlined,
