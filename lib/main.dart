@@ -1,3 +1,4 @@
+import 'package:em_chat_uikit/chat_uikit.dart';
 import 'package:flutter/material.dart';
 import 'package:qa_flutter/test_pages/test_chat_room_list_page.dart';
 import 'pages/home_page.dart';
@@ -18,20 +19,40 @@ void main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final ChatUIKitLocalizations _localization = ChatUIKitLocalizations();
+
+  @override
+  void initState() {
+    _localization.translate('zh');
+    _localization.resetLocales();
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'QA Flutter',
       debugShowCheckedModeBanner: false,
+      supportedLocales: _localization.supportedLocales,
+      localizationsDelegates: _localization.localizationsDelegates,
+      localeResolutionCallback: _localization.localeResolutionCallback,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
       // 根据登录状态动态决定起始页面
       initialRoute: AppSettings().isLoggedIn ? '/home' : '/login',
+      onGenerateRoute: (settings) {
+        return ChatUIKitRoute().generateRoute(settings);
+      },
       routes: {
         '/login': (context) => const LoginPage(),
         '/home': (context) => const HomePage(),

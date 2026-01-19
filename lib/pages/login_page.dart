@@ -1,3 +1,4 @@
+import 'package:em_chat_uikit/chat_uikit.dart';
 import 'package:flutter/material.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../theme/app_colors.dart';
@@ -65,7 +66,7 @@ class _LoginPageState extends State<LoginPage> {
           debugPrint('LoginPage: Initializing with DEFAULT server');
         }
 
-        await EMClient.getInstance.init(options);
+        ChatUIKit.instance.init(options: options);
         _settings.isDirty = false;
         debugPrint(
           'LoginPage: SDK Initialized with AppKey: ${_settings.appKey}',
