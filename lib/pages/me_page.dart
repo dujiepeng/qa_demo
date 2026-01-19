@@ -1,3 +1,4 @@
+import 'package:em_chat_uikit/chat_uikit.dart';
 import 'package:flutter/material.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../utils/version_manager.dart';
@@ -14,12 +15,12 @@ class MePage extends StatefulWidget {
   State<MePage> createState() => _MePageState();
 }
 
-class _MePageState extends State<MePage> {
+class _MePageState extends State<MePage> with ChatUIKitThemeMixin {
   final _settings = AppSettings();
 
   @override
-  Widget build(BuildContext context) {
-    final isDark = _settings.isDarkMode;
+  Widget themeBuilder(BuildContext context, ChatUIKitTheme theme) {
+    final isDark = theme.color.isDark;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -29,7 +30,7 @@ class _MePageState extends State<MePage> {
         elevation: 0,
         title: Text(
           '我',
-          style: TextStyle(color: AppColors.textPrimary(isDark)),
+          style: TextStyle(color: AppColors.textPrimary(theme.color.isDark)),
         ),
         centerTitle: true,
       ),
@@ -39,8 +40,8 @@ class _MePageState extends State<MePage> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppColors.backgroundStart(isDark),
-              AppColors.backgroundEnd(isDark),
+              AppColors.backgroundStart(theme.color.isDark),
+              AppColors.backgroundEnd(theme.color.isDark),
             ],
           ),
         ),
@@ -52,37 +53,46 @@ class _MePageState extends State<MePage> {
             bottom: 20,
           ),
           children: [
-            _buildSettingSectionTitle('偏好设置', isDark),
+            _buildSettingSectionTitle('偏好设置', theme.color.isDark),
             _buildSwitchItem(
               title: '深色模式',
               icon: Icons.dark_mode_outlined,
-              value: _settings.isDarkMode,
+              value: theme.color.isDark,
               onChanged: (val) {
-                setState(() => _settings.isDarkMode = val);
+                setState(() {
+                  ChatUIKitTheme.instance.setColor(
+                    val ? ChatUIKitColor.dark() : ChatUIKitColor.light(),
+                  );
+                });
+                _settings.isDarkMode = val;
                 _settings.saveSettings();
               },
-              isDark: isDark,
+              isDark: theme.color.isDark,
             ),
             const SizedBox(height: 20),
-            _buildSettingSectionTitle('高级设置', isDark),
+            _buildSettingSectionTitle('高级设置', theme.color.isDark),
             Container(
               decoration: BoxDecoration(
                 color: AppColors.inputBackground(isDark),
                 borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: AppColors.glassBorder(isDark)),
+                border: Border.all(
+                  color: AppColors.glassBorder(theme.color.isDark),
+                ),
               ),
               child: ListTile(
                 leading: Icon(
                   Icons.admin_panel_settings_outlined,
-                  color: AppColors.textSecondary(isDark),
+                  color: AppColors.textSecondary(theme.color.isDark),
                 ),
                 title: Text(
                   '服务器配置',
-                  style: TextStyle(color: AppColors.textPrimary(isDark)),
+                  style: TextStyle(
+                    color: AppColors.textPrimary(theme.color.isDark),
+                  ),
                 ),
                 trailing: Icon(
                   Icons.chevron_right,
-                  color: AppColors.textSecondary(isDark),
+                  color: AppColors.textSecondary(theme.color.isDark),
                 ),
                 onTap: () => Navigator.pushNamed(context, '/settings'),
               ),
@@ -101,9 +111,11 @@ class _MePageState extends State<MePage> {
             const SizedBox(height: 10),
             Container(
               decoration: BoxDecoration(
-                color: AppColors.inputBackground(isDark),
+                color: AppColors.inputBackground(theme.color.isDark),
                 borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: AppColors.glassBorder(isDark)),
+                border: Border.all(
+                  color: AppColors.glassBorder(theme.color.isDark),
+                ),
               ),
               child: ListenableBuilder(
                 listenable: VersionManager(),
@@ -111,11 +123,13 @@ class _MePageState extends State<MePage> {
                   return ListTile(
                     leading: Icon(
                       Icons.info_outline,
-                      color: AppColors.textSecondary(isDark),
+                      color: AppColors.textSecondary(theme.color.isDark),
                     ),
                     title: Text(
                       '当前版本',
-                      style: TextStyle(color: AppColors.textPrimary(isDark)),
+                      style: TextStyle(
+                        color: AppColors.textPrimary(theme.color.isDark),
+                      ),
                     ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -143,7 +157,7 @@ class _MePageState extends State<MePage> {
                         Text(
                           AppConfig.appVersion,
                           style: TextStyle(
-                            color: AppColors.textSecondary(isDark),
+                            color: AppColors.textSecondary(theme.color.isDark),
                             fontSize: 14,
                           ),
                         ),

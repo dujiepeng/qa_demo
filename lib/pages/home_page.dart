@@ -19,7 +19,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with ChatUIKitThemeMixin {
   int _currentIndex = 0;
   final _settings = AppSettings();
 
@@ -64,11 +64,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget themeBuilder(BuildContext context, ChatUIKitTheme theme) {
     return AnimatedBuilder(
       animation: _settings,
       builder: (context, _) {
-        final isDark = _settings.isDarkMode;
+        final isDark = theme.color.isDark;
         final List<Widget> pages;
         final List<BottomNavigationBarItem> items;
 
@@ -87,7 +87,6 @@ class _HomePageState extends State<HomePage> {
             ),
           ];
         } else {
-
           pages = [
             _conversationsPage,
             _contactsPage,
@@ -151,7 +150,9 @@ class _HomePageState extends State<HomePage> {
                     currentIndex: safeIndex,
                     onTap: (index) => setState(() => _currentIndex = index),
                     type: BottomNavigationBarType.fixed,
-                    backgroundColor: AppColors.backgroundEnd(isDark),
+                    backgroundColor: isDark
+                        ? ChatUIKitTheme.instance.color.neutralColor1
+                        : ChatUIKitTheme.instance.color.neutralColor98,
                     selectedItemColor: AppColors.primary(isDark),
                     unselectedItemColor: AppColors.textSecondary(isDark),
                     showUnselectedLabels: true,
@@ -172,7 +173,7 @@ class _HomePageState extends State<HomePage> {
                                   width: 8,
                                   height: 8,
                                   decoration: const BoxDecoration(
-                                    color: Colors.red,v
+                                    color: Colors.red,
                                     shape: BoxShape.circle,
                                   ),
                                 ),

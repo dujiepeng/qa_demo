@@ -1,3 +1,4 @@
+import 'package:em_chat_uikit/chat_uikit.dart';
 import 'package:flutter/material.dart';
 
 class AppColors {
@@ -37,4 +38,7 @@ class AppColors {
       isDark ? darkInputBackground : lightInputBackground;
   static Color glassBorder(bool isDark) =>
       isDark ? darkGlassBorder : lightGlassBorder;
+
+  static final darkColor = ChatUIKitColor.dark(primaryHue: 110);
+  static final lightColor = ChatUIKitColor.light(primaryHue: 20);
 }
