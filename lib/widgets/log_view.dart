@@ -1,3 +1,4 @@
+import 'package:em_chat_uikit/chat_uikit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
@@ -7,9 +8,17 @@ class LogEntry {
   final String content;
   final String timestamp;
   final Color? color;
+  final EMMessage? message;
 
-  LogEntry({required this.content, required this.timestamp, this.color});
+  LogEntry({
+    required this.content,
+    required this.timestamp,
+    this.color,
+    this.message,
+  });
 }
+
+enum LogMenuAction { sendReadAck, delete, recall }
 
 /// 日志控制器，用于管理日志数据的增加、清空和监听
 class LogController extends ChangeNotifier {
@@ -18,14 +27,20 @@ class LogController extends ChangeNotifier {
   List<LogEntry> get logs => List.unmodifiable(_logs);
 
   /// 添加一条日志
-  void addLog(String message, {Color? color}) {
+  void addLog(String str, {Color? color, EMMessage? message}) {
     final now = DateTime.now();
+
     final timeStr =
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}.${now.millisecond.toString().padLeft(3, '0')}';
+        '(${now.millisecondsSinceEpoch}) ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}.${now.millisecond.toString().padLeft(3, '0')}';
 
     _logs.insert(
       0,
-      LogEntry(content: message, timestamp: timeStr, color: color),
+      LogEntry(
+        content: str,
+        timestamp: timeStr,
+        color: color,
+        message: message,
+      ),
     );
     notifyListeners();
   }
@@ -41,8 +56,15 @@ class LogController extends ChangeNotifier {
 class LogView extends StatelessWidget {
   final LogController controller;
   final bool isDark;
-
-  const LogView({super.key, required this.controller, required this.isDark});
+  final bool enableMessageManager;
+  final void Function(Message? message, LogMenuAction action)? longPassCallback;
+  const LogView({
+    super.key,
+    required this.controller,
+    required this.isDark,
+    this.enableMessageManager = false,
+    this.longPassCallback,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -126,6 +148,21 @@ class LogView extends StatelessWidget {
                                   value: 'copy',
                                   child: Text('复制'),
                                 ),
+                                if (entry.message != null)
+                                  PopupMenuItem(
+                                    value: 'sendReadAck',
+                                    child: Text('发送已读ACK'),
+                                  ),
+                                if (entry.message != null)
+                                  PopupMenuItem(
+                                    value: 'delete',
+                                    child: Text('从服务器删除'),
+                                  ),
+                                if (entry.message != null)
+                                  PopupMenuItem(
+                                    value: 'recall',
+                                    child: Text('撤回'),
+                                  ),
                               ],
                             );
 

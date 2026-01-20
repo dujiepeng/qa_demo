@@ -1,26 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_settings.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_settings.dart';
 
-class TestChatRoomMuteListPage extends StatefulWidget {
-  const TestChatRoomMuteListPage({super.key, required this.roomId});
+class TestChatRoomMembersPage extends StatefulWidget {
+  const TestChatRoomMembersPage({super.key, required this.roomId});
 
   final String roomId;
 
   @override
-  State<TestChatRoomMuteListPage> createState() =>
-      _TestChatRoomMuteListPageState();
+  State<TestChatRoomMembersPage> createState() =>
+      _TestChatRoomMembersPageState();
 }
 
-class _TestChatRoomMuteListPageState extends State<TestChatRoomMuteListPage> {
+class _TestChatRoomMembersPageState extends State<TestChatRoomMembersPage> {
   final _settings = AppSettings();
   final _scrollController = ScrollController();
   List<String> _members = [];
   bool _isLoading = false;
   bool _isLoadingMore = false;
   String? _errorMessage;
-  int _pageNum = 1;
+  String _cursor = '';
   bool _hasMore = true;
 
   @override
@@ -49,24 +49,19 @@ class _TestChatRoomMuteListPageState extends State<TestChatRoomMuteListPage> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
-      _pageNum = 1;
+      _cursor = '';
       _hasMore = true;
     });
 
     try {
       // 获取聊天室成员列表
       final result = await EMClient.getInstance.chatRoomManager
-          .fetchChatRoomMuteList(
-            widget.roomId,
-            pageNum: _pageNum,
-            pageSize: 50,
-          );
+          .fetchChatRoomMembers(widget.roomId, cursor: '', pageSize: 50);
 
       setState(() {
-        _members = result;
-        _pageNum += 1;
-        // 如果返回的数据少于请求的数量，说明没有更多数据了
-        _hasMore = result.length >= 50;
+        _members = result.data;
+        _cursor = result.cursor ?? '';
+        _hasMore = _cursor.isNotEmpty;
         _isLoading = false;
       });
     } catch (e) {
@@ -85,28 +80,25 @@ class _TestChatRoomMuteListPageState extends State<TestChatRoomMuteListPage> {
     });
 
     try {
-      // 增加页码
-      _pageNum++;
-
       final result = await EMClient.getInstance.chatRoomManager
-          .fetchChatRoomMuteList(
-            widget.roomId,
-            pageNum: _pageNum,
-            pageSize: 50,
-          );
+          .fetchChatRoomMembers(widget.roomId, cursor: _cursor, pageSize: 50);
 
       setState(() {
-        _members.addAll(result);
-        // 如果返回的数据少于请求的数量，说明没有更多数据了
-        _hasMore = result.length >= 50;
+        _members.addAll(result.data);
+        _cursor = result.cursor ?? '';
+        _hasMore = _cursor.isNotEmpty;
         _isLoadingMore = false;
       });
     } catch (e) {
       setState(() {
-        // 加载失败时回退页码
-        _pageNum--;
         _isLoadingMore = false;
       });
+      // 加载更多失败时显示提示
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载更多失败: ${e.toString()}')));
+      }
     }
   }
 
@@ -130,19 +122,51 @@ class _TestChatRoomMuteListPageState extends State<TestChatRoomMuteListPage> {
           children: [
             Divider(height: 1, color: AppColors.glassBorder(isDark)),
 
-            // 移除禁言
+            // 设置管理员
             ListTile(
               leading: Icon(
                 Icons.admin_panel_settings_outlined,
                 color: AppColors.primary(isDark),
               ),
               title: Text(
-                '移除禁言',
+                '设置管理员',
                 style: TextStyle(color: AppColors.textPrimary(isDark)),
               ),
               onTap: () {
                 Navigator.pop(context);
-                _removeMute(memberId);
+                _setAdmin(memberId);
+              },
+            ),
+
+            // 禁言
+            ListTile(
+              leading: Icon(
+                Icons.mic_off_outlined,
+                color: AppColors.primary(isDark),
+              ),
+              title: Text(
+                '禁言',
+                style: TextStyle(color: AppColors.textPrimary(isDark)),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _muteMember(memberId);
+              },
+            ),
+
+            // 加入白名单
+            ListTile(
+              leading: Icon(
+                Icons.verified_user_outlined,
+                color: AppColors.primary(isDark),
+              ),
+              title: Text(
+                '加入白名单',
+                style: TextStyle(color: AppColors.textPrimary(isDark)),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _addToWhitelist(memberId);
               },
             ),
           ],
@@ -160,19 +184,50 @@ class _TestChatRoomMuteListPageState extends State<TestChatRoomMuteListPage> {
     );
   }
 
-  Future<void> _removeMute(String memberId) async {
+  Future<void> _setAdmin(String memberId) async {
     try {
-      await EMClient.getInstance.chatRoomManager.unMuteChatRoomMembers(
+      await EMClient.getInstance.chatRoomManager.addChatRoomAdmin(
+        widget.roomId,
+        memberId,
+      );
+      if (mounted) {
+        _showResultDialog('已设置 $memberId 为管理员', true);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showResultDialog('设置管理员失败: ${e.toString()}', false);
+      }
+    }
+  }
+
+  Future<void> _muteMember(String memberId) async {
+    try {
+      await EMClient.getInstance.chatRoomManager.muteChatRoomMembers(
         widget.roomId,
         [memberId],
       );
       if (mounted) {
-        _fetchMembers();
-        _showResultDialog('移除 $memberId 禁言列表', true);
+        _showResultDialog('已禁言 $memberId', true);
       }
     } catch (e) {
       if (mounted) {
-        _showResultDialog('移除 $memberId 禁言列表失败: ${e.toString()}', false);
+        _showResultDialog('禁言失败: ${e.toString()}', false);
+      }
+    }
+  }
+
+  Future<void> _addToWhitelist(String memberId) async {
+    try {
+      await EMClient.getInstance.chatRoomManager.addMembersToChatRoomAllowList(
+        widget.roomId,
+        [memberId],
+      );
+      if (mounted) {
+        _showResultDialog('已将 $memberId 加入白名单', true);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showResultDialog('加入白名单失败: ${e.toString()}', false);
       }
     }
   }
@@ -233,7 +288,7 @@ class _TestChatRoomMuteListPageState extends State<TestChatRoomMuteListPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '禁言列表 (${_members.length})',
+                '聊天室成员 (${_members.length})',
                 style: TextStyle(
                   color: AppColors.textPrimary(isDark),
                   fontSize: 18,

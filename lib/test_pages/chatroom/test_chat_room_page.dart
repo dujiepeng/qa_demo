@@ -5,17 +5,17 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:qa_flutter/widgets/switch_alert.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/app_settings.dart';
-import '../widgets/input_dialog.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_settings.dart';
+import '../../widgets/input_dialog.dart';
 import 'test_chat_room_members_page.dart';
 import 'test_chat_room_admins_page.dart';
 import 'test_chat_room_white_list_page.dart';
 import 'test_chat_room_mute_list_page.dart';
 import 'test_chat_room_change_owner_page.dart';
-import '../widgets/log_view.dart';
-import '../widgets/grid_action_menu.dart';
-import '../pages/log_content_page.dart';
+import '../../widgets/log_view.dart';
+import '../../widgets/grid_action_menu.dart';
+import '../../pages/log_content_page.dart';
 
 /// 聊天室信息编辑类型
 enum RoomInfoEditType {
@@ -584,7 +584,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
         elevation: 0,
         iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
         title: Text(
-          _roomId.isNotEmpty ? _roomId : '聊天室测试',
+          _roomId.isNotEmpty ? '$_roomId(聊天室)' : '聊天室测试',
           style: TextStyle(color: AppColors.textPrimary(isDark)),
         ),
         centerTitle: true,
@@ -1011,6 +1011,8 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
           final currentUser = await EMClient.getInstance.getCurrentUserId();
           final info = await EMClient.getInstance.chatRoomManager
               .fetchChatRoomInfoFromServer(_roomId);
+          final isMuted = await EMClient.getInstance.chatRoomManager
+              .isMemberInChatRoomMuteList(_roomId);
           if (mounted) {
             showDialog(
               context: context,
@@ -1023,6 +1025,8 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                     Text('当前用户: $currentUser'),
                     const SizedBox(height: 8),
                     Text('房间权限: ${info.permissionType.name}'),
+                    const SizedBox(height: 8),
+                    Text('禁言状态: $isMuted'),
                   ],
                 ),
                 actions: [

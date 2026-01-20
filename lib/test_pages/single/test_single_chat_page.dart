@@ -1,0 +1,458 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:im_flutter_sdk/im_flutter_sdk.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_settings.dart';
+import '../../widgets/log_view.dart';
+import '../../widgets/grid_action_menu.dart';
+import '../../pages/log_content_page.dart';
+
+class TestSingleChatPage extends StatefulWidget {
+  const TestSingleChatPage({super.key});
+
+  @override
+  State<TestSingleChatPage> createState() => _TestSingleChatPageState();
+}
+
+class _TestSingleChatPageState extends State<TestSingleChatPage> {
+  final _eventKey = 'single_test';
+  final _settings = AppSettings();
+  final _userIdController = TextEditingController();
+  final _messageController = TextEditingController();
+  final _logController = LogController();
+
+  @override
+  void initState() {
+    super.initState();
+    _addListener();
+
+    _userIdController.addListener(() {
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _userIdController.dispose();
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  void _addListener() {
+    EMClient.getInstance.chatManager.addMessageEvent(
+      _eventKey,
+      ChatMessageEvent(
+        onSuccess: (msgId, msg) {
+          _addSendLog('${msg.from}: ${msg.toJson().toString()}', message: msg);
+        },
+        onError: (msgId, msg, error) {
+          _addSendLog('发送失败: ${error.toString()}');
+        },
+      ),
+    );
+
+    EMClient.getInstance.chatManager.addEventHandler(
+      _eventKey,
+      EMChatEventHandler(
+        onMessagesReceived: (messages) {
+          for (var msg in messages) {
+            if (msg.conversationId ==
+                _userIdController.text.trim().toLowerCase()) {
+              _addReceiveLog(
+                '${msg.from}: ${msg.toJson().toString()}',
+                message: msg,
+              );
+            }
+          }
+        },
+      ),
+    );
+
+    EMClient.getInstance.groupManager.addEventHandler(
+      _eventKey,
+      EMGroupEventHandler(),
+    );
+  }
+
+  void _addLog(String content) {
+    _logController.addLog(content);
+  }
+
+  void _addAppErrLog(String content) {
+    _logController.addLog(content, color: Colors.red);
+  }
+
+  void _addSendLog(String content, {EMMessage? message}) {
+    _logController.addLog(content, color: Colors.green);
+  }
+
+  void _addReceiveLog(String content, {EMMessage? message}) {
+    _logController.addLog(content, color: Colors.blue);
+  }
+
+  Future<String> _getAssetFilePath(String assetPath) async {
+    final byteData = await rootBundle.load(assetPath);
+    final tempDir = await getTemporaryDirectory();
+    final fileName = assetPath.split('/').last;
+    final file = File('${tempDir.path}/$fileName');
+    await file.writeAsBytes(byteData.buffer.asUint8List());
+    return file.path;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = _settings.isDarkMode;
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
+        title: Text(
+          '单聊测试',
+          style: TextStyle(color: AppColors.textPrimary(isDark)),
+        ),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.info),
+            onPressed: () {
+              Navigator.of(context).pushNamed('/settings');
+            },
+          ),
+        ],
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.backgroundStart(isDark),
+              AppColors.backgroundEnd(isDark),
+            ],
+          ),
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    top: kToolbarHeight + 60,
+                    left: 15,
+                    right: 15,
+                    bottom: 30, // 增加底部间距
+                  ),
+                  child: Column(
+                    children: [
+                      _buildInputRow(
+                        controller: _userIdController,
+                        hintText: '输入对方 ID',
+                        isDark: isDark,
+                      ),
+                      const SizedBox(height: 20),
+                      _buildInputRow(
+                        controller: _messageController,
+                        hintText: '输入消息内容',
+                        buttonText: 'Send',
+                        onPressed: () async {
+                          final text = _messageController.text.trim();
+                          try {
+                            final msg = EMMessage.createTxtSendMessage(
+                              targetId: _userIdController.text
+                                  .trim()
+                                  .toLowerCase(),
+                              content: text,
+                              chatType: ChatType.Chat,
+                            );
+                            await sendMessage(msg);
+                            _messageController.clear();
+                          } catch (e) {
+                            _addAppErrLog('发送文字失败: ${e.toString()}');
+                          }
+                        },
+                        isDark: isDark,
+                      ),
+                      const SizedBox(height: 10),
+                      _buildSectionTitle('消息', isDark),
+                      const SizedBox(height: 10),
+                      _buildMessageTypeButtons(isDark),
+                      const SizedBox(height: 10),
+                      _buildSectionTitle('工具', isDark),
+                      const SizedBox(height: 10),
+                      _buildItemsButtons(isDark),
+                      const SizedBox(height: 20),
+                      // 日志显示区域
+                      LogView(
+                        controller: _logController,
+                        isDark: isDark,
+                        longPassCallback: (message, action) async {
+                          if (action == LogMenuAction.sendReadAck) {
+                            await EMClient.getInstance.chatManager
+                                .sendMessageReadAck(message!);
+                          } else if (action == LogMenuAction.delete) {
+                            await EMClient.getInstance.chatManager
+                                .deleteRemoteMessagesWithIds(
+                                  conversationId: message!.conversationId!,
+                                  type: EMConversationType
+                                      .values[message.chatType.index],
+                                  msgIds: [message.msgId],
+                                );
+                          } else if (action == LogMenuAction.recall) {
+                            await EMClient.getInstance.chatManager
+                                .recallMessage(message!.msgId);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> sendMessage(msg) async {
+    if (_userIdController.text.trim().isEmpty) {
+      _addLog('请先输入对方ID');
+      return;
+    }
+    try {
+      msg.attributes = {
+        'extKey1': 'extValue1',
+        'date': DateTime.now().toString(),
+      };
+      _addSendLog('开始发送消息');
+      await EMClient.getInstance.chatManager.sendMessage(msg);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Widget _buildInputRow({
+    required TextEditingController controller,
+    required String hintText,
+    String? buttonText,
+    VoidCallback? onPressed,
+    required bool isDark,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: controller,
+            style: TextStyle(color: AppColors.textPrimary(isDark)),
+            decoration: InputDecoration(
+              hintText: hintText,
+              hintStyle: TextStyle(color: AppColors.textSecondary(isDark)),
+              filled: true,
+              fillColor: AppColors.inputBackground(isDark),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.glassBorder(isDark)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.glassBorder(isDark)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.primary(isDark)),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 15,
+                vertical: 12,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        if (buttonText?.isNotEmpty == true && onPressed != null)
+          ElevatedButton(
+            onPressed: onPressed,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary(isDark),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(buttonText!),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSectionTitle(String title, bool isDark) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        title,
+        style: TextStyle(
+          color: AppColors.textPrimary(isDark),
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMessageTypeButtons(bool isDark) {
+    final items = [
+      GridActionItem(
+        icon: Icons.image_outlined,
+        label: '图片',
+        onTap: () async {
+          try {
+            final filePath = await _getAssetFilePath('assets/image.jpg');
+            final msg = EMMessage.createImageSendMessage(
+              targetId: _userIdController.text.trim().toLowerCase(),
+              filePath: filePath,
+              width: 1920,
+              height: 1080,
+              fileSize: 111916,
+              chatType: ChatType.Chat,
+            );
+            await sendMessage(msg);
+          } catch (e) {
+            _addAppErrLog('发送图片失败: ${e.toString()}');
+          }
+        },
+      ),
+      GridActionItem(
+        icon: Icons.videocam_outlined,
+        label: '视频',
+        onTap: () async {
+          try {
+            final filePath = await _getAssetFilePath('assets/video.mp4');
+            final thumb = await _getAssetFilePath('assets/image.jpg');
+            final msg = EMMessage.createVideoSendMessage(
+              targetId: _userIdController.text.trim().toLowerCase(),
+              filePath: filePath,
+              thumbnailLocalPath: thumb,
+              width: 1920,
+              height: 1080,
+              duration: 10,
+              fileSize: 4006696,
+              chatType: ChatType.Chat,
+            );
+            await sendMessage(msg);
+          } catch (e) {
+            _addAppErrLog('发送视频失败: ${e.toString()}');
+          }
+        },
+      ),
+      GridActionItem(
+        icon: Icons.mic_outlined,
+        label: '语音',
+        onTap: () async {
+          try {
+            final filePath = await _getAssetFilePath('assets/voice.mp3');
+            final msg = EMMessage.createVoiceSendMessage(
+              targetId: _userIdController.text.trim().toLowerCase(),
+              filePath: filePath,
+              duration: 10,
+              fileSize: 111916,
+              chatType: ChatType.Chat,
+            );
+            await sendMessage(msg);
+          } catch (e) {
+            _addAppErrLog('发送语音失败: ${e.toString()}');
+          }
+        },
+      ),
+      GridActionItem(
+        icon: Icons.description_outlined,
+        label: '文件',
+        onTap: () async {
+          try {
+            final filePath = await _getAssetFilePath('assets/voice.mp3');
+            final msg = EMMessage.createFileSendMessage(
+              targetId: _userIdController.text.trim().toLowerCase(),
+              filePath: filePath,
+              fileSize: 111916,
+              chatType: ChatType.Chat,
+            );
+            await sendMessage(msg);
+          } catch (e) {
+            _addAppErrLog('发送文件失败: ${e.toString()}');
+          }
+        },
+      ),
+      GridActionItem(
+        icon: Icons.location_on_outlined,
+        label: '位置',
+        onTap: () async {
+          try {
+            final msg = EMMessage.createLocationSendMessage(
+              targetId: _userIdController.text.trim().toLowerCase(),
+              latitude: 39.9042,
+              longitude: 116.4074,
+              address: '北京市海淀区中关村',
+              chatType: ChatType.Chat,
+            );
+            await sendMessage(msg);
+          } catch (e) {
+            _addAppErrLog('发送位置失败: ${e.toString()}');
+          }
+        },
+      ),
+      GridActionItem(
+        icon: Icons.extension_outlined,
+        label: '自定义',
+        onTap: () async {
+          try {
+            final msg = EMMessage.createCustomSendMessage(
+              targetId: _userIdController.text.trim().toLowerCase(),
+              event: 'eventValue',
+              params: {'paramsKey': 'paramsValue'},
+              chatType: ChatType.Chat,
+            );
+            await sendMessage(msg);
+          } catch (e) {
+            _addAppErrLog('发送自定义失败: ${e.toString()}');
+          }
+        },
+      ),
+    ];
+
+    return SizedBox(
+      width: MediaQuery.of(context).size.width,
+      child: GridActionMenu(items: items, isDark: isDark, columns: 6),
+    );
+  }
+
+  Widget _buildItemsButtons(bool isDark) {
+    final items = [
+      GridActionItem(
+        icon: Icons.article_outlined,
+        label: '日志',
+        onTap: () async {
+          final logZipPath = await EMClient.getInstance.compressLogs();
+          final logPath = logZipPath.replaceFirst('log.gz', 'easemob.log');
+          if (mounted) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => LogContentPage(logPath: logPath),
+              ),
+            );
+          }
+        },
+      ),
+    ];
+
+    return SizedBox(
+      width: MediaQuery.of(context).size.width,
+      child: GridActionMenu(items: items, isDark: isDark, columns: 6),
+    );
+  }
+}

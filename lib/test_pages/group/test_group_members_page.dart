@@ -1,29 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_settings.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_settings.dart';
 
-class TestChatRoomWhiteListPage extends StatefulWidget {
-  const TestChatRoomWhiteListPage({super.key, required this.roomId});
+/// 群组成员列表页面
+class TestGroupMembersPage extends StatefulWidget {
+  const TestGroupMembersPage({super.key, required this.groupId});
 
-  final String roomId;
+  final String groupId;
 
   @override
-  State<TestChatRoomWhiteListPage> createState() =>
-      _TestChatRoomWhiteListPageState();
+  State<TestGroupMembersPage> createState() => _TestGroupMembersPageState();
 }
 
-class _TestChatRoomWhiteListPageState extends State<TestChatRoomWhiteListPage> {
+class _TestGroupMembersPageState extends State<TestGroupMembersPage> {
   final _settings = AppSettings();
   final _scrollController = ScrollController();
   List<String> _members = [];
   bool _isLoading = false;
+  bool _isLoadingMore = false;
   String? _errorMessage;
+  String _cursor = '';
+  bool _hasMore = true;
 
   @override
   void initState() {
     super.initState();
     _fetchMembers();
+    _scrollController.addListener(_onScroll);
   }
 
   @override
@@ -32,19 +36,34 @@ class _TestChatRoomWhiteListPageState extends State<TestChatRoomWhiteListPage> {
     super.dispose();
   }
 
+  /// 滚动监听
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      if (!_isLoadingMore && _hasMore) {
+        _loadMore();
+      }
+    }
+  }
+
+  /// 获取群组成员列表
   Future<void> _fetchMembers() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _cursor = '';
+      _hasMore = true;
     });
 
     try {
-      // 获取聊天室成员列表
-      final result = await EMClient.getInstance.chatRoomManager
-          .fetchChatRoomAllowListFromServer(widget.roomId);
+      // 获取群组成员列表
+      final result = await EMClient.getInstance.groupManager
+          .fetchMemberListFromServer(widget.groupId, pageSize: 50, cursor: '');
 
       setState(() {
-        _members = result;
+        _members = result.data;
+        _cursor = result.cursor ?? '';
+        _hasMore = _cursor.isNotEmpty;
         _isLoading = false;
       });
     } catch (e) {
@@ -55,6 +74,42 @@ class _TestChatRoomWhiteListPageState extends State<TestChatRoomWhiteListPage> {
     }
   }
 
+  /// 加载更多成员
+  Future<void> _loadMore() async {
+    if (_isLoadingMore || !_hasMore) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      final result = await EMClient.getInstance.groupManager
+          .fetchMemberListFromServer(
+            widget.groupId,
+            pageSize: 50,
+            cursor: _cursor,
+          );
+
+      setState(() {
+        _members.addAll(result.data);
+        _cursor = result.cursor ?? '';
+        _hasMore = _cursor.isNotEmpty;
+        _isLoadingMore = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingMore = false;
+      });
+      // 加载更多失败时显示提示
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载更多失败: ${e.toString()}')));
+      }
+    }
+  }
+
+  /// 显示成员操作菜单
   void _showMemberActions(String memberId, bool isDark) {
     showDialog(
       context: context,
@@ -73,21 +128,53 @@ class _TestChatRoomWhiteListPageState extends State<TestChatRoomWhiteListPage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(height: 16),
             Divider(height: 1, color: AppColors.glassBorder(isDark)),
 
+            // 设置管理员
             ListTile(
               leading: Icon(
                 Icons.admin_panel_settings_outlined,
                 color: AppColors.primary(isDark),
               ),
               title: Text(
-                '移除白名单',
+                '设置管理员',
                 style: TextStyle(color: AppColors.textPrimary(isDark)),
               ),
               onTap: () {
                 Navigator.pop(context);
-                _removeFromWhitelist(memberId);
+                _setAdmin(memberId);
+              },
+            ),
+
+            // 禁言
+            ListTile(
+              leading: Icon(
+                Icons.mic_off_outlined,
+                color: AppColors.primary(isDark),
+              ),
+              title: Text(
+                '禁言',
+                style: TextStyle(color: AppColors.textPrimary(isDark)),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _muteMember(memberId);
+              },
+            ),
+
+            // 加入白名单
+            ListTile(
+              leading: Icon(
+                Icons.verified_user_outlined,
+                color: AppColors.primary(isDark),
+              ),
+              title: Text(
+                '加入白名单',
+                style: TextStyle(color: AppColors.textPrimary(isDark)),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _addToWhitelist(memberId);
               },
             ),
           ],
@@ -105,21 +192,56 @@ class _TestChatRoomWhiteListPageState extends State<TestChatRoomWhiteListPage> {
     );
   }
 
-  Future<void> _removeFromWhitelist(String memberId) async {
+  /// 设置管理员
+  Future<void> _setAdmin(String memberId) async {
     try {
-      await EMClient.getInstance.chatRoomManager
-          .removeMembersFromChatRoomAllowList(widget.roomId, [memberId]);
+      await EMClient.getInstance.groupManager.addAdmin(
+        widget.groupId,
+        memberId,
+      );
       if (mounted) {
-        _fetchMembers();
-        _showResultDialog('移除 $memberId 白名单', true);
+        _showResultDialog('已设置 $memberId 为管理员', true);
       }
     } catch (e) {
       if (mounted) {
-        _showResultDialog('移除失败: ${e.toString()}', false);
+        _showResultDialog('设置管理员失败: ${e.toString()}', false);
       }
     }
   }
 
+  /// 禁言成员
+  Future<void> _muteMember(String memberId) async {
+    try {
+      await EMClient.getInstance.groupManager.muteMembers(widget.groupId, [
+        memberId,
+      ]);
+      if (mounted) {
+        _showResultDialog('已禁言 $memberId', true);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showResultDialog('禁言失败: ${e.toString()}', false);
+      }
+    }
+  }
+
+  /// 加入白名单
+  Future<void> _addToWhitelist(String memberId) async {
+    try {
+      await EMClient.getInstance.groupManager.addAllowList(widget.groupId, [
+        memberId,
+      ]);
+      if (mounted) {
+        _showResultDialog('已将 $memberId 加入白名单', true);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showResultDialog('加入白名单失败: ${e.toString()}', false);
+      }
+    }
+  }
+
+  /// 显示操作结果对话框
   void _showResultDialog(String message, bool isSuccess) {
     final isDark = _settings.isDarkMode;
     showDialog(
@@ -176,7 +298,7 @@ class _TestChatRoomWhiteListPageState extends State<TestChatRoomWhiteListPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '白名单 (${_members.length})',
+                '群组成员 (${_members.length})',
                 style: TextStyle(
                   color: AppColors.textPrimary(isDark),
                   fontSize: 18,
@@ -229,7 +351,7 @@ class _TestChatRoomWhiteListPageState extends State<TestChatRoomWhiteListPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              '获取白名单失败',
+              '获取成员列表失败',
               style: TextStyle(
                 color: AppColors.textPrimary(isDark),
                 fontSize: 16,
@@ -284,8 +406,25 @@ class _TestChatRoomWhiteListPageState extends State<TestChatRoomWhiteListPage> {
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: _members.length,
+      itemCount: _members.length + (_hasMore ? 1 : 0),
       itemBuilder: (context, index) {
+        // 显示加载更多指示器
+        if (index == _members.length) {
+          return Container(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            alignment: Alignment.center,
+            child: _isLoadingMore
+                ? CircularProgressIndicator(color: AppColors.primary(isDark))
+                : Text(
+                    '加载更多...',
+                    style: TextStyle(
+                      color: AppColors.textSecondary(isDark),
+                      fontSize: 12,
+                    ),
+                  ),
+          );
+        }
+
         final member = _members[index];
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

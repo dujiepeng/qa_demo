@@ -32,16 +32,20 @@ class _TestPageState extends State<TestPage> {
   void initState() {
     super.initState();
     _testItems = [
-      // TestGridItem(
-      //   title: '单聊',
-      //   icon: Icons.person_outlined,
-      //   onTap: _noSupportYet,
-      // ),
-      // TestGridItem(
-      //   title: '群聊',
-      //   icon: Icons.group_outlined,
-      //   onTap: _noSupportYet,
-      // ),
+      TestGridItem(
+        title: '单聊',
+        icon: Icons.person_outlined,
+        onTap: () {
+          Navigator.pushNamed(context, '/test_single_chat');
+        },
+      ),
+      TestGridItem(
+        title: '群聊',
+        icon: Icons.group_outlined,
+        onTap: () {
+          Navigator.pushNamed(context, '/test_group_list');
+        },
+      ),
       TestGridItem(
         title: '聊天室',
         icon: Icons.list_alt_outlined,
