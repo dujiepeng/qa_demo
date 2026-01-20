@@ -10,7 +10,9 @@ import '../../widgets/grid_action_menu.dart';
 import '../../pages/log_content_page.dart';
 
 class TestSingleChatPage extends StatefulWidget {
-  const TestSingleChatPage({super.key});
+  const TestSingleChatPage({super.key, this.userId});
+
+  final String? userId;
 
   @override
   State<TestSingleChatPage> createState() => _TestSingleChatPageState();
@@ -27,6 +29,11 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
   void initState() {
     super.initState();
     _addListener();
+
+    // 如果传入了 userId,则自动填充
+    if (widget.userId != null) {
+      _userIdController.text = widget.userId!;
+    }
 
     _userIdController.addListener(() {
       setState(() {});
@@ -58,8 +65,7 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
       EMChatEventHandler(
         onMessagesReceived: (messages) {
           for (var msg in messages) {
-            if (msg.conversationId ==
-                _userIdController.text.trim().toLowerCase()) {
+            if (msg.chatType == ChatType.Chat) {
               _addReceiveLog(
                 '${msg.from}: ${msg.toJson().toString()}',
                 message: msg,
@@ -443,6 +449,38 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => LogContentPage(logPath: logPath),
+              ),
+            );
+          }
+        },
+      ),
+      GridActionItem(
+        icon: Icons.info_outline,
+        label: '信息',
+        onTap: () async {
+          final currentUser = await EMClient.getInstance.getCurrentUserId();
+          final deviceId = await EMClient.getInstance.getCurrentDeviceId();
+
+          if (mounted) {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('个人信息'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('当前用户: $currentUser'),
+                    const SizedBox(height: 8),
+                    Text('设备ID: $deviceId'),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('确定'),
+                  ),
+                ],
               ),
             );
           }

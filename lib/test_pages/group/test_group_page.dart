@@ -895,6 +895,7 @@ class _TestGroupPageState extends State<TestGroupPage> {
             return;
           }
           final currentUser = await EMClient.getInstance.getCurrentUserId();
+          final deviceId = await EMClient.getInstance.getCurrentDeviceId();
           final info = await EMClient.getInstance.groupManager
               .fetchGroupInfoFromServer(_groupId);
           final isMuted = await EMClient.getInstance.groupManager
@@ -909,6 +910,8 @@ class _TestGroupPageState extends State<TestGroupPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('当前用户: $currentUser'),
+                    const SizedBox(height: 8),
+                    Text('设备ID: $deviceId'),
                     const SizedBox(height: 8),
                     Text('房间权限: ${info.permissionType?.name}'),
                     const SizedBox(height: 8),

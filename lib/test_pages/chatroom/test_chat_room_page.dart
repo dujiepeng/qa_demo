@@ -1009,6 +1009,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
             return;
           }
           final currentUser = await EMClient.getInstance.getCurrentUserId();
+          final deviceId = await EMClient.getInstance.getCurrentDeviceId();
           final info = await EMClient.getInstance.chatRoomManager
               .fetchChatRoomInfoFromServer(_roomId);
           final isMuted = await EMClient.getInstance.chatRoomManager
@@ -1023,6 +1024,8 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('当前用户: $currentUser'),
+                    const SizedBox(height: 8),
+                    Text('设备ID: $deviceId'),
                     const SizedBox(height: 8),
                     Text('房间权限: ${info.permissionType.name}'),
                     const SizedBox(height: 8),
