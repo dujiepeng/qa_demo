@@ -1,7 +1,7 @@
-import 'package:em_chat_uikit/chat_uikit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
+import 'package:qa_flutter/uikit/lib/chat_uikit.dart';
 
 /// 日志条目模型，包含内容、时间戳和可选背景色
 class LogEntry {

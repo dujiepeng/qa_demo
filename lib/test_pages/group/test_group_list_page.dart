@@ -28,6 +28,11 @@ class _TestGroupListPageState extends State<TestGroupListPage> {
     super.initState();
     _fetchGroups();
     _scrollController.addListener(_scrollListener);
+
+    EMClient.getInstance.groupManager.addEventHandler(
+      'group_list',
+      EMGroupEventHandler(),
+    );
   }
 
   @override
@@ -175,16 +180,25 @@ class _TestGroupListPageState extends State<TestGroupListPage> {
                 : RefreshIndicator(
                     onRefresh: _fetchGroups,
                     child: _groups.isEmpty
-                        ? Center(
-                            child: Text(
-                              '暂无加入的群组',
-                              style: TextStyle(
-                                color: AppColors.textSecondary(isDark),
+                        ? ListView(
+                            children: [
+                              SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height - 200,
+                                child: Center(
+                                  child: Text(
+                                    '暂无加入的群组',
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary(isDark),
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           )
                         : ListView.builder(
                             controller: _scrollController,
+                            physics: const AlwaysScrollableScrollPhysics(),
                             itemCount: _groups.length + (_hasMore ? 1 : 0),
                             itemBuilder: (context, index) {
                               if (index < _groups.length) {
