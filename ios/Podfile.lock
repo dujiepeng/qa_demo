@@ -49,6 +49,8 @@ PODS:
     - HyphenateChat (= 4.17.1)
   - image_picker_ios (0.0.1):
     - Flutter
+  - package_info_plus (0.4.5):
+    - Flutter
   - path_provider_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
@@ -80,6 +82,7 @@ DEPENDENCIES:
   - flutter_localization (from `.symlinks/plugins/flutter_localization/ios`)
   - im_flutter_sdk_ios (from `.symlinks/plugins/im_flutter_sdk_ios/ios`)
   - image_picker_ios (from `.symlinks/plugins/image_picker_ios/ios`)
+  - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
   - record_ios (from `.symlinks/plugins/record_ios/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
@@ -112,6 +115,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/im_flutter_sdk_ios/ios"
   image_picker_ios:
     :path: ".symlinks/plugins/image_picker_ios/ios"
+  package_info_plus:
+    :path: ".symlinks/plugins/package_info_plus/ios"
   path_provider_foundation:
     :path: ".symlinks/plugins/path_provider_foundation/darwin"
   record_ios:
@@ -139,6 +144,7 @@ SPEC CHECKSUMS:
   HyphenateChat: b41e58b4d6731e0ee38aa52253dfc38caad6db38
   im_flutter_sdk_ios: ea32284df35c005072b1770daf57d29f7d7fea01
   image_picker_ios: 4f2f91b01abdb52842a8e277617df877e40f905b
+  package_info_plus: c0502532a26c7662a62a356cebe2692ec5fe4ec4
   path_provider_foundation: 0b743cbb62d8e47eab856f09262bb8c1ddcfe6ba
   record_ios: 840d21cce013c5a3b2168b74a54ebdb4136359e2
   SDWebImage: e9c98383c7572d713c1a0d7dd2783b10599b9838

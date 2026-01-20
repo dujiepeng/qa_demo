@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:qa_flutter/test_pages/chatroom/test_chat_room_list_page.dart';
 import 'package:qa_flutter/theme/app_colors.dart';
 import 'package:qa_flutter/uikit/lib/chat_uikit.dart';
+import 'config/app_config.dart';
 import 'pages/home_page.dart';
 import 'pages/login_page.dart';
 import 'pages/settings_page.dart';
@@ -13,6 +14,9 @@ import 'utils/version_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 初始化应用配置 (读取版本号等信息)
+  await AppConfig.init();
 
   // 加载持久化配置
   await AppSettings().loadSettings();

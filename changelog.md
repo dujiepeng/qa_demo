@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.35.0+102] - 2026-01-20
+
+### 修改内容
+- **[优化]** 版本号管理优化:
+    - 添加 `package_info_plus` 依赖。
+    - 重写 `AppConfig` 类,使用动态读取 `pubspec.yaml` 中的版本号。
+    - 在 `main.dart` 中初始化 `AppConfig`。
+    - 以后只需更新 `pubspec.yaml` 的 `version` 字段,无需手动维护 `app_config.dart`。
+- **[版本]** 迭代项目版本号至 `1.35.0+102`。
+
 ## [1.35.0+101] - 2026-01-20
 
 ### 修改内容
