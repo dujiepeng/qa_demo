@@ -46,6 +46,82 @@ class _TestGroupMembersPageState extends State<TestGroupMembersPage> {
     }
   }
 
+  /// 添加成员
+  Future<void> _addMembers() async {
+    final isDark = _settings.isDarkMode;
+    final controller = TextEditingController();
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: isDark ? const Color(0xFF2C2C2E) : Colors.white,
+        title: Text(
+          '添加成员',
+          style: TextStyle(
+            color: AppColors.textPrimary(isDark),
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: TextStyle(color: AppColors.textPrimary(isDark)),
+          decoration: InputDecoration(
+            hintText: '请输入成员 ID',
+            hintStyle: TextStyle(color: AppColors.textSecondary(isDark)),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: AppColors.glassBorder(isDark)),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: AppColors.primary(isDark)),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              '取消',
+              style: TextStyle(color: AppColors.textSecondary(isDark)),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              final input = controller.text.trim();
+              if (input.isNotEmpty) {
+                Navigator.pop(context, input);
+              }
+            },
+            child: Text(
+              '确认',
+              style: TextStyle(color: AppColors.primary(isDark)),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    // 处理输入结果
+    if (result != null && result.isNotEmpty) {
+      try {
+        await EMClient.getInstance.groupManager.addMembers(widget.groupId, [
+          result,
+        ]);
+        if (mounted) {
+          _showResultDialog('已添加成员 $result', true);
+          // 刷新成员列表
+          _fetchMembers();
+        }
+      } catch (e) {
+        if (mounted) {
+          _showResultDialog('添加成员失败: ${e.toString()}', false);
+        }
+      }
+    }
+  }
+
   /// 获取群组成员列表
   Future<void> _fetchMembers() async {
     setState(() {
@@ -307,6 +383,11 @@ class _TestGroupMembersPageState extends State<TestGroupMembersPage> {
               ),
               Row(
                 children: [
+                  IconButton(
+                    icon: Icon(Icons.add, color: AppColors.primary(isDark)),
+                    onPressed: _isLoading ? null : _addMembers,
+                    tooltip: '添加',
+                  ),
                   IconButton(
                     icon: Icon(Icons.refresh, color: AppColors.primary(isDark)),
                     onPressed: _isLoading ? null : _fetchMembers,

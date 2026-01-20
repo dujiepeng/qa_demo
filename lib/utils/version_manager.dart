@@ -95,19 +95,29 @@ class VersionManager extends ChangeNotifier {
     }
   }
 
-  // 简单的版本比较算法
+  // 版本比较算法
   // 返回 1: v1 > v2
   // 返回 -1: v1 < v2
   // 返回 0: v1 == v2
   int _compareVersions(String v1, String v2) {
     try {
-      // 移除构建号 (+号及后面部分)
-      v1 = v1.split('+')[0];
-      v2 = v2.split('+')[0];
+      // 分离版本号和构建号
+      final v1Parts = v1.split('+');
+      final v2Parts = v2.split('+');
 
-      List<int> n1 = v1.split('.').map((s) => int.parse(s)).toList();
-      List<int> n2 = v2.split('.').map((s) => int.parse(s)).toList();
+      final v1Version = v1Parts[0]; // 例如: "1.35.0"
+      final v2Version = v2Parts[0];
 
+      final v1Build = v1Parts.length > 1
+          ? int.tryParse(v1Parts[1]) ?? 0
+          : 0; // 例如: 99
+      final v2Build = v2Parts.length > 1 ? int.tryParse(v2Parts[1]) ?? 0 : 0;
+
+      // 比较主版本号 (major.minor.patch)
+      List<int> n1 = v1Version.split('.').map((s) => int.parse(s)).toList();
+      List<int> n2 = v2Version.split('.').map((s) => int.parse(s)).toList();
+
+      // 比较 major.minor.patch
       for (int i = 0; i < 3; i++) {
         int num1 = i < n1.length ? n1[i] : 0;
         int num2 = i < n2.length ? n2[i] : 0;
@@ -115,6 +125,10 @@ class VersionManager extends ChangeNotifier {
         if (num1 > num2) return 1;
         if (num1 < num2) return -1;
       }
+
+      // 如果主版本号相同,比较构建号
+      if (v1Build > v2Build) return 1;
+      if (v1Build < v2Build) return -1;
     } catch (e) {
       debugPrint('Error comparing versions: $e');
     }
