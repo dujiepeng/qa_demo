@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:qa_flutter/widgets/switch_alert.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
+import '../../widgets/async_button.dart';
 import '../../widgets/input_dialog.dart';
 import '../../widgets/log_view.dart';
 import '../../widgets/grid_action_menu.dart';
@@ -89,7 +90,188 @@ class _TestGroupPageState extends State<TestGroupPage> {
 
     EMClient.getInstance.groupManager.addEventHandler(
       _eventKey,
-      EMGroupEventHandler(),
+      EMGroupEventHandler(
+        onAdminAddedFromGroup: (groupId, admin) {
+          if (groupId == _groupId) {
+            _addReceiveLog(
+              'onAdminAddedFromGroup: groupId: $groupId, admin: $admin',
+            );
+          }
+        },
+        onAdminRemovedFromGroup: (groupId, admin) {
+          if (groupId == _groupId) {
+            _addReceiveLog(
+              'onAdminRemovedFromGroup: groupId: $groupId, admin: $admin',
+            );
+          }
+        },
+        onAllGroupMemberMuteStateChanged: (groupId, isAllMuted) {
+          if (groupId == _groupId) {
+            _addReceiveLog(
+              'onAllGroupMemberMuteStateChanged: groupId: $groupId, isAllMuted: $isAllMuted',
+            );
+          }
+        },
+        onAllowListAddedFromGroup: (groupId, members) {
+          if (groupId == _groupId) {
+            _addReceiveLog(
+              'onAllowListAddedFromGroup: groupId: $groupId, members: $members',
+            );
+          }
+        },
+        onAllowListRemovedFromGroup: (groupId, members) {
+          if (groupId == _groupId) {
+            _addReceiveLog(
+              'onAllowListRemovedFromGroup: groupId: $groupId, members: $members',
+            );
+          }
+        },
+        onAnnouncementChangedFromGroup: (groupId, announcement) {
+          if (groupId == _groupId) {
+            _addReceiveLog(
+              'onAnnouncementChangedFromGroup: groupId: $groupId, announcement: $announcement',
+            );
+          }
+        },
+        onAttributesChangedOfGroupMember:
+            (groupId, userId, attributes, operatorId) {
+              if (groupId == _groupId) {
+                _addReceiveLog(
+                  'onAttributesChangedOfGroupMember: groupId: $groupId, userId: $userId, attributes: $attributes, operatorId: $operatorId',
+                );
+              }
+            },
+        onAutoAcceptInvitationFromGroup: (groupId, inviter, inviteMessage) {
+          if (groupId == _groupId) {
+            _addReceiveLog(
+              'onAutoAcceptInvitationFromGroup: groupId: $groupId, inviter: $inviter, inviteMessage: $inviteMessage',
+            );
+          }
+        },
+        onDisableChanged: (groupId, isDisable) {
+          if (groupId == _groupId) {
+            _addReceiveLog(
+              'onDisableChanged: groupId: $groupId, isDisable: $isDisable',
+            );
+          }
+        },
+        onGroupDestroyed: (groupId, groupName) {
+          if (groupId == _groupId) {
+            _addReceiveLog(
+              'onGroupDestroyed: groupId: $groupId, groupName: $groupName',
+            );
+          }
+        },
+        onInvitationAcceptedFromGroup: (groupId, invitee, reason) {
+          if (groupId == _groupId) {
+            _addReceiveLog(
+              'onInvitationAcceptedFromGroup: groupId: $groupId, invitee: $invitee, reason: $reason',
+            );
+          }
+        },
+        onInvitationDeclinedFromGroup: (groupId, invitee, reason) {
+          if (groupId == _groupId) {
+            _addReceiveLog(
+              'onInvitationDeclinedFromGroup: groupId: $groupId, invitee: $invitee, reason: $reason',
+            );
+          }
+        },
+        onInvitationReceivedFromGroup: (groupId, groupName, inviter, reason) {
+          if (groupId == _groupId) {
+            _addReceiveLog(
+              'onInvitationReceivedFromGroup: groupId: $groupId, groupName: $groupName, inviter: $inviter, reason: $reason',
+            );
+          }
+        },
+        onMembersExitedFromGroup: (groupId, userIds) {
+          if (groupId == _groupId) {
+            _addReceiveLog(
+              'onMembersExitedFromGroup: groupId: $groupId, userIds: $userIds',
+            );
+          }
+        },
+        onMembersJoinedFromGroup: (groupId, userIds) {
+          if (groupId == _groupId) {
+            _addReceiveLog(
+              'onMembersJoinedFromGroup: groupId: $groupId, userIds: $userIds',
+            );
+          }
+        },
+        onMuteListAddedFromGroup: (groupId, mutes, muteExpire) {
+          if (groupId == _groupId) {
+            _addReceiveLog(
+              'onMuteListAddedFromGroup: groupId: $groupId, mutes: $mutes, muteExpire: $muteExpire',
+            );
+          }
+        },
+        onMuteListRemovedFromGroup: (groupId, mutes) {
+          if (groupId == _groupId) {
+            _addReceiveLog(
+              'onMuteListRemovedFromGroup: groupId: $groupId, mutes: $mutes',
+            );
+          }
+        },
+        onOwnerChangedFromGroup: (groupId, newOwner, oldOwner) {
+          if (groupId == _groupId) {
+            _addReceiveLog(
+              'onOwnerChangedFromGroup: groupId: $groupId, newOwner: $newOwner, oldOwner: $oldOwner',
+            );
+          }
+        },
+        onRequestToJoinAcceptedFromGroup: (groupId, groupName, accepter) {
+          if (groupId == _groupId) {
+            _addReceiveLog(
+              'onRequestToJoinAcceptedFromGroup: groupId: $groupId, groupName: $groupName, accepter: $accepter',
+            );
+          }
+        },
+        onRequestToJoinDeclinedFromGroup:
+            (groupId, groupName, decliner, reason, applicant) {
+              if (groupId == _groupId) {
+                _addReceiveLog(
+                  'onRequestToJoinDeclinedFromGroup: groupId: $groupId, groupName: $groupName, decliner: $decliner, reason: $reason, applicant: $applicant',
+                );
+              }
+            },
+        onRequestToJoinReceivedFromGroup: (groupId, groupName, applicant, reason) {
+          if (groupId == _groupId) {
+            _addReceiveLog(
+              'onRequestToJoinReceivedFromGroup: groupId: $groupId, groupName: $groupName, applicant: $applicant, reason: $reason',
+            );
+          }
+        },
+        onSharedFileAddedFromGroup: (groupId, sharedFile) {
+          if (groupId == _groupId) {
+            _addReceiveLog(
+              'onSharedFileAddedFromGroup: groupId: $groupId, sharedFile: ${sharedFile.fileId}',
+            );
+          }
+        },
+        onSharedFileDeletedFromGroup: (groupId, fileId) {
+          if (groupId == _groupId) {
+            _addReceiveLog(
+              'onSharedFileDeletedFromGroup: groupId: $groupId, fileId: $fileId',
+            );
+          }
+        },
+        onSpecificationDidUpdate: (group) {
+          if (group.groupId == _groupId) {
+            _addReceiveLog(
+              'onSpecificationDidUpdate: name: ${group.groupName}, description: ${group.desc}',
+            );
+          }
+        },
+        onUserRemovedFromGroup: (groupId, groupName) {
+          if (groupId == _groupId) {
+            setState(() {
+              _groupId = '';
+            });
+            _addReceiveLog(
+              'onUserRemovedFromGroup: groupId: $groupId, groupName: $groupName',
+            );
+          }
+        },
+      ),
     );
   }
 
@@ -619,7 +801,7 @@ class _TestGroupPageState extends State<TestGroupPage> {
     required TextEditingController controller,
     required String hintText,
     required String buttonText,
-    required VoidCallback onPressed,
+    required Future<void> Function() onPressed,
     required bool isDark,
   }) {
     return Row(
@@ -653,7 +835,7 @@ class _TestGroupPageState extends State<TestGroupPage> {
           ),
         ),
         const SizedBox(width: 12),
-        ElevatedButton(
+        AsyncButton(
           onPressed: onPressed,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary(isDark),
@@ -890,42 +1072,44 @@ class _TestGroupPageState extends State<TestGroupPage> {
         icon: Icons.info_outline,
         label: '信息',
         onTap: () async {
-          if (_groupId.isEmpty) {
-            _addSendLog('请先加入群组');
-            return;
-          }
           final currentUser = await EMClient.getInstance.getCurrentUserId();
           final deviceId = await EMClient.getInstance.getCurrentDeviceId();
-          final info = await EMClient.getInstance.groupManager
-              .fetchGroupInfoFromServer(_groupId);
-          final isMuted = await EMClient.getInstance.groupManager
-              .isMemberInGroupMuteList(_groupId);
-          if (mounted) {
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('个人信息'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('当前用户: $currentUser'),
-                    const SizedBox(height: 8),
-                    Text('设备ID: $deviceId'),
-                    const SizedBox(height: 8),
-                    Text('房间权限: ${info.permissionType?.name}'),
-                    const SizedBox(height: 8),
-                    Text('禁言状态: $isMuted'),
+          EMGroup? info;
+          bool? isMuted;
+          try {
+            info = await EMClient.getInstance.groupManager
+                .fetchGroupInfoFromServer(_groupId);
+            isMuted = await EMClient.getInstance.groupManager
+                .isMemberInGroupMuteList(_groupId);
+          } catch (_) {
+          } finally {
+            if (mounted) {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('个人信息'),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('当前用户: $currentUser'),
+                      const SizedBox(height: 8),
+                      Text('设备ID: $deviceId'),
+                      const SizedBox(height: 8),
+                      Text('房间权限: ${info?.permissionType?.name}'),
+                      const SizedBox(height: 8),
+                      Text('禁言状态: $isMuted'),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('确定'),
+                    ),
                   ],
                 ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('确定'),
-                  ),
-                ],
-              ),
-            );
+              );
+            }
           }
         },
       ),

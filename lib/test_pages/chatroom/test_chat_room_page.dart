@@ -7,6 +7,7 @@ import 'package:qa_flutter/widgets/switch_alert.dart';
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
+import '../../widgets/async_button.dart';
 import '../../widgets/input_dialog.dart';
 import 'test_chat_room_members_page.dart';
 import 'test_chat_room_admins_page.dart';
@@ -189,6 +190,9 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
         },
         onRemovedFromChatRoom: (roomId, roomName, participant, reason) {
           if (roomId == _roomId) {
+            setState(() {
+              _roomId = '';
+            });
             _addReceiveLog(
               'onRemovedFromChatRoom: roomId: $roomId, roomName: $roomName, participant: $participant, reason: $reason',
             );
@@ -646,7 +650,8 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                             }
                           } else {
                             // Join
-                            _addLog('开始加入 $inputId');
+                            final userId = EMClient.getInstance.currentUserId;
+                            _addLog('$userId 开始加入 $inputId');
                             String showMsg = '';
                             try {
                               await EMClient.getInstance.chatRoomManager
@@ -733,7 +738,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
     required TextEditingController controller,
     required String hintText,
     required String buttonText,
-    required VoidCallback onPressed,
+    required Future<void> Function() onPressed,
     required bool isDark,
   }) {
     return Row(
@@ -767,7 +772,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
           ),
         ),
         const SizedBox(width: 12),
-        ElevatedButton(
+        AsyncButton(
           onPressed: onPressed,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary(isDark),
@@ -1004,42 +1009,44 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
         icon: Icons.info_outline,
         label: '信息',
         onTap: () async {
-          if (_roomId.isEmpty) {
-            _addSendLog('请先加入聊天室');
-            return;
-          }
           final currentUser = await EMClient.getInstance.getCurrentUserId();
           final deviceId = await EMClient.getInstance.getCurrentDeviceId();
-          final info = await EMClient.getInstance.chatRoomManager
-              .fetchChatRoomInfoFromServer(_roomId);
-          final isMuted = await EMClient.getInstance.chatRoomManager
-              .isMemberInChatRoomMuteList(_roomId);
-          if (mounted) {
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('个人信息'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('当前用户: $currentUser'),
-                    const SizedBox(height: 8),
-                    Text('设备ID: $deviceId'),
-                    const SizedBox(height: 8),
-                    Text('房间权限: ${info.permissionType.name}'),
-                    const SizedBox(height: 8),
-                    Text('禁言状态: $isMuted'),
+          EMChatRoom? info;
+          bool? isMuted;
+          try {
+            info = await EMClient.getInstance.chatRoomManager
+                .fetchChatRoomInfoFromServer(_roomId);
+            isMuted = await EMClient.getInstance.chatRoomManager
+                .isMemberInChatRoomMuteList(_roomId);
+          } catch (_) {
+          } finally {
+            if (mounted) {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('个人信息'),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('当前用户: $currentUser'),
+                      const SizedBox(height: 8),
+                      Text('设备ID: $deviceId'),
+                      const SizedBox(height: 8),
+                      Text('房间权限: ${info?.permissionType.name}'),
+                      const SizedBox(height: 8),
+                      Text('禁言状态: $isMuted'),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('确定'),
+                    ),
                   ],
                 ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('确定'),
-                  ),
-                ],
-              ),
-            );
+              );
+            }
           }
         },
       ),
