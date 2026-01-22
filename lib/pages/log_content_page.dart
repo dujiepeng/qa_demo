@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 
 class LogContentPage extends StatefulWidget {
@@ -80,6 +81,17 @@ class _LogContentPageState extends State<LogContentPage> {
     }
   }
 
+  Future<void> _copyToClipboard() async {
+    if (_content.isNotEmpty && _content != 'Loading...') {
+      await Clipboard.setData(ClipboardData(text: _content));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('日志内容已复制到剪贴板')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = MediaQuery.of(context).platformBrightness == Brightness.dark;
@@ -127,12 +139,15 @@ class _LogContentPageState extends State<LogContentPage> {
               child: SingleChildScrollView(
                 controller: _scrollController,
                 padding: const EdgeInsets.all(16.0),
-                child: SelectableText(
-                  _content,
-                  style: TextStyle(
-                    fontFamily: 'Courier',
-                    fontSize: 12,
-                    color: AppColors.textPrimary(isDark),
+                child: GestureDetector(
+                  onLongPress: _copyToClipboard,
+                  child: SelectableText(
+                    _content,
+                    style: TextStyle(
+                      fontFamily: 'Courier',
+                      fontSize: 12,
+                      color: AppColors.textPrimary(isDark),
+                    ),
                   ),
                 ),
               ),
