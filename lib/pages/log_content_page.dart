@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import '../theme/app_colors.dart';
 
 class LogContentPage extends StatefulWidget {
@@ -140,15 +141,26 @@ class _LogContentPageState extends State<LogContentPage> {
                 controller: _scrollController,
                 padding: const EdgeInsets.all(16.0),
                 child: GestureDetector(
-                  onLongPress: _copyToClipboard,
-                  child: SelectableText(
-                    _content,
-                    style: TextStyle(
-                      fontFamily: 'Courier',
-                      fontSize: 12,
-                      color: AppColors.textPrimary(isDark),
-                    ),
-                  ),
+                  onLongPress: defaultTargetPlatform == TargetPlatform.android
+                      ? _copyToClipboard
+                      : null,
+                  child: defaultTargetPlatform == TargetPlatform.android
+                      ? Text(
+                          _content,
+                          style: TextStyle(
+                            fontFamily: 'Courier',
+                            fontSize: 12,
+                            color: AppColors.textPrimary(isDark),
+                          ),
+                        )
+                      : SelectableText(
+                          _content,
+                          style: TextStyle(
+                            fontFamily: 'Courier',
+                            fontSize: 12,
+                            color: AppColors.textPrimary(isDark),
+                          ),
+                        ),
                 ),
               ),
             ),
