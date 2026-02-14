@@ -6,7 +6,8 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 
 class TestChatRoomListPage extends StatefulWidget {
-  const TestChatRoomListPage({super.key});
+  final Function(String roomId)? onItemTap;
+  const TestChatRoomListPage({super.key, this.onItemTap});
 
   @override
   State<TestChatRoomListPage> createState() => _TestChatRoomListPageState();
@@ -259,15 +260,19 @@ class _TestChatRoomListPageState extends State<TestChatRoomListPage> {
                                         color: AppColors.textSecondary(isDark),
                                       ),
                                       onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                TestChatRoomPage(
-                                                  roomId: room.roomId,
-                                                ),
-                                          ),
-                                        );
+                                        if (widget.onItemTap != null) {
+                                          widget.onItemTap!(room.roomId);
+                                        } else {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  TestChatRoomPage(
+                                                    roomId: room.roomId,
+                                                  ),
+                                            ),
+                                          );
+                                        }
                                       },
                                     ),
                                   ),

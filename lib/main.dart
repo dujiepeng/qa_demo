@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:qa_flutter/test_pages/chatroom/test_chat_room_list_page.dart';
 import 'package:qa_flutter/theme/app_colors.dart';
+import 'package:qa_flutter/theme/app_settings.dart';
 import 'package:qa_flutter/uikit/lib/chat_uikit.dart';
 import 'config/app_config.dart';
 import 'mobile/home_page.dart';

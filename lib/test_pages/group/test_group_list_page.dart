@@ -7,7 +7,8 @@ import '../../theme/app_settings.dart';
 
 /// 群组列表页面
 class TestGroupListPage extends StatefulWidget {
-  const TestGroupListPage({super.key});
+  final Function(String groupId)? onItemTap;
+  const TestGroupListPage({super.key, this.onItemTap});
 
   @override
   State<TestGroupListPage> createState() => _TestGroupListPageState();
@@ -274,14 +275,18 @@ class _TestGroupListPageState extends State<TestGroupListPage> {
                                         color: AppColors.textSecondary(isDark),
                                       ),
                                       onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => TestGroupPage(
-                                              groupId: group.groupId,
+                                        if (widget.onItemTap != null) {
+                                          widget.onItemTap!(group.groupId);
+                                        } else {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => TestGroupPage(
+                                                groupId: group.groupId,
+                                              ),
                                             ),
-                                          ),
-                                        );
+                                          );
+                                        }
                                       },
                                     ),
                                   ),

@@ -7,7 +7,8 @@ import '../../theme/app_settings.dart';
 
 /// 好友列表页面
 class TestSingleChatListPage extends StatefulWidget {
-  const TestSingleChatListPage({super.key});
+  final Function(String userId)? onItemTap;
+  const TestSingleChatListPage({super.key, this.onItemTap});
 
   @override
   State<TestSingleChatListPage> createState() => _TestSingleChatListPageState();
@@ -348,15 +349,19 @@ class _TestSingleChatListPageState extends State<TestSingleChatListPage> {
                                       color: AppColors.textSecondary(isDark),
                                     ),
                                     onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              TestSingleChatPage(
-                                                userId: contact.userId,
-                                              ),
-                                        ),
-                                      );
+                                      if (widget.onItemTap != null) {
+                                        widget.onItemTap!(contact.userId);
+                                      } else {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                TestSingleChatPage(
+                                                  userId: contact.userId,
+                                                ),
+                                          ),
+                                        );
+                                      }
                                     },
                                   ),
                                 ),
