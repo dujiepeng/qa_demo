@@ -61,6 +61,11 @@ class _MyAppState extends State<MyApp> {
     // 监听设置变化
     final settings = context.watch<AppSettings>();
 
+    // 动态同步 UIKit 主题色
+    ChatUIKitTheme.instance.setColor(
+      settings.isDarkMode ? AppColors.darkColor : AppColors.lightColor,
+    );
+
     return MaterialApp(
       title: 'QA Flutter',
       debugShowCheckedModeBanner: false,

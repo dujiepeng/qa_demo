@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import 'package:provider/provider.dart';
-import '../config/app_config.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_settings.dart';
-import '../common/utils/version_manager.dart';
-import '../common/widgets/update_dialog.dart';
+import '../../config/app_config.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_settings.dart';
+import '../utils/version_manager.dart';
+import 'update_dialog.dart';
 
 class MePageContent extends StatelessWidget {
   final bool showAppBar;
@@ -159,6 +159,20 @@ class MePageContent extends StatelessWidget {
       ],
     );
 
+    Widget content = Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.backgroundStart(isDark),
+            AppColors.backgroundEnd(isDark),
+          ],
+        ),
+      ),
+      child: body,
+    );
+
     if (showAppBar) {
       return Scaffold(
         extendBodyBehindAppBar: true,
@@ -172,22 +186,10 @@ class MePageContent extends StatelessWidget {
           ),
           centerTitle: true,
         ),
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.backgroundStart(isDark),
-                AppColors.backgroundEnd(isDark),
-              ],
-            ),
-          ),
-          child: body,
-        ),
+        body: content,
       );
     } else {
-      return body;
+      return Scaffold(backgroundColor: Colors.transparent, body: content);
     }
   }
 
