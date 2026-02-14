@@ -176,6 +176,7 @@ class _MePageState extends State<MePage> with ChatUIKitThemeMixin {
             ElevatedButton(
               onPressed: () async {
                 // 调用环信退出
+                final navigator = Navigator.of(context);
                 try {
                   await EMClient.getInstance.logout();
                 } catch (_) {}
@@ -184,9 +185,7 @@ class _MePageState extends State<MePage> with ChatUIKitThemeMixin {
                 await _settings.saveSettings();
                 // 跳转回登录页面
                 if (mounted) {
-                  Navigator.of(
-                    context,
-                  ).pushNamedAndRemoveUntil('/login', (route) => false);
+                  navigator.pushNamedAndRemoveUntil('/login', (route) => false);
                 }
               },
               style: ElevatedButton.styleFrom(
