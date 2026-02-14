@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import 'package:provider/provider.dart';
 import 'package:qa_flutter/uikit/lib/chat_uikit.dart';
-import '../config/app_config.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
 import '../common/utils/version_manager.dart';
@@ -11,6 +10,7 @@ import '../test_pages/single/test_single_chat_list_page.dart';
 import '../test_pages/group/test_group_list_page.dart';
 import '../test_pages/chatroom/test_chat_room_list_page.dart';
 import '../common/settings_page.dart';
+import '../common/widgets/me_page_content.dart';
 
 class _TabItem {
   final String label;
@@ -63,9 +63,14 @@ class _TestDashboardPadState extends State<TestDashboardPad> {
         page: const TestChatRoomListPage(),
       ),
       _TabItem(
+        label: '服务器',
+        icon: Icons.dns_outlined,
+        page: const SettingsPage(),
+      ),
+      _TabItem(
         label: '设置',
         icon: Icons.settings_outlined,
-        page: const SettingsPage(),
+        page: const MePageContent(showAppBar: false),
       ),
     ];
   }
@@ -126,8 +131,13 @@ class _TestDashboardPadState extends State<TestDashboardPad> {
                   onTap: () => _showUserDetail(context, isDark),
                   child: CircleAvatar(
                     radius: 20,
-                    backgroundColor: AppColors.primary(isDark).withValues(alpha: 0.1),
-                    child: Icon(Icons.person, color: AppColors.primary(isDark), size: 20),
+                    backgroundColor:
+                        AppColors.primary(isDark).withValues(alpha: 0.1),
+                    child: Icon(
+                      Icons.person,
+                      color: AppColors.primary(isDark),
+                      size: 20,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -137,27 +147,17 @@ class _TestDashboardPadState extends State<TestDashboardPad> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  // 版本检查红点
-                  Consumer<VersionManager>(
-                    builder: (context, vm, _) {
-                      return IconButton(
-                        icon: Badge(
-                          isLabelVisible: vm.hasNewVersion,
-                          child: Icon(
-                            Icons.info_outline,
-                            color: AppColors.textSecondary(isDark),
-                          ),
-                        ),
-                        onPressed: () {
-                          if (vm.hasNewVersion) {
-                            UpdateDialog.show(context);
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('已是最新版本')),
-                            );
-                          }
-                        },
-                      );
+                  // 快速切换测试模式 (可选保留)
+                  IconButton(
+                    icon: Icon(
+                      Icons.bug_report,
+                      color: settings.isTestMode
+                          ? AppColors.primary(isDark)
+                          : AppColors.textSecondary(isDark),
+                    ),
+                    onPressed: () {
+                      settings.isTestMode = !settings.isTestMode;
+                      settings.saveSettings();
                     },
                   ),
                   // 主题切换
@@ -170,11 +170,6 @@ class _TestDashboardPadState extends State<TestDashboardPad> {
                       settings.isDarkMode = !isDark;
                       settings.saveSettings();
                     },
-                  ),
-                  // 退出登录
-                  IconButton(
-                    icon: const Icon(Icons.logout, color: Colors.redAccent),
-                    onPressed: () => _handleLogout(context, settings),
                   ),
                   const SizedBox(height: 20),
                 ],
@@ -229,16 +224,5 @@ class _TestDashboardPadState extends State<TestDashboardPad> {
         ],
       ),
     );
-  }
-
-  Future<void> _handleLogout(BuildContext context, AppSettings settings) async {
-    try {
-      await EMClient.getInstance.logout();
-    } catch (_) {}
-    settings.isLoggedIn = false;
-    await settings.saveSettings();
-    if (context.mounted) {
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-    }
   }
 }
