@@ -5,6 +5,8 @@ import '../theme/app_settings.dart';
 import '../utils/version_manager.dart';
 import '../widgets/update_dialog.dart';
 import '../utils/chat_event_widget.dart';
+import '../utils/responsive_util.dart';
+import '../widgets/responsive_layout.dart';
 import 'conversations_page.dart';
 import 'contacts_page.dart';
 import 'groups_page.dart';
@@ -56,7 +58,7 @@ class _HomePageState extends State<HomePage> with ChatUIKitThemeMixin {
   void _checkAndShowUpdateDialog() {
     if (!mounted) return;
 
-    // 如果有新版本，且还没弹过窗（这里可以优化为每天弹一次，或者基于版本存SP，目前简单处理）
+    // 如果有新版本，且还没弹过窗
     if (VersionManager().hasNewVersion && !_hasShownUpdateDialog) {
       _hasShownUpdateDialog = true;
       UpdateDialog.show(context);
@@ -129,87 +131,148 @@ class _HomePageState extends State<HomePage> with ChatUIKitThemeMixin {
           safeIndex = pages.length - 1;
         }
 
+        final body = IndexedStack(index: safeIndex, children: pages);
+
         return ChatEventWidget(
-          child: Scaffold(
-            backgroundColor: AppColors.backgroundStart(isDark),
-            body: IndexedStack(index: safeIndex, children: pages),
-            bottomNavigationBar: Container(
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, -5),
-                  ),
-                ],
+          child: ResponsiveLayout(
+            mobile: Scaffold(
+              backgroundColor: AppColors.backgroundStart(isDark),
+              body: body,
+              bottomNavigationBar: _buildBottomNavigationBar(
+                context,
+                isDark,
+                items,
+                safeIndex,
               ),
-              child: ListenableBuilder(
-                listenable: VersionManager(),
-                builder: (context, _) {
-                  return BottomNavigationBar(
-                    currentIndex: safeIndex,
-                    onTap: (index) => setState(() => _currentIndex = index),
-                    type: BottomNavigationBarType.fixed,
-                    backgroundColor: isDark
-                        ? ChatUIKitTheme.instance.color.neutralColor1
-                        : ChatUIKitTheme.instance.color.neutralColor98,
-                    selectedItemColor: AppColors.primary(isDark),
-                    unselectedItemColor: AppColors.textSecondary(isDark),
-                    showUnselectedLabels: true,
-                    selectedFontSize: 12,
-                    unselectedFontSize: 12,
-                    items: items.map((item) {
-                      // 为“我”的 Tab (label == '我') 添加红点
-                      if (item.label == '我' && VersionManager().hasNewVersion) {
-                        return BottomNavigationBarItem(
-                          icon: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              item.icon,
-                              Positioned(
-                                right: -2,
-                                top: -2,
-                                child: Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          activeIcon: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              item.activeIcon,
-                              Positioned(
-                                right: -2,
-                                top: -2,
-                                child: Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          label: item.label,
-                        );
-                      }
-                      return item;
-                    }).toList(),
-                  );
-                },
+            ),
+            tablet: Scaffold(
+              backgroundColor: AppColors.backgroundStart(isDark),
+              body: Row(
+                children: [
+                  _buildNavigationRail(context, isDark, items, safeIndex),
+                  const VerticalDivider(thickness: 1, width: 1),
+                  Expanded(child: body),
+                ],
               ),
             ),
           ),
         );
       },
+    );
+  }
+
+  /// 构建 Pad 侧边导航栏
+  Widget _buildNavigationRail(
+    BuildContext context,
+    bool isDark,
+    List<BottomNavigationBarItem> items,
+    int safeIndex,
+  ) {
+    return NavigationRail(
+      selectedIndex: safeIndex,
+      onDestinationSelected: (index) => setState(() => _currentIndex = index),
+      labelType: NavigationRailLabelType.all,
+      backgroundColor: isDark
+          ? ChatUIKitTheme.instance.color.neutralColor1
+          : ChatUIKitTheme.instance.color.neutralColor98,
+      selectedIconTheme: IconThemeData(color: AppColors.primary(isDark)),
+      unselectedIconTheme: IconThemeData(
+        color: AppColors.textSecondary(isDark),
+      ),
+      selectedLabelTextStyle: TextStyle(
+        color: AppColors.primary(isDark),
+        fontSize: 12,
+      ),
+      unselectedLabelTextStyle: TextStyle(
+        color: AppColors.textSecondary(isDark),
+        fontSize: 12,
+      ),
+      destinations: items.map((item) {
+        // 为“我”按钮处理红点提示
+        Widget icon = item.icon;
+        Widget activeIcon = item.activeIcon ?? item.icon;
+
+        if (item.label == '我' && VersionManager().hasNewVersion) {
+          icon = _buildBadgeIcon(icon);
+          activeIcon = _buildBadgeIcon(activeIcon);
+        }
+
+        return NavigationRailDestination(
+          icon: icon,
+          selectedIcon: activeIcon,
+          label: Text(item.label ?? ''),
+        );
+      }).toList(),
+    );
+  }
+
+  /// 构建手机端底部导航栏
+  Widget _buildBottomNavigationBar(
+    BuildContext context,
+    bool isDark,
+    List<BottomNavigationBarItem> items,
+    int safeIndex,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: ListenableBuilder(
+        listenable: VersionManager(),
+        builder: (context, _) {
+          return BottomNavigationBar(
+            currentIndex: safeIndex,
+            onTap: (index) => setState(() => _currentIndex = index),
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: isDark
+                ? ChatUIKitTheme.instance.color.neutralColor1
+                : ChatUIKitTheme.instance.color.neutralColor98,
+            selectedItemColor: AppColors.primary(isDark),
+            unselectedItemColor: AppColors.textSecondary(isDark),
+            showUnselectedLabels: true,
+            selectedFontSize: 12,
+            unselectedFontSize: 12,
+            items: items.map((item) {
+              if (item.label == '我' && VersionManager().hasNewVersion) {
+                return BottomNavigationBarItem(
+                  icon: _buildBadgeIcon(item.icon),
+                  activeIcon: _buildBadgeIcon(item.activeIcon ?? item.icon),
+                  label: item.label,
+                );
+              }
+              return item;
+            }).toList(),
+          );
+        },
+      ),
+    );
+  }
+
+  /// 为图标添加红点通知
+  Widget _buildBadgeIcon(Widget icon) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        icon,
+        Positioned(
+          right: -2,
+          top: -2,
+          child: Container(
+            width: 8,
+            height: 8,
+            decoration: const BoxDecoration(
+              color: Colors.red,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
