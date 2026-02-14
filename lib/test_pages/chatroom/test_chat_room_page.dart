@@ -7,16 +7,16 @@ import 'package:qa_flutter/common/widgets/switch_alert.dart';
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
-import '../../widgets/async_button.dart';
-import '../../widgets/input_dialog.dart';
+import '../../common/widgets/async_button.dart';
+import '../../common/widgets/input_dialog.dart';
 import 'test_chat_room_members_page.dart';
 import 'test_chat_room_admins_page.dart';
 import 'test_chat_room_white_list_page.dart';
 import 'test_chat_room_mute_list_page.dart';
 import 'test_chat_room_change_owner_page.dart';
-import '../../widgets/log_view.dart';
-import '../../widgets/grid_action_menu.dart';
-import '../../pages/log_content_page.dart';
+import '../../common/widgets/log_view.dart';
+import '../../common/widgets/grid_action_menu.dart';
+import '../../common/log_content_page.dart';
 
 /// 聊天室信息编辑类型
 enum RoomInfoEditType {

@@ -5,9 +5,9 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
-import '../../widgets/log_view.dart';
-import '../../widgets/grid_action_menu.dart';
-import '../../pages/log_content_page.dart';
+import '../../common/widgets/log_view.dart';
+import '../../common/widgets/grid_action_menu.dart';
+import '../../common/log_content_page.dart';
 
 class TestSingleChatPage extends StatefulWidget {
   const TestSingleChatPage({super.key, this.userId});

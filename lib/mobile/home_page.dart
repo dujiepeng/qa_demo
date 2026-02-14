@@ -11,8 +11,8 @@ import '../common/conversations_page.dart';
 import '../common/contacts_page.dart';
 import '../common/groups_page.dart';
 import '../common/rooms_page.dart';
-import '../mobile/me_page.dart';
-import '../mobile/test_page.dart';
+import 'me_page.dart';
+import 'test_page.dart';
 import '../pad/test_dashboard_pad.dart';
 
 class HomePage extends StatefulWidget {

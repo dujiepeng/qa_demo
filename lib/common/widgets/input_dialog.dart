@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_settings.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_settings.dart';
 
 /// 输入字段数据模型
 class InputFieldData {

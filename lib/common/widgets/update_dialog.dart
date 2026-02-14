@@ -2,8 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../theme/app_colors.dart';
-import '../common/utils/version_manager.dart';
+import '../../theme/app_colors.dart';
+import '../utils/version_manager.dart';
 
 class UpdateDialog extends StatelessWidget {
   final String version;

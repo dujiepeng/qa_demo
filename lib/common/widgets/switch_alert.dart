@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_settings.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_settings.dart';
 
 /// 带有 Switch 的对话框组件，支持异步确认逻辑
 ///

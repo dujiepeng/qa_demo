@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import '../config/app_config.dart';
+import '../../config/app_config.dart';
 
 class VersionManager extends ChangeNotifier {
   static final VersionManager _instance = VersionManager._internal();
