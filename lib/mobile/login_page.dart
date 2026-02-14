@@ -72,27 +72,26 @@ class _LoginPageState extends State<LoginPage> {
           'LoginPage: SDK Initialized with AppKey: ${_settings.appKey}',
         );
       }
+      final navigator = Navigator.of(context);
+      final messenger = ScaffoldMessenger.of(context);
       try {
-        await EMClient.getInstance.logout();
-      } catch (_) {}
+        await EMClient.getInstance.loginWithPassword(uid, pwd);
 
-      await EMClient.getInstance.loginWithPassword(uid, pwd);
+        // // 更新登录状态并保存
+        // _settings.isLoggedIn = true;
+        // await _settings.saveSettings();
 
-      // // 更新登录状态并保存
-      // _settings.isLoggedIn = true;
-      // await _settings.saveSettings();
-
-      if (!context.mounted) return;
-      Navigator.pushReplacementNamed(context, '/home');
-    } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Login Failed: $e'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-    } finally {
+        navigator.pushReplacementNamed('/home');
+      } catch (e) {
+        if (mounted) {
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text('Login Failed: $e'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+      } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
