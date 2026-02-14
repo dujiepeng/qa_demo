@@ -5,7 +5,6 @@ import '../theme/app_settings.dart';
 import '../utils/version_manager.dart';
 import '../widgets/update_dialog.dart';
 import '../utils/chat_event_widget.dart';
-import '../utils/responsive_util.dart';
 import '../widgets/responsive_layout.dart';
 import 'conversations_page.dart';
 import 'contacts_page.dart';
