@@ -37,9 +37,6 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     setState(() => _isLoading = true);
-    final navigator = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-
     try {
       // 使用设置中的服务器配置进行初始化
       if (_settings.isDirty) {
