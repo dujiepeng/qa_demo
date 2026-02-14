@@ -64,9 +64,7 @@ class _TestDashboardPadState extends State<TestDashboardPad> {
               color: AppColors.glassBorder(isDark),
             ),
             // 右侧主区域: 测试功能网格
-            Expanded(
-              child: _buildMainContent(context, isDark),
-            ),
+            Expanded(child: _buildMainContent(context, isDark)),
           ],
         ),
       ),
@@ -216,10 +214,7 @@ class _TestDashboardPadState extends State<TestDashboardPad> {
           children: [
             Icon(icon, color: AppColors.textSecondary(isDark), size: 20),
             const SizedBox(width: 12),
-            Text(
-              title,
-              style: TextStyle(color: AppColors.textPrimary(isDark)),
-            ),
+            Text(title, style: TextStyle(color: AppColors.textPrimary(isDark))),
             const Spacer(),
             Icon(
               Icons.chevron_right,
@@ -250,10 +245,7 @@ class _TestDashboardPadState extends State<TestDashboardPad> {
         children: [
           Icon(icon, color: AppColors.textSecondary(isDark), size: 20),
           const SizedBox(width: 12),
-          Text(
-            title,
-            style: TextStyle(color: AppColors.textPrimary(isDark)),
-          ),
+          Text(title, style: TextStyle(color: AppColors.textPrimary(isDark))),
           const Spacer(),
           Switch(
             value: value,
@@ -356,7 +348,7 @@ class _TestDashboardPadState extends State<TestDashboardPad> {
         icon: const Icon(Icons.logout),
         label: const Text('退出登录'),
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.red.withOpacity(0.8),
+          backgroundColor: Colors.red.withValues(alpha: 0.8),
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
@@ -435,7 +427,7 @@ class _TestDashboardPadState extends State<TestDashboardPad> {
           border: Border.all(color: AppColors.glassBorder(isDark)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -448,14 +440,10 @@ class _TestDashboardPadState extends State<TestDashboardPad> {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: AppColors.primary(isDark).withOpacity(0.1),
+                color: AppColors.primary(isDark).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                icon,
-                color: AppColors.primary(isDark),
-                size: 32,
-              ),
+              child: Icon(icon, color: AppColors.primary(isDark), size: 32),
             ),
             const SizedBox(height: 16),
             Text(
