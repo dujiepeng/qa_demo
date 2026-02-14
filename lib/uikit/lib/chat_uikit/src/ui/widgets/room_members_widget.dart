@@ -311,7 +311,7 @@ class _ChatRoomMembersWidgetState extends State<ChatRoomMembersWidget>
       temp,
       belongId: widget.roomId,
     );
-    members.removeWhere((element) => map.values.contains(element.id));
+    members.removeWhere((element) => map.containsKey(element.id));
     members.addAll(map.values);
 
     if (mounted) {
@@ -328,7 +328,7 @@ class _ChatRoomMembersWidgetState extends State<ChatRoomMembersWidget>
       temp,
       belongId: widget.roomId,
     );
-    members.removeWhere((element) => map.values.contains(element.id));
+    members.removeWhere((element) => map.containsKey(element.id));
     members.addAll(map.values);
     if (mounted) {
       setState(() {});
