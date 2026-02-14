@@ -3,17 +3,17 @@ import 'package:qa_flutter/uikit/lib/chat_uikit.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
-import '../utils/version_manager.dart';
-import '../widgets/update_dialog.dart';
-import '../utils/chat_event_widget.dart';
-import '../widgets/responsive_layout.dart';
-import 'conversations_page.dart';
-import 'contacts_page.dart';
-import 'groups_page.dart';
-import 'rooms_page.dart';
-import 'me_page.dart';
-import 'test_page.dart';
-import 'test_dashboard_pad.dart';
+import '../common/utils/version_manager.dart';
+import '../common/widgets/update_dialog.dart';
+import '../common/utils/chat_event_widget.dart';
+import '../common/widgets/responsive_layout.dart';
+import '../common/conversations_page.dart';
+import '../common/contacts_page.dart';
+import '../common/groups_page.dart';
+import '../common/rooms_page.dart';
+import '../mobile/me_page.dart';
+import '../mobile/test_page.dart';
+import '../pad/test_dashboard_pad.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});

@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
-import 'package:qa_flutter/widgets/switch_alert.dart';
+import 'package:qa_flutter/common/widgets/switch_alert.dart';
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';

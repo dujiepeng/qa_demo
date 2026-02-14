@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:qa_flutter/config/app_config.dart';
 
 import 'package:qa_flutter/uikit/lib/chat_uikit.dart';
-import '../utils/version_manager.dart';
+import '../common/utils/version_manager.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
-import '../widgets/update_dialog.dart';
+import '../common/widgets/update_dialog.dart';
 
 class MePage extends StatefulWidget {
   final bool isDark;

@@ -4,9 +4,9 @@ import 'package:provider/provider.dart';
 import '../config/app_config.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
-import '../utils/version_manager.dart';
-import '../widgets/update_dialog.dart';
-import 'test_page.dart';
+import '../common/utils/version_manager.dart';
+import '../common/widgets/update_dialog.dart';
+import '../mobile/test_page.dart';
 
 class TestDashboardPad extends StatefulWidget {
   const TestDashboardPad({super.key});

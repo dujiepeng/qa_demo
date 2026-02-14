@@ -4,14 +4,14 @@ import 'package:qa_flutter/test_pages/chatroom/test_chat_room_list_page.dart';
 import 'package:qa_flutter/theme/app_colors.dart';
 import 'package:qa_flutter/uikit/lib/chat_uikit.dart';
 import 'config/app_config.dart';
-import 'pages/home_page.dart';
-import 'pages/login_page.dart';
-import 'pages/settings_page.dart';
+import 'mobile/home_page.dart';
+import 'mobile/login_page.dart';
+import 'common/settings_page.dart';
 import 'test_pages/group/test_group_list_page.dart';
 import 'test_pages/single/test_single_chat_list_page.dart';
 import 'test_pages/single/test_single_chat_page.dart';
 import 'theme/app_settings.dart';
-import 'utils/version_manager.dart';
+import 'common/utils/version_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
