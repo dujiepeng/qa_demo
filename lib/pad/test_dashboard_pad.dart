@@ -133,17 +133,46 @@ class _TestDashboardPadState extends State<TestDashboardPad>
                   flex: 1,
                   child: Column(
                     children: [
-                      TabBar(
-                        controller: _tabController,
-                        labelColor: AppColors.primary(isDark),
-                        unselectedLabelColor: AppColors.textSecondary(isDark),
-                        indicatorColor: AppColors.primary(isDark),
-                        tabs: const [
-                          Tab(text: '单聊'),
-                          Tab(text: '群聊'),
-                          Tab(text: '聊天室'),
-                        ],
+                      // TabBar 容器，确保符合 UIKit 主题
+                      Material(
+                        color: isDark
+                            ? ChatUIKitTheme.instance.color.neutralColor1
+                            : ChatUIKitTheme.instance.color.neutralColor98,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: AppColors.glassBorder(isDark),
+                                width: 0.5,
+                              ),
+                            ),
+                          ),
+                          child: TabBar(
+                            controller: _tabController,
+                            labelColor: AppColors.primary(isDark),
+                            unselectedLabelColor: AppColors.textSecondary(isDark),
+                            indicatorColor: AppColors.primary(isDark),
+                            indicatorSize: TabBarIndicatorSize.label,
+                            indicatorWeight: 3,
+                            dividerColor: Colors.transparent, // 移除默认分割线
+                            tabs: const [
+                              Tab(
+                                height: 50,
+                                child: Text('单聊', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                              ),
+                              Tab(
+                                height: 50,
+                                child: Text('群聊', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                              ),
+                              Tab(
+                                height: 50,
+                                child: Text('聊天室', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
+                      // 内容区域
                       Expanded(
                         child: TabBarView(
                           controller: _tabController,
