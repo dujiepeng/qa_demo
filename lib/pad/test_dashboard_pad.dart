@@ -63,11 +63,6 @@ class _TestDashboardPadState extends State<TestDashboardPad> {
         page: const TestChatRoomListPage(),
       ),
       _TabItem(
-        label: '服务器',
-        icon: Icons.dns_outlined,
-        page: const SettingsPage(),
-      ),
-      _TabItem(
         label: '设置',
         icon: Icons.settings_outlined,
         page: const MePageContent(showAppBar: false),
