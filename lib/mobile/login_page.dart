@@ -82,10 +82,10 @@ class _LoginPageState extends State<LoginPage> {
       // _settings.isLoggedIn = true;
       // await _settings.saveSettings();
 
-      if (!mounted) return;
+      if (!context.mounted) return;
       Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Login Failed: $e'),

@@ -85,7 +85,7 @@ class _TestPageState extends State<TestPage> {
               final currentUser = await EMClient.getInstance.getCurrentUserId();
               final deviceId = await EMClient.getInstance.getCurrentDeviceId();
 
-              if (!mounted) return;
+              if (!context.mounted) return;
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(

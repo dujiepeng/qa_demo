@@ -418,7 +418,7 @@ class _ChatRoomMembersWidgetState extends State<ChatRoomMembersWidget>
   Widget searchBar() {
     // TODO: 搜索
     return const SizedBox();
-    Widget content;
+  }
     final theme = ChatUIKitTheme.instance;
     content = ValueListenableBuilder(
       valueListenable: isSearch,
