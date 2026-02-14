@@ -10,7 +10,7 @@ import 'common/settings_page.dart';
 import 'test_pages/group/test_group_list_page.dart';
 import 'test_pages/single/test_single_chat_list_page.dart';
 import 'test_pages/single/test_single_chat_page.dart';
-import 'theme/app_settings.dart';
+import 'common/utils/log_service.dart';
 import 'common/utils/version_manager.dart';
 
 void main() async {
@@ -30,6 +30,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider.value(value: AppSettings()),
         ChangeNotifierProvider.value(value: VersionManager()),
+        ChangeNotifierProvider(create: (_) => LogService()),
       ],
       child: const MyApp(),
     ),
