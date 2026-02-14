@@ -30,8 +30,9 @@ enum GroupInfoEditType {
 }
 
 class TestGroupPage extends StatefulWidget {
-  const TestGroupPage({super.key, this.groupId});
+  const TestGroupPage({super.key, this.groupId, this.showAppBar = true});
   final String? groupId;
+  final bool showAppBar;
   @override
   State<TestGroupPage> createState() => _TestGroupPageState();
 }
@@ -651,7 +652,7 @@ class _TestGroupPageState extends State<TestGroupPage> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       backgroundColor: Colors.transparent,
-      appBar: AppBar(
+      appBar: widget.showAppBar ? AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
@@ -668,7 +669,7 @@ class _TestGroupPageState extends State<TestGroupPage> {
             },
           ),
         ],
-      ),
+      ) : null,
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -686,8 +687,8 @@ class _TestGroupPageState extends State<TestGroupPage> {
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: Padding(
-                  padding: const EdgeInsets.only(
-                    top: kToolbarHeight + 60,
+                  padding: EdgeInsets.only(
+                    top: widget.showAppBar ? (kToolbarHeight + 60) : 20,
                     left: 15,
                     right: 15,
                     bottom: 30, // 增加底部间距

@@ -26,6 +26,7 @@ class _TestDashboardPadState extends State<TestDashboardPad>
   
   // 局部详情页状态
   Widget? _detailPage;
+  String _detailTitle = '';
 
   @override
   void initState() {
@@ -51,9 +52,10 @@ class _TestDashboardPadState extends State<TestDashboardPad>
   }
 
   // 切换到详情页
-  void _showDetail(Widget page) {
+  void _showDetail(Widget page, String title) {
     setState(() {
       _detailPage = page;
+      _detailTitle = title;
     });
   }
 
@@ -61,6 +63,7 @@ class _TestDashboardPadState extends State<TestDashboardPad>
   void _hideDetail() {
     setState(() {
       _detailPage = null;
+      _detailTitle = '';
     });
   }
 
@@ -148,12 +151,21 @@ class _TestDashboardPadState extends State<TestDashboardPad>
           Expanded(
             child: Column(
               children: [
-                // 上半部分: Tab 页或详情页 (50%)
+                // 顶层工具栏 (Master AppBar)
+                _buildMasterAppBar(isDark),
+                // 上半部分内容 (列表或详情)
                 Expanded(
                   flex: 1,
                   child: _detailPage != null 
-                    ? _buildDetailContainer(isDark)
-                    : _buildTabContainer(isDark),
+                    ? _detailPage!
+                    : TabBarView(
+                        controller: _tabController,
+                        children: [
+                          TestSingleChatListPage(onItemTap: (id) => _showDetail(TestSingleChatPage(userId: id, showAppBar: false), '单聊: $id')),
+                          TestGroupListPage(onItemTap: (id) => _showDetail(TestGroupPage(groupId: id, showAppBar: false), '群组: $id')),
+                          TestChatRoomListPage(onItemTap: (id) => _showDetail(TestChatRoomPage(roomId: id, showAppBar: false), '聊天室: $id')),
+                        ],
+                      ),
                 ),
                 // 水平分割线
                 Divider(height: 1, thickness: 1, color: AppColors.glassBorder(isDark)),
@@ -170,93 +182,77 @@ class _TestDashboardPadState extends State<TestDashboardPad>
     );
   }
 
-  // 构建 Tab 列表容器
-  Widget _buildTabContainer(bool isDark) {
-    return Column(
-      children: [
-        Material(
-          color: isDark
-              ? ChatUIKitTheme.instance.color.neutralColor1
-              : ChatUIKitTheme.instance.color.neutralColor98,
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: AppColors.glassBorder(isDark),
-                  width: 0.5,
-                ),
-              ),
-            ),
-            child: TabBar(
-              controller: _tabController,
-              labelColor: AppColors.primary(isDark),
-              unselectedLabelColor: AppColors.textSecondary(isDark),
-              indicatorColor: AppColors.primary(isDark),
-              indicatorSize: TabBarIndicatorSize.label,
-              indicatorWeight: 3,
-              dividerColor: Colors.transparent,
-              tabs: const [
-                Tab(height: 50, child: Text('单聊', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600))),
-                Tab(height: 50, child: Text('群聊', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600))),
-                Tab(height: 50, child: Text('聊天室', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600))),
-              ],
+  // 构建顶层统一工具栏
+  Widget _buildMasterAppBar(bool isDark) {
+    return Material(
+      color: isDark
+          ? ChatUIKitTheme.instance.color.neutralColor1
+          : ChatUIKitTheme.instance.color.neutralColor98,
+      child: Container(
+        height: 50,
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: AppColors.glassBorder(isDark),
+              width: 0.5,
             ),
           ),
         ),
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              TestSingleChatListPage(onItemTap: (id) => _showDetail(TestSingleChatPage(userId: id))),
-              TestGroupListPage(onItemTap: (id) => _showDetail(TestGroupPage(groupId: id))),
-              TestChatRoomListPage(onItemTap: (id) => _showDetail(TestChatRoomPage(roomId: id))),
-            ],
-          ),
-        ),
+        child: _detailPage != null 
+          ? _buildDetailHeader(isDark)
+          : _buildTabHeader(isDark),
+      ),
+    );
+  }
+
+  // 列表模式下的 Header (TabBar)
+  Widget _buildTabHeader(bool isDark) {
+    return TabBar(
+      controller: _tabController,
+      labelColor: AppColors.primary(isDark),
+      unselectedLabelColor: AppColors.textSecondary(isDark),
+      indicatorColor: AppColors.primary(isDark),
+      indicatorSize: TabBarIndicatorSize.label,
+      indicatorWeight: 3,
+      dividerColor: Colors.transparent,
+      tabs: const [
+        Tab(height: 50, child: Text('单聊', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600))),
+        Tab(height: 50, child: Text('群聊', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600))),
+        Tab(height: 50, child: Text('聊天室', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600))),
       ],
     );
   }
 
-  // 构建详情容器 (带返回按钮)
-  Widget _buildDetailContainer(bool isDark) {
-    return Column(
+  // 详情模式下的 Header (Back + Title + Actions)
+  Widget _buildDetailHeader(bool isDark) {
+    return Row(
       children: [
-        // 局部导航栏
-        Container(
-          height: 50,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          decoration: BoxDecoration(
-            color: isDark
-                ? ChatUIKitTheme.instance.color.neutralColor1
-                : ChatUIKitTheme.instance.color.neutralColor98,
-            border: Border(
-              bottom: BorderSide(
-                color: AppColors.glassBorder(isDark),
-                width: 0.5,
-              ),
+        const SizedBox(width: 8),
+        IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+          onPressed: _hideDetail,
+          color: AppColors.primary(isDark),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            _detailTitle,
+            style: TextStyle(
+              color: AppColors.textPrimary(isDark),
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
             ),
-          ),
-          child: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-                onPressed: _hideDetail,
-                color: AppColors.primary(isDark),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '返回列表',
-                style: TextStyle(
-                  color: AppColors.primary(isDark),
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+            overflow: TextOverflow.ellipsis,
           ),
         ),
-        // 详情内容
-        Expanded(child: _detailPage!),
+        // 统一提取功能按钮
+        IconButton(
+          icon: const Icon(Icons.info_outline, size: 22),
+          onPressed: () => Navigator.of(context).pushNamed('/settings'),
+          color: AppColors.textSecondary(isDark),
+          tooltip: 'SDK配置',
+        ),
+        const SizedBox(width: 12),
       ],
     );
   }

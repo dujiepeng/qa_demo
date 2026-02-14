@@ -31,8 +31,9 @@ enum RoomInfoEditType {
 }
 
 class TestChatRoomPage extends StatefulWidget {
-  const TestChatRoomPage({super.key, this.roomId});
+  const TestChatRoomPage({super.key, this.roomId, this.showAppBar = true});
   final String? roomId;
+  final bool showAppBar;
   @override
   State<TestChatRoomPage> createState() => _TestChatRoomPageState();
 }
@@ -583,7 +584,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       backgroundColor: Colors.transparent,
-      appBar: AppBar(
+      appBar: widget.showAppBar ? AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
@@ -600,7 +601,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
             },
           ),
         ],
-      ),
+      ) : null,
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -618,8 +619,8 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: Padding(
-                  padding: const EdgeInsets.only(
-                    top: kToolbarHeight + 60,
+                  padding: EdgeInsets.only(
+                    top: widget.showAppBar ? (kToolbarHeight + 60) : 20,
                     left: 15,
                     right: 15,
                     bottom: 30, // 增加底部间距
