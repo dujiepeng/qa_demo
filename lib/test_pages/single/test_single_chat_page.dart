@@ -108,54 +108,117 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
     return file.path;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final isDark = _settings.isDarkMode;
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      backgroundColor: Colors.transparent,
-      appBar: widget.showAppBar ? AppBar(
+    @override
+
+    Widget build(BuildContext context) {
+
+      final isDark = _settings.isDarkMode;
+
+      return Scaffold(
+
+        extendBodyBehindAppBar: true,
+
         backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
-        title: Text(
-          '单聊测试',
-          style: TextStyle(color: AppColors.textPrimary(isDark)),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.info),
-            onPressed: () {
-              Navigator.of(context).pushNamed('/settings');
-            },
+
+        appBar: widget.showAppBar ? AppBar(
+
+          toolbarHeight: kToolbarHeight + 20, // 增加高度
+
+          backgroundColor: Colors.transparent,
+
+          elevation: 0,
+
+          iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
+
+          title: Padding(
+
+            padding: const EdgeInsets.only(top: 20), // 标题下移
+
+            child: Text(
+
+              '单聊测试',
+
+              style: TextStyle(color: AppColors.textPrimary(isDark)),
+
+            ),
+
           ),
-        ],
-      ) : null,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.backgroundStart(isDark),
-              AppColors.backgroundEnd(isDark),
-            ],
+
+          centerTitle: true,
+
+          actions: [
+
+            Padding(
+
+              padding: const EdgeInsets.only(top: 20),
+
+              child: IconButton(
+
+                icon: const Icon(Icons.info),
+
+                onPressed: () {
+
+                  Navigator.of(context).pushNamed('/settings');
+
+                },
+
+              ),
+
+            ),
+
+          ],
+
+        ) : null,
+
+        body: Container(
+
+          decoration: BoxDecoration(
+
+            gradient: LinearGradient(
+
+              begin: Alignment.topLeft,
+
+              end: Alignment.bottomRight,
+
+              colors: [
+
+                AppColors.backgroundStart(isDark),
+
+                AppColors.backgroundEnd(isDark),
+
+              ],
+
+            ),
+
           ),
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    top: widget.showAppBar ? (kToolbarHeight + 60) : 20,
-                    left: 15,
-                    right: 15,
-                    bottom: 30, // 增加底部间距
-                  ),
-                  child: Column(
+
+          child: LayoutBuilder(
+
+            builder: (context, constraints) {
+
+              return SingleChildScrollView(
+
+                child: ConstrainedBox(
+
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+
+                  child: Padding(
+
+                    padding: EdgeInsets.only(
+
+                      top: widget.showAppBar ? (kToolbarHeight + 80) : 40, // 统一增加 20 像素
+
+                      left: 15,
+
+                      right: 15,
+
+                      bottom: 30,
+
+                    ),
+
+                    child: Column(
+
+  
                     children: [
                       _buildInputRow(
                         controller: _userIdController,

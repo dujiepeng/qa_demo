@@ -653,20 +653,27 @@ class _TestGroupPageState extends State<TestGroupPage> {
       extendBodyBehindAppBar: true,
       backgroundColor: Colors.transparent,
       appBar: widget.showAppBar ? AppBar(
+        toolbarHeight: kToolbarHeight + 20, // 增加高度
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
-        title: Text(
-          _groupId.isNotEmpty ? '$_groupId(群)' : '群组测试',
-          style: TextStyle(color: AppColors.textPrimary(isDark)),
+        title: Padding(
+          padding: const EdgeInsets.only(top: 20), // 标题下移
+          child: Text(
+            _groupId.isNotEmpty ? '$_groupId(群)' : '群组测试',
+            style: TextStyle(color: AppColors.textPrimary(isDark)),
+          ),
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.info),
-            onPressed: () {
-              Navigator.of(context).pushNamed('/settings');
-            },
+          Padding(
+            padding: const EdgeInsets.only(top: 20),
+            child: IconButton(
+              icon: const Icon(Icons.info),
+              onPressed: () {
+                Navigator.of(context).pushNamed('/settings');
+              },
+            ),
           ),
         ],
       ) : null,
@@ -688,7 +695,7 @@ class _TestGroupPageState extends State<TestGroupPage> {
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: Padding(
                   padding: EdgeInsets.only(
-                    top: widget.showAppBar ? (kToolbarHeight + 60) : 20,
+                    top: widget.showAppBar ? (kToolbarHeight + 80) : 40, // 统一增加 20 像素
                     left: 15,
                     right: 15,
                     bottom: 30, // 增加底部间距
@@ -1122,3 +1129,4 @@ class _TestGroupPageState extends State<TestGroupPage> {
     );
   }
 }
+

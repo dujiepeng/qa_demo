@@ -10,6 +10,7 @@ import '../test_pages/group/test_group_page.dart';
 import '../test_pages/chatroom/test_chat_room_list_page.dart';
 import '../test_pages/chatroom/test_chat_room_page.dart';
 import '../common/utils/log_service.dart';
+import '../common/widgets/me_page_content.dart';
 
 class TestDashboardPad extends StatefulWidget {
   const TestDashboardPad({super.key});
@@ -23,6 +24,9 @@ class _TestDashboardPadState extends State<TestDashboardPad>
   late TabController _tabController;
   String _currentUserId = 'Unknown';
   final ScrollController _logScrollController = ScrollController();
+
+  // 侧边栏索引: 0 - 测试, 1 - 设置
+  int _navIndex = 0;
 
   // 局部详情页状态
   Widget? _detailPage;
@@ -77,9 +81,13 @@ class _TestDashboardPadState extends State<TestDashboardPad>
         children: [
           // 左侧细页签 (NavigationRail)
           NavigationRail(
-            selectedIndex: 0,
+            selectedIndex: _navIndex,
             onDestinationSelected: (index) {
-              if (_detailPage != null) _hideDetail();
+              setState(() {
+                _navIndex = index;
+                // 切换大类页签时，自动退出详情页
+                if (_detailPage != null) _hideDetail();
+              });
             },
             labelType: NavigationRailLabelType.all,
             backgroundColor: isDark
@@ -94,13 +102,17 @@ class _TestDashboardPadState extends State<TestDashboardPad>
               fontSize: 12,
               fontWeight: FontWeight.bold,
             ),
+            unselectedLabelTextStyle: TextStyle(
+              color: AppColors.textSecondary(isDark),
+              fontSize: 12,
+            ),
             leading: Column(
               children: [
                 const SizedBox(height: 20),
                 RotatedBox(
                   quarterTurns: -1,
                   child: Text(
-                    '测试',
+                    _navIndex == 0 ? '测试' : '设置',
                     style: TextStyle(
                       color: AppColors.primary(isDark),
                       fontSize: 20,
@@ -139,6 +151,10 @@ class _TestDashboardPadState extends State<TestDashboardPad>
                 icon: Icon(Icons.bug_report_outlined),
                 label: Text('测试'),
               ),
+              NavigationRailDestination(
+                icon: Icon(Icons.settings_outlined),
+                label: Text('设置'),
+              ),
             ],
           ),
           // 分割线
@@ -147,68 +163,112 @@ class _TestDashboardPadState extends State<TestDashboardPad>
             thickness: 1,
             color: AppColors.glassBorder(isDark),
           ),
-          // 右侧内容区域: 上下平分
+          // 右侧内容区域
           Expanded(
-            child: Column(
-              children: [
-                // 顶层工具栏 (Master AppBar)
-                _buildMasterAppBar(isDark),
-                // 上半部分内容 (列表或详情)
-                Expanded(
-                  flex: 1,
-                  child: _detailPage != null
-                      ? _detailPage!
-                      : TabBarView(
-                          controller: _tabController,
-                          children: [
-                            TestSingleChatListPage(
-                              onItemTap: (id) => _showDetail(
-                                TestSingleChatPage(
-                                  userId: id,
-                                  showAppBar: false,
-                                ),
-                                '单聊: $id',
-                              ),
-                            ),
-                            TestGroupListPage(
-                              onItemTap: (id) => _showDetail(
-                                TestGroupPage(groupId: id, showAppBar: false),
-                                '群组: $id',
-                              ),
-                            ),
-                            TestChatRoomListPage(
-                              onItemTap: (id) => _showDetail(
-                                TestChatRoomPage(roomId: id, showAppBar: false),
-                                '聊天室: $id',
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
-                // 水平分割线
-                Divider(
-                  height: 1,
-                  thickness: 1,
-                  color: AppColors.glassBorder(isDark),
-                ),
-                // 下半部分: 日志区域 (50%)
-                Expanded(flex: 1, child: _buildLogPanel(context, isDark)),
-              ],
-            ),
+            child: _navIndex == 0 ? _buildTestDashboard(isDark) : _buildMeContent(isDark),
           ),
         ],
       ),
     );
   }
 
-  // 构建顶层统一工具栏
+  // 构建测试面板 (主逻辑)
+  Widget _buildTestDashboard(bool isDark) {
+    return Column(
+      children: [
+        // 顶层工具栏 (Master AppBar)
+        _buildMasterAppBar(isDark),
+        // 上半部分内容 (列表或详情)
+        Expanded(
+          flex: 1,
+          child: _detailPage != null
+              ? _detailPage!
+              : TabBarView(
+                  controller: _tabController,
+                  children: [
+                    TestSingleChatListPage(
+                      onItemTap: (id) => _showDetail(
+                        TestSingleChatPage(
+                          userId: id,
+                          showAppBar: false,
+                        ),
+                        '单聊: $id',
+                      ),
+                    ),
+                    TestGroupListPage(
+                      onItemTap: (id) => _showDetail(
+                        TestGroupPage(groupId: id, showAppBar: false),
+                        '群组: $id',
+                      ),
+                    ),
+                    TestChatRoomListPage(
+                      onItemTap: (id) => _showDetail(
+                        TestChatRoomPage(roomId: id, showAppBar: false),
+                        '聊天室: $id',
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+        // 水平分割线
+        Divider(
+          height: 1,
+          thickness: 1,
+          color: AppColors.glassBorder(isDark),
+        ),
+        // 下半部分: 日志区域 (50%)
+        Expanded(flex: 1, child: _buildLogPanel(context, isDark)),
+      ],
+    );
+  }
+
+  // 构建“我”的设置页面内容
+  Widget _buildMeContent(bool isDark) {
+    return Column(
+      children: [
+        // 顶层工具栏 (仅标题)
+        Material(
+          color: isDark
+              ? ChatUIKitTheme.instance.color.neutralColor1
+              : ChatUIKitTheme.instance.color.neutralColor98,
+          child: Container(
+            height: 70,
+            padding: const EdgeInsets.only(top: 20),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: AppColors.glassBorder(isDark),
+                  width: 0.5,
+                ),
+              ),
+            ),
+            child: Text(
+              '设置',
+              style: TextStyle(
+                color: AppColors.textPrimary(isDark),
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+        const Expanded(
+          child: MePageContent(showAppBar: false),
+        ),
+      ],
+    );
+  }
+
+  // 构建顶层统一工具栏 (仅用于测试面板)
   Widget _buildMasterAppBar(bool isDark) {
     return Material(
       color: isDark
           ? ChatUIKitTheme.instance.color.neutralColor1
           : ChatUIKitTheme.instance.color.neutralColor98,
       child: Container(
-        height: 50,
+        height: 70,
+        padding: const EdgeInsets.only(top: 20),
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
