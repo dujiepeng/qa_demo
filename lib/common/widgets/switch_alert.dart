@@ -7,7 +7,7 @@ import '../../theme/app_settings.dart';
 /// [title] 对话框标题
 /// [description] 对话框描述信息
 /// [initialValue] 开关的初始状态
-/// [onChanged] 切换开关的回调，返回 Future<bool>。如果返回 false，开关将回弹到旧状态。
+/// [onChanged] 切换开关的回调，返回 Future&lt;bool&gt;。如果返回 false，开关将回弹到旧状态。
 Future<void> showSwitchAlert({
   required BuildContext context,
   required String title,

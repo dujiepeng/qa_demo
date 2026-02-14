@@ -377,7 +377,7 @@ mixin ChatActions on ChatWrapper {
         keywords,
         count: maxCount,
         timestamp: timestamp,
-        senders: [sender!],
+        senders: sender != null ? [sender] : null,
         searchScope: MessageSearchScope.Content,
         direction: direction,
       );

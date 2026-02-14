@@ -82,21 +82,21 @@ class _LoginPageState extends State<LoginPage> {
       // _settings.isLoggedIn = true;
       // await _settings.saveSettings();
 
-      navigator.pushReplacementNamed('/home');
+      if (!context.mounted) return;
+      Navigator.of(context).pushReplacementNamed('/home');
     } catch (e) {
-      if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              'Login Failed: $e',
-              style: TextStyle(
-                color: AppColors.textPrimary(_settings.isDarkMode),
-              ),
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Login Failed: $e',
+            style: TextStyle(
+              color: AppColors.textPrimary(_settings.isDarkMode),
             ),
-            backgroundColor: Colors.redAccent,
           ),
-        );
-      }
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
