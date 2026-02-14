@@ -37,6 +37,8 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     setState(() => _isLoading = true);
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
     try {
       // 使用设置中的服务器配置进行初始化
       if (_settings.isDirty) {
@@ -79,11 +81,11 @@ class _LoginPageState extends State<LoginPage> {
       // _settings.isLoggedIn = true;
       // await _settings.saveSettings();
 
-      if (!context.mounted) return;
-      Navigator.of(context).pushReplacementNamed('/home');
+      if (!mounted) return;
+      navigator.pushReplacementNamed('/home');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text(
             'Login Failed: $e',
