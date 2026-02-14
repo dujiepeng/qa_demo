@@ -36,7 +36,7 @@ class GroupsPage extends StatelessWidget {
               Icon(
                 Icons.group_outlined,
                 size: 80,
-                color: AppColors.primary(isDark).withOpacity(0.5),
+                color: AppColors.primary(isDark).withValues(alpha: 0.5),
               ),
               const SizedBox(height: 20),
               Text(
@@ -51,7 +51,7 @@ class GroupsPage extends StatelessWidget {
               Text(
                 '正在寻找战友...',
                 style: TextStyle(
-                  color: AppColors.textSecondary(isDark).withOpacity(0.7),
+                  color: AppColors.textSecondary(isDark).withValues(alpha: 0.7),
                   fontSize: 16,
                 ),
               ),

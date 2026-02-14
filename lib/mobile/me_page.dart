@@ -190,7 +190,7 @@ class _MePageState extends State<MePage> with ChatUIKitThemeMixin {
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.withOpacity(0.8),
+                backgroundColor: Colors.red.withValues(alpha: 0.8),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 15),
                 shape: RoundedRectangleBorder(
@@ -245,7 +245,7 @@ class _MePageState extends State<MePage> with ChatUIKitThemeMixin {
         ),
         value: value,
         onChanged: onChanged,
-        activeColor: AppColors.primary(isDark),
+        activeTrackColor: AppColors.primary(isDark),
         contentPadding: const EdgeInsets.symmetric(horizontal: 15),
       ),
     );

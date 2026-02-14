@@ -185,7 +185,9 @@ class _ContactsPageState extends State<ContactsPage> {
       ),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: AppColors.primary(widget.isDark).withOpacity(0.2),
+          backgroundColor: AppColors.primary(
+            widget.isDark,
+          ).withValues(alpha: 0.2),
           child: Icon(Icons.person, color: AppColors.primary(widget.isDark)),
         ),
         title: Text(

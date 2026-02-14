@@ -27,10 +27,8 @@ class _WaterRipperState extends State<WaterRipper>
   late AnimationController _controller;
   @override
   void initState() {
-    _controller = AnimationController(
-      vsync: this,
-      duration: widget.duration,
-    )..repeat();
+    _controller = AnimationController(vsync: this, duration: widget.duration)
+      ..repeat();
     super.initState();
   }
 
@@ -56,9 +54,7 @@ class _WaterRipperState extends State<WaterRipper>
                       color: widget.color,
                       child: widget.child ?? const SizedBox(),
                     ),
-                    child: RepaintBoundary(
-                      child: child,
-                    ),
+                    child: RepaintBoundary(child: child),
                   );
                 },
               )
@@ -92,7 +88,7 @@ class WaterRipplePainter extends CustomPainter {
 
     for (int i = count; i >= 0; i--) {
       final double opacity = (1.0 - ((i + progress) / (count + 1)));
-      final Color paintColor = color.withOpacity(opacity);
+      final Color paintColor = color.withValues(alpha: opacity);
       _paint.color = paintColor;
 
       double width0 = width * ((i + progress) / (count + 1));

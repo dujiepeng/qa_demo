@@ -82,20 +82,19 @@ class _LoginPageState extends State<LoginPage> {
       // _settings.isLoggedIn = true;
       // await _settings.saveSettings();
 
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
-      }
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Login Failed: $e'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Login Failed: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (!mounted) return;
+      setState(() => _isLoading = false);
     }
   }
 
@@ -112,7 +111,7 @@ class _LoginPageState extends State<LoginPage> {
           IconButton(
             icon: Icon(
               Icons.settings_outlined,
-              color: AppColors.textPrimary(isDark).withOpacity(0.8),
+              color: AppColors.textPrimary(isDark).withValues(alpha: 0.8),
             ),
             onPressed: () => Navigator.pushNamed(context, '/settings'),
           ),

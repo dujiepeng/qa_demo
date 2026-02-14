@@ -387,7 +387,7 @@ class _ContactDetailsViewState extends State<ContactDetailsView>
           builder: (context, value, child) {
             return CupertinoSwitch(
               value: isNotDisturb.value,
-              activeColor: theme.color.isDark
+              activeTrackColor: theme.color.isDark
                   ? theme.color.primaryColor6
                   : theme.color.primaryColor5,
               trackColor: theme.color.isDark

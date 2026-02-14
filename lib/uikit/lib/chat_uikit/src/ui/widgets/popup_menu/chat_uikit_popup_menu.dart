@@ -59,8 +59,10 @@ class _ChatUIKitPopupMenuState extends State<ChatUIKitPopupMenu>
       RenderBox current = context.findRenderObject() as RenderBox;
       Rect rect = Rect.fromPoints(
         current.localToGlobal(Offset.zero),
-        current.localToGlobal(Offset(current.size.width, current.size.height),
-            ancestor: overlay),
+        current.localToGlobal(
+          Offset(current.size.width, current.size.height),
+          ancestor: overlay,
+        ),
       );
 
       menuLeftTop = rect.topLeft;
@@ -79,13 +81,14 @@ class _ChatUIKitPopupMenuState extends State<ChatUIKitPopupMenu>
   @override
   Widget build(BuildContext context) {
     Widget content = NotificationListener(
-        child: widget.child,
-        onNotification: (notification) {
-          if (notification is ScrollUpdateNotification) {
-            widget.controller.hideMenu();
-          }
-          return false;
-        });
+      child: widget.child,
+      onNotification: (notification) {
+        if (notification is ScrollUpdateNotification) {
+          widget.controller.hideMenu();
+        }
+        return false;
+      },
+    );
 
     content = Listener(
       onPointerHover: (event) {
@@ -117,8 +120,10 @@ class _ChatUIKitPopupMenuState extends State<ChatUIKitPopupMenu>
       RenderBox current = context.findRenderObject() as RenderBox;
       Rect rect = Rect.fromPoints(
         current.localToGlobal(Offset.zero),
-        current.localToGlobal(Offset(current.size.width, current.size.height),
-            ancestor: overlay),
+        current.localToGlobal(
+          Offset(current.size.width, current.size.height),
+          ancestor: overlay,
+        ),
       );
 
       menuLeftTop = rect.topLeft;
@@ -142,9 +147,11 @@ class _ChatUIKitPopupMenuState extends State<ChatUIKitPopupMenu>
     double itemHeight = itemWidth / 68 * 58;
     double menuHeight =
         (widget.controller.list!.length / 5).ceil() * itemHeight +
-            kMenuHorizontalPadding * 2;
-    double menuWidth =
-        min(maxWidth, itemWidth * widget.controller.list!.length);
+        kMenuHorizontalPadding * 2;
+    double menuWidth = min(
+      maxWidth,
+      itemWidth * widget.controller.list!.length,
+    );
 
     double dy = 0;
     double dx = 0;
@@ -156,7 +163,8 @@ class _ChatUIKitPopupMenuState extends State<ChatUIKitPopupMenu>
             _kMenuArrowHeight -
             _verticalPadding >
         menuLeftTop!.dy) {
-      dy = widget.controller.rect!.top -
+      dy =
+          widget.controller.rect!.top -
           menuHeight -
           reactionHeight -
           _kMenuArrowHeight;
@@ -168,12 +176,14 @@ class _ChatUIKitPopupMenuState extends State<ChatUIKitPopupMenu>
             menuHeight +
             _verticalPadding <
         menuRightBottom!.dy) {
-      dy = widget.controller.rect!.top +
+      dy =
+          widget.controller.rect!.top +
           widget.controller.rect!.height +
           _kMenuArrowHeight;
       arrowOnTop = true;
     } else {
-      dy = menuRightBottom!.dy -
+      dy =
+          menuRightBottom!.dy -
           menuHeight -
           _kMenuArrowHeight -
           _verticalPadding -
@@ -183,7 +193,8 @@ class _ChatUIKitPopupMenuState extends State<ChatUIKitPopupMenu>
     double offset = 0;
     if (widget.controller.topWidget == null) {
       if (widget.controller.list!.length < 5) {
-        dx = widget.controller.rect!.left -
+        dx =
+            widget.controller.rect!.left -
             menuWidth / 2 +
             widget.controller.rect!.width / 2;
 
@@ -276,11 +287,7 @@ class ChatUIKitPopupMenuController with ChangeNotifier {
 
   List<ChatUIKitEventAction>? list;
 
-  void showMenu(
-    Widget? topWidget,
-    Rect rect,
-    List<ChatUIKitEventAction> list,
-  ) {
+  void showMenu(Widget? topWidget, Rect rect, List<ChatUIKitEventAction> list) {
     this.topWidget = topWidget;
     this.rect = rect;
     this.list = list;
@@ -362,11 +369,7 @@ class _PopupMenuWidgetState extends State<_PopUpMenuWidget> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 if (item.icon != null)
-                  SizedBox(
-                    height: 28,
-                    width: 28,
-                    child: item.icon!,
-                  ),
+                  SizedBox(height: 28, width: 28, child: item.icon!),
                 const SizedBox(height: 4),
                 Text(
                   item.label,
@@ -392,10 +395,7 @@ class _PopupMenuWidgetState extends State<_PopUpMenuWidget> {
         color: widget.style.backgroundColor,
         borderRadius: BorderRadius.circular(widget.style.radiusCircular),
       ),
-      constraints: BoxConstraints(
-        maxWidth: maxWidth,
-        minWidth: itemHeight,
-      ),
+      constraints: BoxConstraints(maxWidth: maxWidth, minWidth: itemHeight),
       child: content,
     );
 
@@ -413,12 +413,13 @@ class _PopupMenuWidgetState extends State<_PopUpMenuWidget> {
             SizedBox(
               width: maxWidth,
               child: Padding(
-                  padding: const EdgeInsets.only(
-                    top: kMenuHorizontalPadding,
-                    left: kMenuHorizontalPadding + 5,
-                    right: kMenuHorizontalPadding + 5,
-                  ),
-                  child: widget.topWidget),
+                padding: const EdgeInsets.only(
+                  top: kMenuHorizontalPadding,
+                  left: kMenuHorizontalPadding + 5,
+                  right: kMenuHorizontalPadding + 5,
+                ),
+                child: widget.topWidget,
+              ),
             ),
             const SizedBox(height: kMenuHorizontalPadding),
             Divider(
@@ -440,13 +441,14 @@ class _PopupMenuWidgetState extends State<_PopUpMenuWidget> {
             SizedBox(
               width: maxWidth,
               child: Padding(
-                  padding: const EdgeInsets.only(
-                    bottom: kMenuHorizontalPadding,
-                    left: kMenuHorizontalPadding + 5,
-                    right: kMenuHorizontalPadding + 5,
-                  ),
-                  child: widget.topWidget),
-            )
+                padding: const EdgeInsets.only(
+                  bottom: kMenuHorizontalPadding,
+                  left: kMenuHorizontalPadding + 5,
+                  right: kMenuHorizontalPadding + 5,
+                ),
+                child: widget.topWidget,
+              ),
+            ),
           ],
         ],
       );
@@ -466,15 +468,11 @@ class _PopupMenuWidgetState extends State<_PopUpMenuWidget> {
         screenWidth:
             widget.leftTop.dx + widget.rightBottom.dx - _kHorizontalPadding * 2,
       ),
-      child: RepaintBoundary(
-        child: content,
-      ),
+      child: RepaintBoundary(child: content),
     );
 
     if (widget.topWidget == null) {
-      content = Row(
-        children: [content],
-      );
+      content = Row(children: [content]);
     }
 
     content = AnimatedOpacity(
@@ -484,10 +482,7 @@ class _PopupMenuWidgetState extends State<_PopUpMenuWidget> {
       child: content,
     );
 
-    content = Material(
-      color: Colors.transparent,
-      child: content,
-    );
+    content = Material(color: Colors.transparent, child: content);
     content = MediaQuery.removePadding(
       context: context,
       removeTop: true,
@@ -535,7 +530,7 @@ class _TrianglePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final shadowColor = this.shadowColor ?? Colors.black.withOpacity(0.9);
+    final shadowColor = this.shadowColor ?? Colors.black.withValues(alpha: 0.9);
     final Paint paint = Paint()
       ..color = color
       ..strokeWidth = 0
@@ -571,10 +566,18 @@ class _TrianglePainter extends CustomPainter {
     }
 
     path.close();
-    canvas.drawShadow(path.shift(const Offset(0, -2)),
-        shadowColor.withOpacity(1), 2.0, false);
-    canvas.drawShadow(path.shift(const Offset(0, 0)),
-        shadowColor.withOpacity(0.5), 2.0, false);
+    canvas.drawShadow(
+      path.shift(const Offset(0, -2)),
+      shadowColor.withValues(alpha: 1),
+      2.0,
+      false,
+    );
+    canvas.drawShadow(
+      path.shift(const Offset(0, 0)),
+      shadowColor.withValues(alpha: 0.5),
+      2.0,
+      false,
+    );
 
     canvas.drawPath(path, paint);
   }

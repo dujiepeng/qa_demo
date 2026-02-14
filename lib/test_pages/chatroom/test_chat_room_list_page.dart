@@ -230,7 +230,7 @@ class _TestChatRoomListPageState extends State<TestChatRoomListPage> {
                                         decoration: BoxDecoration(
                                           color: AppColors.primary(
                                             isDark,
-                                          ).withOpacity(0.1),
+                                          ).withValues(alpha: 0.1),
                                           shape: BoxShape.circle,
                                         ),
                                         child: Icon(

@@ -6,7 +6,6 @@ import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
 import '../common/utils/version_manager.dart';
 import '../common/widgets/update_dialog.dart';
-import '../mobile/test_page.dart';
 
 class TestDashboardPad extends StatefulWidget {
   const TestDashboardPad({super.key});
@@ -31,7 +30,7 @@ class _TestDashboardPadState extends State<TestDashboardPad> {
     if (mounted) {
       setState(() {
         _currentUserId = user ?? 'Not logged in';
-        _deviceId = device ?? 'Unknown';
+        _deviceId = device;
       });
     }
   }
@@ -250,7 +249,7 @@ class _TestDashboardPadState extends State<TestDashboardPad> {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: AppColors.primary(isDark),
+            activeTrackColor: AppColors.primary(isDark),
           ),
         ],
       ),

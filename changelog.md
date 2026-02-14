@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.38.0+111] - 2026-02-14
+
+### 修改内容
+- **[优化]** API 调用现代化:
+    - 全局替换已过时的 `withOpacity` 为现代 API `withValues(alpha: ...)`，适配最新 Flutter 版本要求。
+    - 统一迁移过时的 `activeColor` 为 `activeTrackColor` 或对应的 `WidgetStateProperty` 替代方案。
+- **[安全性]** 代码质量与异步控制增强:
+    - 修复了项目中多处 `use_build_context_synchronously` 警告，通过引入严密的 `if (!mounted) return;` 风格检查，确保异步操作（如等待 IM SDK 响应）后使用 `BuildContext` 的安全性。
+    - 重点重构了 `TestPage` 和 `LoginPage` 的交互逻辑，消除了潜在的组件挂载状态访问风险。
+- **[修复]** 解决由于 `pad/test_dashboard_pad.dart` 命名冲突导致的编译错误。
+- **[版本]** 迭代项目版本号至 `1.38.0+111`，完成代码质量加固。
+
 ## [1.37.0+110] - 2026-02-14
 
 ### 修改内容

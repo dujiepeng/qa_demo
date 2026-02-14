@@ -132,7 +132,9 @@ class _InputDialogState extends State<_InputDialog> {
                   hintText: field.placeholder,
                   labelStyle: TextStyle(color: AppColors.textSecondary(isDark)),
                   hintStyle: TextStyle(
-                    color: AppColors.textSecondary(isDark).withOpacity(0.5),
+                    color: AppColors.textSecondary(
+                      isDark,
+                    ).withValues(alpha: 0.5),
                   ),
                   enabledBorder: UnderlineInputBorder(
                     borderSide: BorderSide(

@@ -65,7 +65,7 @@ class _PinMessageListViewState extends State<PinMessageListView>
   void initState() {
     super.initState();
     ChatUIKitProvider.instance.addObserver(this);
-    barrierColor = widget.barrierColor ?? Colors.black.withOpacity(0.3);
+    barrierColor = widget.barrierColor ?? Colors.black.withValues(alpha: 0.3);
     _controller = AnimationController(vsync: this, duration: widget.duration);
     cure = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
 

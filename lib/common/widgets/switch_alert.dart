@@ -135,7 +135,7 @@ class _SwitchAlertState extends State<_SwitchAlert> {
                   Switch.adaptive(
                     value: _currentValue,
                     onChanged: _isProcessing ? null : _handleToggle,
-                    activeColor: AppColors.primary(isDark),
+                    activeTrackColor: AppColors.primary(isDark),
                   ),
                   if (_isProcessing)
                     const SizedBox(
