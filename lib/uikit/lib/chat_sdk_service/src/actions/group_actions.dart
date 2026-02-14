@@ -63,15 +63,9 @@ mixin GroupActions on GroupWrapper {
     });
   }
 
-  Future<Group> fetchGroupInfo({
-    required String groupId,
-    bool fetchMembers = false,
-  }) {
+  Future<Group> fetchGroupInfo({required String groupId}) {
     return checkResult(ChatSDKEvent.fetchGroupInfo, () {
-      return Client.getInstance.groupManager.fetchGroupInfoFromServer(
-        groupId,
-        fetchMembers: fetchMembers,
-      );
+      return Client.getInstance.groupManager.fetchGroupInfoFromServer(groupId);
     });
   }
 
@@ -186,10 +180,7 @@ mixin GroupActions on GroupWrapper {
     required List<String> members,
   }) {
     return checkResult(ChatSDKEvent.deleteGroupMembers, () {
-      return Client.getInstance.groupManager.removeMembers(
-        groupId,
-        members,
-      );
+      return Client.getInstance.groupManager.removeMembers(groupId, members);
     });
   }
 
@@ -198,10 +189,7 @@ mixin GroupActions on GroupWrapper {
     required List<String> members,
   }) {
     return checkResult(ChatSDKEvent.addGroupBlockList, () {
-      return Client.getInstance.groupManager.blockMembers(
-        groupId,
-        members,
-      );
+      return Client.getInstance.groupManager.blockMembers(groupId, members);
     });
   }
 
@@ -210,10 +198,7 @@ mixin GroupActions on GroupWrapper {
     required List<String> members,
   }) {
     return checkResult(ChatSDKEvent.deleteGroupBlockList, () {
-      return Client.getInstance.groupManager.unblockMembers(
-        groupId,
-        members,
-      );
+      return Client.getInstance.groupManager.unblockMembers(groupId, members);
     });
   }
 
@@ -222,10 +207,7 @@ mixin GroupActions on GroupWrapper {
     required String name,
   }) {
     return checkResult(ChatSDKEvent.changeGroupName, () async {
-      await Client.getInstance.groupManager.changeGroupName(
-        groupId,
-        name,
-      );
+      await Client.getInstance.groupManager.updateGroupName(groupId, name);
       Group? group = await Client.getInstance.groupManager.getGroupWithId(
         groupId,
       );
@@ -239,10 +221,7 @@ mixin GroupActions on GroupWrapper {
     required String desc,
   }) {
     return checkResult(ChatSDKEvent.changeGroupDescription, () {
-      return Client.getInstance.groupManager.changeGroupDescription(
-        groupId,
-        desc,
-      );
+      return Client.getInstance.groupManager.updateGroupDesc(groupId, desc);
     });
   }
 
@@ -275,10 +254,7 @@ mixin GroupActions on GroupWrapper {
     required String newOwner,
   }) {
     return checkResult(ChatSDKEvent.changeGroupOwner, () {
-      return Client.getInstance.groupManager.changeOwner(
-        groupId,
-        newOwner,
-      );
+      return Client.getInstance.groupManager.changeOwner(groupId, newOwner);
     });
   }
 
@@ -287,10 +263,7 @@ mixin GroupActions on GroupWrapper {
     required String memberId,
   }) {
     return checkResult(ChatSDKEvent.addGroupAdmin, () {
-      return Client.getInstance.groupManager.addAdmin(
-        groupId,
-        memberId,
-      );
+      return Client.getInstance.groupManager.addAdmin(groupId, memberId);
     });
   }
 
@@ -299,10 +272,7 @@ mixin GroupActions on GroupWrapper {
     required String memberId,
   }) {
     return checkResult(ChatSDKEvent.deleteGroupAdmin, () {
-      return Client.getInstance.groupManager.removeAdmin(
-        groupId,
-        memberId,
-      );
+      return Client.getInstance.groupManager.removeAdmin(groupId, memberId);
     });
   }
 
@@ -325,10 +295,7 @@ mixin GroupActions on GroupWrapper {
     required List<String> members,
   }) {
     return checkResult(ChatSDKEvent.deleteGroupMuteMembers, () {
-      return Client.getInstance.groupManager.unMuteMembers(
-        groupId,
-        members,
-      );
+      return Client.getInstance.groupManager.unMuteMembers(groupId, members);
     });
   }
 
@@ -349,10 +316,7 @@ mixin GroupActions on GroupWrapper {
     required List<String> members,
   }) {
     return checkResult(ChatSDKEvent.addGroupAllowMembers, () {
-      return Client.getInstance.groupManager.addAllowList(
-        groupId,
-        members,
-      );
+      return Client.getInstance.groupManager.addAllowList(groupId, members);
     });
   }
 
@@ -361,10 +325,7 @@ mixin GroupActions on GroupWrapper {
     required List<String> members,
   }) {
     return checkResult(ChatSDKEvent.deleteGroupAllowMembers, () {
-      return Client.getInstance.groupManager.removeAllowList(
-        groupId,
-        members,
-      );
+      return Client.getInstance.groupManager.removeAllowList(groupId, members);
     });
   }
 
@@ -430,9 +391,7 @@ mixin GroupActions on GroupWrapper {
     });
   }
 
-  Future<void> joinPublicGroup({
-    required String groupId,
-  }) {
+  Future<void> joinPublicGroup({required String groupId}) {
     return checkResult(ChatSDKEvent.joinPublicGroup, () {
       return Client.getInstance.groupManager.joinPublicGroup(groupId);
     });
@@ -487,10 +446,7 @@ mixin GroupActions on GroupWrapper {
     required String userId,
   }) {
     return checkResult(ChatSDKEvent.acceptGroupInvitation, () {
-      return Client.getInstance.groupManager.acceptInvitation(
-        groupId,
-        userId,
-      );
+      return Client.getInstance.groupManager.acceptInvitation(groupId, userId);
     });
   }
 

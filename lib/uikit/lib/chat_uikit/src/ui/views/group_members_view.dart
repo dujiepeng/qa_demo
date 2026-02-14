@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../chat_uikit.dart';
 
 class GroupMembersView extends StatefulWidget {
-  GroupMembersView.arguments(GroupMembersViewArguments arguments, {Key? key})
+  GroupMembersView.arguments(GroupMembersViewArguments arguments, {super.key})
     : profile = arguments.profile,
       itemBuilder = arguments.itemBuilder,
       onSearchTap = arguments.onSearchTap,
@@ -19,8 +19,7 @@ class GroupMembersView extends StatefulWidget {
       viewObserver = arguments.viewObserver,
       onSelectLetterChanged = arguments.onSelectLetterChanged,
       sortAlphabetical = arguments.sortAlphabetical,
-      universalAlphabeticalLetter = arguments.universalAlphabeticalLetter,
-      super(key: key);
+      universalAlphabeticalLetter = arguments.universalAlphabeticalLetter;
 
   const GroupMembersView({
     required this.profile,

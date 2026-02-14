@@ -7,8 +7,11 @@ mixin RoomActions on RoomWrapper {
     String? ext,
   }) async {
     return checkResult(ChatSDKEvent.joinChatRoom, () {
-      return Client.getInstance.chatRoomManager
-          .joinChatRoom(roomId, leaveOtherRooms: leaveOther, ext: ext);
+      return Client.getInstance.chatRoomManager.joinChatRoom(
+        roomId,
+        leaveOtherRooms: leaveOther,
+        ext: ext,
+      );
     });
   }
 
@@ -30,14 +33,10 @@ mixin RoomActions on RoomWrapper {
     });
   }
 
-  Future<ChatRoom> fetchChatRoomInfoFromServer({
-    required String roomId,
-    bool fetchMembers = false,
-  }) {
+  Future<ChatRoom> fetchChatRoomInfoFromServer({required String roomId}) {
     return checkResult(ChatSDKEvent.fetchChatRoomInfoFromServer, () {
       return Client.getInstance.chatRoomManager.fetchChatRoomInfoFromServer(
         roomId,
-        fetchMembers: fetchMembers,
       );
     });
   }
@@ -56,17 +55,17 @@ mixin RoomActions on RoomWrapper {
     List<String>? members,
   }) {
     return checkResult(ChatSDKEvent.createChatRoom, () {
-      return Client.getInstance.chatRoomManager.createChatRoom(name,
-          desc: desc,
-          welcomeMsg: welcomeMsg,
-          maxUserCount: maxUserCount,
-          members: members);
+      return Client.getInstance.chatRoomManager.createChatRoom(
+        name,
+        desc: desc,
+        welcomeMsg: welcomeMsg,
+        maxUserCount: maxUserCount,
+        members: members,
+      );
     });
   }
 
-  Future<void> destroyChatRoom(
-    String roomId,
-  ) {
+  Future<void> destroyChatRoom(String roomId) {
     return checkResult(ChatSDKEvent.destroyChatRoom, () {
       return Client.getInstance.chatRoomManager.destroyChatRoom(roomId);
     });
@@ -102,8 +101,11 @@ mixin RoomActions on RoomWrapper {
     int pageSize = 200,
   }) {
     return checkResult(ChatSDKEvent.fetchChatRoomMembers, () {
-      return Client.getInstance.chatRoomManager
-          .fetchChatRoomMembers(roomId, cursor: cursor, pageSize: pageSize);
+      return Client.getInstance.chatRoomManager.fetchChatRoomMembers(
+        roomId,
+        cursor: cursor,
+        pageSize: pageSize,
+      );
     });
   }
 
@@ -113,8 +115,11 @@ mixin RoomActions on RoomWrapper {
     int duration = -1,
   }) {
     return checkResult(ChatSDKEvent.muteChatRoomMembers, () {
-      return Client.getInstance.chatRoomManager
-          .muteChatRoomMembers(roomId, muteMembers, duration: duration);
+      return Client.getInstance.chatRoomManager.muteChatRoomMembers(
+        roomId,
+        muteMembers,
+        duration: duration,
+      );
     });
   }
 
@@ -123,20 +128,16 @@ mixin RoomActions on RoomWrapper {
     required List<String> unMuteMembers,
   }) {
     return checkResult(ChatSDKEvent.unMuteChatRoomMembers, () {
-      return Client.getInstance.chatRoomManager
-          .unMuteChatRoomMembers(roomId, unMuteMembers);
+      return Client.getInstance.chatRoomManager.unMuteChatRoomMembers(
+        roomId,
+        unMuteMembers,
+      );
     });
   }
 
-  Future<void> changeOwner({
-    required String roomId,
-    required String newOwner,
-  }) {
+  Future<void> changeOwner({required String roomId, required String newOwner}) {
     return checkResult(ChatSDKEvent.changeChatRoomOwner, () {
-      return Client.getInstance.chatRoomManager.changeOwner(
-        roomId,
-        newOwner,
-      );
+      return Client.getInstance.chatRoomManager.changeOwner(roomId, newOwner);
     });
   }
 
@@ -145,10 +146,7 @@ mixin RoomActions on RoomWrapper {
     required String admin,
   }) {
     return checkResult(ChatSDKEvent.addChatRoomAdmin, () {
-      return Client.getInstance.chatRoomManager.addChatRoomAdmin(
-        roomId,
-        admin,
-      );
+      return Client.getInstance.chatRoomManager.addChatRoomAdmin(roomId, admin);
     });
   }
 
@@ -233,22 +231,24 @@ mixin RoomActions on RoomWrapper {
     required String announcement,
   }) {
     return checkResult(ChatSDKEvent.updateChatRoomAnnouncement, () {
-      return Client.getInstance.chatRoomManager
-          .updateChatRoomAnnouncement(roomId, announcement);
+      return Client.getInstance.chatRoomManager.updateChatRoomAnnouncement(
+        roomId,
+        announcement,
+      );
     });
   }
 
-  Future<String?> fetchChatRoomAnnouncement({
+  Future<String?> fetchChatRoomAnnouncement({required String roomId}) {
+    return checkResult(ChatSDKEvent.fetchChatRoomAnnouncement, () {
+      return Client.getInstance.chatRoomManager.fetchChatRoomAnnouncement(
+        roomId,
+      );
+    });
+  }
+
+  Future<List<String>> fetchChatRoomAllowListFromServer({
     required String roomId,
   }) {
-    return checkResult(ChatSDKEvent.fetchChatRoomAnnouncement, () {
-      return Client.getInstance.chatRoomManager
-          .fetchChatRoomAnnouncement(roomId);
-    });
-  }
-
-  Future<List<String>> fetchChatRoomAllowListFromServer(
-      {required String roomId}) {
     return checkResult(ChatSDKEvent.fetchChatRoomAllowListFromServer, () {
       return Client.getInstance.chatRoomManager
           .fetchChatRoomAllowListFromServer(roomId);
@@ -257,8 +257,9 @@ mixin RoomActions on RoomWrapper {
 
   Future<bool> isMemberInChatRoomAllowList({required String roomId}) {
     return checkResult(ChatSDKEvent.isMemberInChatRoomAllowList, () {
-      return Client.getInstance.chatRoomManager
-          .isMemberInChatRoomAllowList(roomId);
+      return Client.getInstance.chatRoomManager.isMemberInChatRoomAllowList(
+        roomId,
+      );
     });
   }
 
@@ -280,10 +281,7 @@ mixin RoomActions on RoomWrapper {
   }) {
     return checkResult(ChatSDKEvent.removeMembersFromChatRoomAllowList, () {
       return Client.getInstance.chatRoomManager
-          .removeMembersFromChatRoomAllowList(
-        roomId,
-        members,
-      );
+          .removeMembersFromChatRoomAllowList(roomId, members);
     });
   }
 
@@ -295,8 +293,9 @@ mixin RoomActions on RoomWrapper {
 
   Future<void> unMuteAllChatRoomMembers({required String roomId}) {
     return checkResult(ChatSDKEvent.unMuteAllChatRoomMembers, () {
-      return Client.getInstance.chatRoomManager
-          .unMuteAllChatRoomMembers(roomId);
+      return Client.getInstance.chatRoomManager.unMuteAllChatRoomMembers(
+        roomId,
+      );
     });
   }
 
@@ -319,10 +318,12 @@ mixin RoomActions on RoomWrapper {
     bool overwrite = false,
   }) {
     return checkResult(ChatSDKEvent.addChatRoomAttributes, () {
-      return Client.getInstance.chatRoomManager.addAttributes(roomId,
-          attributes: attributes,
-          deleteWhenLeft: deleteWhenLeft,
-          overwrite: overwrite);
+      return Client.getInstance.chatRoomManager.addAttributes(
+        roomId,
+        attributes: attributes,
+        deleteWhenLeft: deleteWhenLeft,
+        overwrite: overwrite,
+      );
     });
   }
 

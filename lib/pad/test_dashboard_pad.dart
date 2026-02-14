@@ -1,11 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import 'package:provider/provider.dart';
+import 'package:qa_flutter/uikit/lib/chat_uikit.dart';
 import '../config/app_config.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
 import '../common/utils/version_manager.dart';
 import '../common/widgets/update_dialog.dart';
+import '../test_pages/single/test_single_chat_list_page.dart';
+import '../test_pages/group/test_group_list_page.dart';
+import '../test_pages/chatroom/test_chat_room_list_page.dart';
+import '../common/settings_page.dart';
+
+class _TabItem {
+  final String label;
+  final IconData icon;
+  final Widget page;
+  _TabItem({required this.label, required this.icon, required this.page});
+}
 
 class TestDashboardPad extends StatefulWidget {
   const TestDashboardPad({super.key});
@@ -15,8 +27,8 @@ class TestDashboardPad extends StatefulWidget {
 }
 
 class _TestDashboardPadState extends State<TestDashboardPad> {
+  int _selectedIndex = 0;
   String _currentUserId = 'Unknown';
-  String _deviceId = 'Unknown';
 
   @override
   void initState() {
@@ -26,436 +38,207 @@ class _TestDashboardPadState extends State<TestDashboardPad> {
 
   Future<void> _loadUserInfo() async {
     final user = await EMClient.getInstance.getCurrentUserId();
-    final device = await EMClient.getInstance.getCurrentDeviceId();
     if (mounted) {
       setState(() {
         _currentUserId = user ?? 'Not logged in';
-        _deviceId = device;
       });
     }
+  }
+
+  List<_TabItem> _getTabs() {
+    return [
+      _TabItem(
+        label: '单聊',
+        icon: Icons.person_outline,
+        page: const TestSingleChatListPage(),
+      ),
+      _TabItem(
+        label: '群聊',
+        icon: Icons.group_outlined,
+        page: const TestGroupListPage(),
+      ),
+      _TabItem(
+        label: '聊天室',
+        icon: Icons.meeting_room_outlined,
+        page: const TestChatRoomListPage(),
+      ),
+      _TabItem(
+        label: '设置',
+        icon: Icons.settings_outlined,
+        page: const SettingsPage(),
+      ),
+    ];
   }
 
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<AppSettings>();
     final isDark = settings.isDarkMode;
+    final tabs = _getTabs();
 
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.backgroundStart(isDark),
-              AppColors.backgroundEnd(isDark),
-            ],
-          ),
-        ),
-        child: Row(
-          children: [
-            // 左侧侧边栏: 用户信息与核心设置
-            _buildSidebar(context, settings, isDark),
-            // 垂直分割线
-            VerticalDivider(
-              width: 1,
-              thickness: 1,
-              color: AppColors.glassBorder(isDark),
+      body: Row(
+        children: [
+          // 左侧细页签 (NavigationRail)
+          NavigationRail(
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: (index) {
+              setState(() {
+                _selectedIndex = index;
+              });
+            },
+            labelType: NavigationRailLabelType.all,
+            backgroundColor: isDark
+                ? ChatUIKitTheme.instance.color.neutralColor1
+                : ChatUIKitTheme.instance.color.neutralColor98,
+            selectedIconTheme: IconThemeData(color: AppColors.primary(isDark)),
+            unselectedIconTheme: IconThemeData(
+              color: AppColors.textSecondary(isDark),
             ),
-            // 右侧主区域: 测试功能网格
-            Expanded(child: _buildMainContent(context, isDark)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSidebar(
-    BuildContext context,
-    AppSettings settings,
-    bool isDark,
-  ) {
-    return Container(
-      width: 300,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildUserInfoSection(isDark),
-          const SizedBox(height: 30),
-          _buildSectionTitle('快速配置', isDark),
-          _buildSidebarItem(
-            title: '服务器配置',
-            icon: Icons.admin_panel_settings_outlined,
-            onTap: () => Navigator.pushNamed(context, '/settings'),
-            isDark: isDark,
-          ),
-          const SizedBox(height: 10),
-          _buildSidebarSwitch(
-            title: '深色模式',
-            icon: Icons.dark_mode_outlined,
-            value: settings.isDarkMode,
-            onChanged: (val) => settings.isDarkMode = val,
-            isDark: isDark,
-          ),
-          const SizedBox(height: 10),
-          _buildSidebarSwitch(
-            title: '测试模式',
-            icon: Icons.bug_report_outlined,
-            value: settings.isTestMode,
-            onChanged: (val) => settings.isTestMode = val,
-            isDark: isDark,
-          ),
-          const Spacer(),
-          _buildVersionInfo(context, isDark),
-          const SizedBox(height: 20),
-          _buildLogoutButton(context, settings, isDark),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildUserInfoSection(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.inputBackground(isDark),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.glassBorder(isDark)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: AppColors.primary(isDark),
-                child: const Icon(Icons.person, color: Colors.white),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '当前用户',
-                      style: TextStyle(
-                        color: AppColors.textSecondary(isDark),
-                        fontSize: 12,
-                      ),
-                    ),
-                    Text(
-                      _currentUserId,
-                      style: TextStyle(
-                        color: AppColors.textPrimary(isDark),
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const Divider(height: 24),
-          Text(
-            '设备 ID',
-            style: TextStyle(
+            selectedLabelTextStyle: TextStyle(
+              color: AppColors.primary(isDark),
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+            unselectedLabelTextStyle: TextStyle(
               color: AppColors.textSecondary(isDark),
               fontSize: 12,
             ),
-          ),
-          Text(
-            _deviceId,
-            style: TextStyle(
-              color: AppColors.textPrimary(isDark),
-              fontSize: 14,
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 12),
-      child: Text(
-        title,
-        style: TextStyle(
-          color: AppColors.primary(isDark),
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSidebarItem({
-    required String title,
-    required IconData icon,
-    required VoidCallback onTap,
-    required bool isDark,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.inputBackground(isDark),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.glassBorder(isDark)),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: AppColors.textSecondary(isDark), size: 20),
-            const SizedBox(width: 12),
-            Text(title, style: TextStyle(color: AppColors.textPrimary(isDark))),
-            const Spacer(),
-            Icon(
-              Icons.chevron_right,
-              color: AppColors.textSecondary(isDark),
-              size: 16,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSidebarSwitch({
-    required String title,
-    required IconData icon,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-    required bool isDark,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.inputBackground(isDark),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.glassBorder(isDark)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: AppColors.textSecondary(isDark), size: 20),
-          const SizedBox(width: 12),
-          Text(title, style: TextStyle(color: AppColors.textPrimary(isDark))),
-          const Spacer(),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeTrackColor: AppColors.primary(isDark),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVersionInfo(BuildContext context, bool isDark) {
-    return Consumer<VersionManager>(
-      builder: (context, vm, _) {
-        return InkWell(
-          onTap: vm.hasNewVersion ? () => UpdateDialog.show(context) : null,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.inputBackground(isDark),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.glassBorder(isDark)),
-            ),
-            child: Row(
+            leading: Column(
               children: [
-                Icon(
-                  Icons.info_outline,
-                  color: AppColors.textSecondary(isDark),
-                  size: 20,
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '版本',
-                      style: TextStyle(
-                        color: AppColors.textSecondary(isDark),
-                        fontSize: 12,
-                      ),
-                    ),
-                    Text(
-                      AppConfig.appVersion,
-                      style: TextStyle(
-                        color: AppColors.textPrimary(isDark),
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                if (vm.hasNewVersion)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Text(
-                      'NEW',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
+                const SizedBox(height: 20),
+                // 标题: 测试
+                RotatedBox(
+                  quarterTurns: -1,
+                  child: Text(
+                    '测试',
+                    style: TextStyle(
+                      color: AppColors.primary(isDark),
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 4,
                     ),
                   ),
+                ),
+                const SizedBox(height: 30),
+                // 用户头像
+                GestureDetector(
+                  onTap: () => _showUserDetail(context, isDark),
+                  child: CircleAvatar(
+                    radius: 20,
+                    backgroundColor: AppColors.primary(isDark).withValues(alpha: 0.1),
+                    child: Icon(Icons.person, color: AppColors.primary(isDark), size: 20),
+                  ),
+                ),
+                const SizedBox(height: 20),
               ],
             ),
+            trailing: Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  // 版本检查红点
+                  Consumer<VersionManager>(
+                    builder: (context, vm, _) {
+                      return IconButton(
+                        icon: Badge(
+                          isLabelVisible: vm.hasNewVersion,
+                          child: Icon(
+                            Icons.info_outline,
+                            color: AppColors.textSecondary(isDark),
+                          ),
+                        ),
+                        onPressed: () {
+                          if (vm.hasNewVersion) {
+                            UpdateDialog.show(context);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('已是最新版本')),
+                            );
+                          }
+                        },
+                      );
+                    },
+                  ),
+                  // 主题切换
+                  IconButton(
+                    icon: Icon(
+                      isDark ? Icons.light_mode : Icons.dark_mode,
+                      color: AppColors.textSecondary(isDark),
+                    ),
+                    onPressed: () {
+                      settings.isDarkMode = !isDark;
+                      settings.saveSettings();
+                    },
+                  ),
+                  // 退出登录
+                  IconButton(
+                    icon: const Icon(Icons.logout, color: Colors.redAccent),
+                    onPressed: () => _handleLogout(context, settings),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+            destinations: tabs.map((tab) {
+              return NavigationRailDestination(
+                icon: Icon(tab.icon),
+                label: Text(tab.label),
+              );
+            }).toList(),
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildLogoutButton(
-    BuildContext context,
-    AppSettings settings,
-    bool isDark,
-  ) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: () async {
-          try {
-            await EMClient.getInstance.logout();
-          } catch (_) {}
-          settings.isLoggedIn = false;
-          await settings.saveSettings();
-          if (context.mounted) {
-            Navigator.of(
-              context,
-            ).pushNamedAndRemoveUntil('/login', (route) => false);
-          }
-        },
-        icon: const Icon(Icons.logout),
-        label: const Text('退出登录'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.red.withValues(alpha: 0.8),
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+          // 分割线
+          VerticalDivider(
+            width: 1,
+            thickness: 1,
+            color: AppColors.glassBorder(isDark),
           ),
-        ),
+          // 右侧主内容区域
+          Expanded(
+            child: IndexedStack(
+              index: _selectedIndex,
+              children: tabs.map((tab) => tab.page).toList(),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildMainContent(BuildContext context, bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(40, 60, 40, 20),
-          child: Text(
-            '测试面板',
-            style: TextStyle(
-              color: AppColors.textPrimary(isDark),
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 30),
-            // 复用 TestPage 的 GridView 逻辑，但在 Pad 上增加列数
-            child: GridView.count(
-              crossAxisCount: 4,
-              mainAxisSpacing: 20,
-              crossAxisSpacing: 20,
-              children: [
-                _buildGridItem(
-                  title: '单聊',
-                  icon: Icons.person_outlined,
-                  onTap: () =>
-                      Navigator.pushNamed(context, '/test_single_chat_list'),
-                  isDark: isDark,
-                ),
-                _buildGridItem(
-                  title: '群聊',
-                  icon: Icons.group_outlined,
-                  onTap: () => Navigator.pushNamed(context, '/test_group_list'),
-                  isDark: isDark,
-                ),
-                _buildGridItem(
-                  title: '聊天室',
-                  icon: Icons.list_alt_outlined,
-                  onTap: () =>
-                      Navigator.pushNamed(context, '/test_chat_room_list'),
-                  isDark: isDark,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildGridItem({
-    required String title,
-    required IconData icon,
-    required VoidCallback onTap,
-    required bool isDark,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.inputBackground(isDark),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.glassBorder(isDark)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+  void _showUserDetail(BuildContext context, bool isDark) async {
+    final deviceId = await EMClient.getInstance.getCurrentDeviceId();
+    if (!context.mounted) return;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('当前用户'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: AppColors.primary(isDark).withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: AppColors.primary(isDark), size: 32),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: TextStyle(
-                color: AppColors.textPrimary(isDark),
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            Text('用户 ID: $_currentUserId'),
+            const SizedBox(height: 8),
+            Text('设备 ID: $deviceId'),
           ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('确定'),
+          ),
+        ],
       ),
     );
+  }
+
+  Future<void> _handleLogout(BuildContext context, AppSettings settings) async {
+    try {
+      await EMClient.getInstance.logout();
+    } catch (_) {}
+    settings.isLoggedIn = false;
+    await settings.saveSettings();
+    if (context.mounted) {
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+    }
   }
 }

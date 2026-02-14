@@ -254,7 +254,7 @@ class _TestGroupListPageState extends State<TestGroupListPage> {
                                         ),
                                       ),
                                       title: Text(
-                                        group.name ?? '未命名群组',
+                                        group.groupName ?? '未命名群组',
                                         style: TextStyle(
                                           color: AppColors.textPrimary(isDark),
                                           fontWeight: FontWeight.bold,
