@@ -37,6 +37,9 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     setState(() => _isLoading = true);
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
     try {
       // 使用设置中的服务器配置进行初始化
       if (_settings.isDirty) {
@@ -72,26 +75,29 @@ class _LoginPageState extends State<LoginPage> {
           'LoginPage: SDK Initialized with AppKey: ${_settings.appKey}',
         );
       }
-      final navigator = Navigator.of(context);
-      final messenger = ScaffoldMessenger.of(context);
-      try {
-        await EMClient.getInstance.loginWithPassword(uid, pwd);
 
-        // // 更新登录状态并保存
-        // _settings.isLoggedIn = true;
-        // await _settings.saveSettings();
+      await EMClient.getInstance.loginWithPassword(uid, pwd);
 
-        navigator.pushReplacementNamed('/home');
-      } catch (e) {
-        if (mounted) {
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text('Login Failed: $e'),
-              backgroundColor: Colors.redAccent,
+      // // 更新登录状态并保存
+      // _settings.isLoggedIn = true;
+      // await _settings.saveSettings();
+
+      navigator.pushReplacementNamed('/home');
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Login Failed: $e',
+              style: TextStyle(
+                color: AppColors.textPrimary(_settings.isDarkMode),
+              ),
             ),
-          );
-        }
-      } finally {
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
