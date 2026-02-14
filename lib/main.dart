@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:qa_flutter/test_pages/chatroom/test_chat_room_list_page.dart';
 import 'package:qa_flutter/theme/app_colors.dart';
 import 'package:qa_flutter/uikit/lib/chat_uikit.dart';
@@ -24,7 +25,15 @@ void main() async {
   // 启动后台版本检查
   VersionManager().checkVersion();
 
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: AppSettings()),
+        ChangeNotifierProvider.value(value: VersionManager()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {
@@ -49,6 +58,9 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    // 监听设置变化
+    final settings = context.watch<AppSettings>();
+
     return MaterialApp(
       title: 'QA Flutter',
       debugShowCheckedModeBanner: false,
@@ -60,7 +72,7 @@ class _MyAppState extends State<MyApp> {
         useMaterial3: true,
       ),
       // 根据登录状态动态决定起始页面
-      initialRoute: AppSettings().isLoggedIn ? '/home' : '/login',
+      initialRoute: settings.isLoggedIn ? '/home' : '/login',
       onGenerateRoute: (settings) {
         return ChatUIKitRoute().generateRoute(settings);
       },

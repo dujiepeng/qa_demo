@@ -36,7 +36,14 @@ class AppSettings extends ChangeNotifier {
     }
   }
 
-  bool isLoggedIn = false; // 登录状态
+  bool _isLoggedIn = false; // 登录状态
+  bool get isLoggedIn => _isLoggedIn;
+  set isLoggedIn(bool value) {
+    if (_isLoggedIn != value) {
+      _isLoggedIn = value;
+      notifyListeners();
+    }
+  }
 
   bool _isTestMode = false; // 测试模式
   bool get isTestMode => _isTestMode;

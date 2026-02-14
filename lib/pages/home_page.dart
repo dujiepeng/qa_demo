@@ -1,3 +1,4 @@
+import 'package:provider/provider.dart';
 import 'package:qa_flutter/uikit/lib/chat_uikit.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
@@ -12,6 +13,7 @@ import 'groups_page.dart';
 import 'rooms_page.dart';
 import 'me_page.dart';
 import 'test_page.dart';
+import 'test_dashboard_pad.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -22,7 +24,6 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with ChatUIKitThemeMixin {
   int _currentIndex = 0;
-  final _settings = AppSettings();
 
   // 缓存页面实例，避免每次 build 都重新创建
   late final Widget _conversationsPage;
@@ -66,97 +67,97 @@ class _HomePageState extends State<HomePage> with ChatUIKitThemeMixin {
 
   @override
   Widget themeBuilder(BuildContext context, ChatUIKitTheme theme) {
-    return AnimatedBuilder(
-      animation: _settings,
-      builder: (context, _) {
-        final isDark = theme.color.isDark;
-        final List<Widget> pages;
-        final List<BottomNavigationBarItem> items;
+    // 监听设置变化
+    final settings = context.watch<AppSettings>();
+    final isDark = theme.color.isDark;
 
-        if (_settings.isTestMode) {
-          pages = [_testPage, _mePage];
-          items = const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.bug_report),
-              activeIcon: Icon(Icons.bug_report),
-              label: '测试',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              activeIcon: Icon(Icons.person),
-              label: '我',
-            ),
-          ];
-        } else {
-          pages = [
-            _conversationsPage,
-            _contactsPage,
-            _groupsPage,
-            _roomsPage,
-            _mePage,
-          ];
-          items = const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_outline),
-              activeIcon: Icon(Icons.chat_bubble),
-              label: '会话',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.people_outline),
-              activeIcon: Icon(Icons.people),
-              label: '好友',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.group_outlined),
-              activeIcon: Icon(Icons.group),
-              label: '群组',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.meeting_room_outlined),
-              activeIcon: Icon(Icons.meeting_room),
-              label: '聊天室',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              activeIcon: Icon(Icons.person),
-              label: '我',
-            ),
-          ];
-        }
+    final List<Widget> pages;
+    final List<BottomNavigationBarItem> items;
 
-        // 索引越界保护
-        int safeIndex = _currentIndex;
-        if (safeIndex >= pages.length) {
-          safeIndex = pages.length - 1;
-        }
+    if (settings.isTestMode) {
+      pages = [_testPage, _mePage];
+      items = const [
+        BottomNavigationBarItem(
+          icon: Icon(Icons.bug_report),
+          activeIcon: Icon(Icons.bug_report),
+          label: '测试',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person_outline),
+          activeIcon: Icon(Icons.person),
+          label: '我',
+        ),
+      ];
+    } else {
+      pages = [
+        _conversationsPage,
+        _contactsPage,
+        _groupsPage,
+        _roomsPage,
+        _mePage,
+      ];
+      items = const [
+        BottomNavigationBarItem(
+          icon: Icon(Icons.chat_bubble_outline),
+          activeIcon: Icon(Icons.chat_bubble),
+          label: '会话',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.people_outline),
+          activeIcon: Icon(Icons.people),
+          label: '好友',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.group_outlined),
+          activeIcon: Icon(Icons.group),
+          label: '群组',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.meeting_room_outlined),
+          activeIcon: Icon(Icons.meeting_room),
+          label: '聊天室',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person_outline),
+          activeIcon: Icon(Icons.person),
+          label: '我',
+        ),
+      ];
+    }
 
-        final body = IndexedStack(index: safeIndex, children: pages);
+    // 索引越界保护
+    int safeIndex = _currentIndex;
+    if (safeIndex >= pages.length) {
+      safeIndex = pages.length - 1;
+    }
 
-        return ChatEventWidget(
-          child: ResponsiveLayout(
-            mobile: Scaffold(
-              backgroundColor: AppColors.backgroundStart(isDark),
-              body: body,
-              bottomNavigationBar: _buildBottomNavigationBar(
-                context,
-                isDark,
-                items,
-                safeIndex,
-              ),
-            ),
-            tablet: Scaffold(
-              backgroundColor: AppColors.backgroundStart(isDark),
-              body: Row(
-                children: [
-                  _buildNavigationRail(context, isDark, items, safeIndex),
-                  const VerticalDivider(thickness: 1, width: 1),
-                  Expanded(child: body),
-                ],
-              ),
-            ),
+    final body = IndexedStack(index: safeIndex, children: pages);
+
+    return ChatEventWidget(
+      child: ResponsiveLayout(
+        mobile: Scaffold(
+          backgroundColor: AppColors.backgroundStart(isDark),
+          body: body,
+          bottomNavigationBar: _buildBottomNavigationBar(
+            context,
+            isDark,
+            items,
+            safeIndex,
           ),
-        );
-      },
+        ),
+        tablet: settings.isTestMode
+            ? const TestDashboardPad() // Pad 测试模式直接展示集成面板
+            : Scaffold(
+                backgroundColor: AppColors.backgroundStart(isDark),
+                body: Row(
+                  children: [
+                    _buildNavigationRail(context, isDark, items, safeIndex),
+                    const VerticalDivider(thickness: 1, width: 1),
+                    Expanded(child: body),
+                  ],
+                ),
+              ),
+      ),
     );
   }
 
@@ -189,9 +190,11 @@ class _HomePageState extends State<HomePage> with ChatUIKitThemeMixin {
       destinations: items.map((item) {
         // 为“我”按钮处理红点提示
         Widget icon = item.icon;
-        Widget activeIcon = item.activeIcon ?? item.icon;
+        Widget activeIcon = item.activeIcon;
 
-        if (item.label == '我' && VersionManager().hasNewVersion) {
+        final hasUpdate = context.watch<VersionManager>().hasNewVersion;
+
+        if (item.label == '我' && hasUpdate) {
           icon = _buildBadgeIcon(icon);
           activeIcon = _buildBadgeIcon(activeIcon);
         }
@@ -222,9 +225,8 @@ class _HomePageState extends State<HomePage> with ChatUIKitThemeMixin {
           ),
         ],
       ),
-      child: ListenableBuilder(
-        listenable: VersionManager(),
-        builder: (context, _) {
+      child: Consumer<VersionManager>(
+        builder: (context, vm, _) {
           return BottomNavigationBar(
             currentIndex: safeIndex,
             onTap: (index) => setState(() => _currentIndex = index),
@@ -238,10 +240,10 @@ class _HomePageState extends State<HomePage> with ChatUIKitThemeMixin {
             selectedFontSize: 12,
             unselectedFontSize: 12,
             items: items.map((item) {
-              if (item.label == '我' && VersionManager().hasNewVersion) {
+              if (item.label == '我' && vm.hasNewVersion) {
                 return BottomNavigationBarItem(
                   icon: _buildBadgeIcon(item.icon),
-                  activeIcon: _buildBadgeIcon(item.activeIcon ?? item.icon),
+                  activeIcon: _buildBadgeIcon(item.activeIcon),
                   label: item.label,
                 );
               }
