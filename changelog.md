@@ -9,6 +9,7 @@
     - 重构了 `HomePage` 核心布局：
         - 手机端保留经典的底部导航栏 (`BottomNavigationBar`)。
         - Pad 端采用更适合大屏的侧边导航栏 (`NavigationRail`)，提升空间利用率。
+- **[修复]** 修复 `ResponsiveLayout` 中 `ResponsiveUtil` 的导入路径错误。
 - **[版本]** 迭代项目版本号至 `1.36.0+109`，开启 Pad 布局支持分支 `feat/pad-layout-support`。
 
 ## [1.35.5+108] - 2026-01-23

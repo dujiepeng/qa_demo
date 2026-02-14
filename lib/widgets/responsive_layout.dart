@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'responsive_util.dart';
+import '../utils/responsive_util.dart';
 
 /// 响应式布局容器组件
 /// 根据设备类型（手机/平板）自动切换显示不同的布局
