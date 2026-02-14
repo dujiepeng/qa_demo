@@ -23,7 +23,7 @@ class _TestDashboardPadState extends State<TestDashboardPad>
   late TabController _tabController;
   String _currentUserId = 'Unknown';
   final ScrollController _logScrollController = ScrollController();
-  
+
   // 局部详情页状态
   Widget? _detailPage;
   String _detailTitle = '';
@@ -156,24 +156,43 @@ class _TestDashboardPadState extends State<TestDashboardPad>
                 // 上半部分内容 (列表或详情)
                 Expanded(
                   flex: 1,
-                  child: _detailPage != null 
-                    ? _detailPage!
-                    : TabBarView(
-                        controller: _tabController,
-                        children: [
-                          TestSingleChatListPage(onItemTap: (id) => _showDetail(TestSingleChatPage(userId: id, showAppBar: false), '单聊: $id')),
-                          TestGroupListPage(onItemTap: (id) => _showDetail(TestGroupPage(groupId: id, showAppBar: false), '群组: $id')),
-                          TestChatRoomListPage(onItemTap: (id) => _showDetail(TestChatRoomPage(roomId: id, showAppBar: false), '聊天室: $id')),
-                        ],
-                      ),
+                  child: _detailPage != null
+                      ? _detailPage!
+                      : TabBarView(
+                          controller: _tabController,
+                          children: [
+                            TestSingleChatListPage(
+                              onItemTap: (id) => _showDetail(
+                                TestSingleChatPage(
+                                  userId: id,
+                                  showAppBar: false,
+                                ),
+                                '单聊: $id',
+                              ),
+                            ),
+                            TestGroupListPage(
+                              onItemTap: (id) => _showDetail(
+                                TestGroupPage(groupId: id, showAppBar: false),
+                                '群组: $id',
+                              ),
+                            ),
+                            TestChatRoomListPage(
+                              onItemTap: (id) => _showDetail(
+                                TestChatRoomPage(roomId: id, showAppBar: false),
+                                '聊天室: $id',
+                              ),
+                            ),
+                          ],
+                        ),
                 ),
                 // 水平分割线
-                Divider(height: 1, thickness: 1, color: AppColors.glassBorder(isDark)),
-                // 下半部分: 日志区域 (50%)
-                Expanded(
-                  flex: 1,
-                  child: _buildLogPanel(context, isDark),
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: AppColors.glassBorder(isDark),
                 ),
+                // 下半部分: 日志区域 (50%)
+                Expanded(flex: 1, child: _buildLogPanel(context, isDark)),
               ],
             ),
           ),
@@ -198,9 +217,9 @@ class _TestDashboardPadState extends State<TestDashboardPad>
             ),
           ),
         ),
-        child: _detailPage != null 
-          ? _buildDetailHeader(isDark)
-          : _buildTabHeader(isDark),
+        child: _detailPage != null
+            ? _buildDetailHeader(isDark)
+            : _buildTabHeader(isDark),
       ),
     );
   }
@@ -216,9 +235,27 @@ class _TestDashboardPadState extends State<TestDashboardPad>
       indicatorWeight: 3,
       dividerColor: Colors.transparent,
       tabs: const [
-        Tab(height: 50, child: Text('单聊', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600))),
-        Tab(height: 50, child: Text('群聊', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600))),
-        Tab(height: 50, child: Text('聊天室', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600))),
+        Tab(
+          height: 50,
+          child: Text(
+            '单聊',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+        ),
+        Tab(
+          height: 50,
+          child: Text(
+            '群聊',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+        ),
+        Tab(
+          height: 50,
+          child: Text(
+            '聊天室',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+        ),
       ],
     );
   }
@@ -259,10 +296,12 @@ class _TestDashboardPadState extends State<TestDashboardPad>
 
   Widget _buildLogPanel(BuildContext context, bool isDark) {
     final logService = context.watch<LogService>();
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_logScrollController.hasClients) {
-        _logScrollController.jumpTo(_logScrollController.position.maxScrollExtent);
+        _logScrollController.jumpTo(
+          _logScrollController.position.maxScrollExtent,
+        );
       }
     });
 
