@@ -411,7 +411,7 @@ class _TestDashboardPadState extends State<TestDashboardPad>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '操作日志',
+                '日志',
                 style: TextStyle(
                   color: AppColors.primary(isDark),
                   fontWeight: FontWeight.bold,
