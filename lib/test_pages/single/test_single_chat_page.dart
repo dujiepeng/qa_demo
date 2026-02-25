@@ -108,117 +108,183 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
     return file.path;
   }
 
-    @override
+  @override
+  Widget build(BuildContext context) {
+    final isDark = _settings.isDarkMode;
 
-    Widget build(BuildContext context) {
+    return Scaffold(
+      extendBodyBehindAppBar: true,
 
-      final isDark = _settings.isDarkMode;
+      backgroundColor: Colors.transparent,
 
-      return Scaffold(
+      appBar: widget.showAppBar
+          ? AppBar(
+              toolbarHeight: kToolbarHeight + 20, // 增加高度
 
-        extendBodyBehindAppBar: true,
+              backgroundColor: Colors.transparent,
 
-        backgroundColor: Colors.transparent,
+              elevation: 0,
 
-        appBar: widget.showAppBar ? AppBar(
+              iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
 
-          toolbarHeight: kToolbarHeight + 20, // 增加高度
+              title: Padding(
+                padding: const EdgeInsets.only(top: 20), // 标题下移
 
-          backgroundColor: Colors.transparent,
+                child: Text(
+                  '单聊测试',
 
-          elevation: 0,
-
-          iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
-
-          title: Padding(
-
-            padding: const EdgeInsets.only(top: 20), // 标题下移
-
-            child: Text(
-
-              '单聊测试',
-
-              style: TextStyle(color: AppColors.textPrimary(isDark)),
-
-            ),
-
-          ),
-
-          centerTitle: true,
-
-          actions: [
-
-            Padding(
-
-              padding: const EdgeInsets.only(top: 20),
-
-              child: IconButton(
-
-                icon: const Icon(Icons.info),
-
-                onPressed: () {
-
-                  Navigator.of(context).pushNamed('/settings');
-
-                },
-
+                  style: TextStyle(color: AppColors.textPrimary(isDark)),
+                ),
               ),
 
-            ),
+              centerTitle: true,
 
-          ],
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 20),
 
-        ) : null,
+                  child: IconButton(
+                    icon: const Icon(Icons.info),
 
-        body: Container(
-
-          decoration: BoxDecoration(
-
-            gradient: LinearGradient(
-
-              begin: Alignment.topLeft,
-
-              end: Alignment.bottomRight,
-
-              colors: [
-
-                AppColors.backgroundStart(isDark),
-
-                AppColors.backgroundEnd(isDark),
-
+                    onPressed: () {
+                      Navigator.of(context).pushNamed('/settings');
+                    },
+                  ),
+                ),
               ],
+            )
+          : null,
 
-            ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
 
+            end: Alignment.bottomRight,
+
+            colors: [
+              AppColors.backgroundStart(isDark),
+
+              AppColors.backgroundEnd(isDark),
+            ],
           ),
+        ),
 
-          child: LayoutBuilder(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWideScreen = constraints.maxWidth > 800;
 
-            builder: (context, constraints) {
-
-              return SingleChildScrollView(
-
-                child: ConstrainedBox(
-
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-
-                  child: Padding(
-
-                    padding: EdgeInsets.only(
-
-                      top: widget.showAppBar ? (kToolbarHeight + 80) : 40, // 统一增加 20 像素
-
-                      left: 15,
-
-                      right: 15,
-
-                      bottom: 30,
-
+            if (isWideScreen) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 左侧: 操作区域
+                  Expanded(
+                    flex: 3,
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.only(
+                        top: widget.showAppBar ? (kToolbarHeight + 80) : 40,
+                        left: 15,
+                        right: 15,
+                        bottom: 30,
+                      ),
+                      child: Column(
+                        children: [
+                          _buildInputRow(
+                            controller: _userIdController,
+                            hintText: '输入对方 ID',
+                            isDark: isDark,
+                          ),
+                          const SizedBox(height: 20),
+                          _buildInputRow(
+                            controller: _messageController,
+                            hintText: '输入消息内容',
+                            buttonText: 'Send',
+                            onPressed: () async {
+                              final text = _messageController.text.trim();
+                              try {
+                                final msg = EMMessage.createTxtSendMessage(
+                                  targetId: _userIdController.text
+                                      .trim()
+                                      .toLowerCase(),
+                                  content: text,
+                                  chatType: ChatType.Chat,
+                                );
+                                await sendMessage(msg);
+                                _messageController.clear();
+                              } catch (e) {
+                                _addAppErrLog('发送文字失败: ${e.toString()}');
+                              }
+                            },
+                            isDark: isDark,
+                          ),
+                          const SizedBox(height: 10),
+                          _buildSectionTitle('消息', isDark),
+                          const SizedBox(height: 20),
+                          _buildMessageTypeButtons(isDark),
+                          const SizedBox(height: 10),
+                          _buildSectionTitle('工具', isDark),
+                          const SizedBox(height: 20),
+                          _buildItemsButtons(isDark),
+                        ],
+                      ),
                     ),
+                  ),
+                  // 分割线
+                  VerticalDivider(
+                    width: 1,
+                    thickness: 1,
+                    color: AppColors.glassBorder(isDark).withOpacity(0.2),
+                  ),
+                  // 右侧: 日志区域
+                  Expanded(
+                    flex: 2,
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        top: widget.showAppBar ? (kToolbarHeight + 80) : 40,
+                        left: 15,
+                        right: 15,
+                        bottom: 30,
+                      ),
+                      child: LogView(
+                        controller: _logController,
+                        isDark: isDark,
+                        longPassCallback: (message, action) async {
+                          if (action == LogMenuAction.sendReadAck) {
+                            await EMClient.getInstance.chatManager
+                                .sendMessageReadAck(message!);
+                          } else if (action == LogMenuAction.delete) {
+                            await EMClient.getInstance.chatManager
+                                .deleteRemoteMessagesWithIds(
+                                  conversationId: message!.conversationId!,
+                                  type: EMConversationType
+                                      .values[message.chatType.index],
+                                  msgIds: [message.msgId],
+                                );
+                          } else if (action == LogMenuAction.recall) {
+                            await EMClient.getInstance.chatManager
+                                .recallMessage(message!.msgId);
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
 
-                    child: Column(
-
-  
+            // 默认移动端布局 (垂直)
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    top: widget.showAppBar ? (kToolbarHeight + 80) : 40,
+                    left: 15,
+                    right: 15,
+                    bottom: 30,
+                  ),
+                  child: Column(
                     children: [
                       _buildInputRow(
                         controller: _userIdController,

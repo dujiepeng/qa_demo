@@ -90,7 +90,7 @@ class LogView extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '操作日志',
+                      '日志',
                       style: TextStyle(
                         color: AppColors.textPrimary(isDark),
                         fontSize: 14,
