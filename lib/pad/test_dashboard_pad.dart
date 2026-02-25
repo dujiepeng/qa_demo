@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:qa_flutter/uikit/lib/chat_uikit.dart';
 import '../theme/app_colors.dart';
@@ -9,6 +10,8 @@ import '../test_pages/group/test_group_list_page.dart';
 import '../test_pages/group/test_group_page.dart';
 import '../test_pages/chatroom/test_chat_room_list_page.dart';
 import '../test_pages/chatroom/test_chat_room_page.dart';
+import 'dart:io';
+import 'dart:async';
 import '../common/utils/log_service.dart';
 import '../common/widgets/me_page_content.dart';
 
@@ -24,6 +27,11 @@ class _TestDashboardPadState extends State<TestDashboardPad>
   late TabController _tabController;
   String _currentUserId = 'Unknown';
   final ScrollController _logScrollController = ScrollController();
+
+  // SDK 日志文件相关
+  String _sdkLogContent = '正在加载 SDK 日志...';
+  Timer? _logTimer;
+  String? _lastLogPath;
 
   // 日志高度
   double _logPanelHeight = 300.0;
@@ -42,12 +50,41 @@ class _TestDashboardPadState extends State<TestDashboardPad>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _loadUserInfo();
+    _startLogSync();
+  }
+
+  void _startLogSync() {
+    _logTimer?.cancel();
+    _logTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      _syncSdkLogs();
+    });
+  }
+
+  Future<void> _syncSdkLogs() async {
+    try {
+      final logZipPath = await EMClient.getInstance.compressLogs();
+      final logPath = logZipPath.replaceFirst('log.gz', 'easemob.log');
+
+      final file = File(logPath);
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        if (mounted && content != _sdkLogContent) {
+          setState(() {
+            _sdkLogContent = content;
+            _lastLogPath = logPath;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Sync SDK logs error: $e');
+    }
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     _logScrollController.dispose();
+    _logTimer?.cancel();
     super.dispose();
   }
 
@@ -391,8 +428,6 @@ class _TestDashboardPadState extends State<TestDashboardPad>
   }
 
   Widget _buildLogPanel(BuildContext context, bool isDark) {
-    final logService = context.watch<LogService>();
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_logScrollController.hasClients) {
         _logScrollController.jumpTo(
@@ -422,12 +457,33 @@ class _TestDashboardPadState extends State<TestDashboardPad>
                 children: [
                   IconButton(
                     icon: const Icon(Icons.copy_all, size: 18),
-                    onPressed: () => logService.log('尝试复制日志...'),
+                    onPressed: () async {
+                      if (_sdkLogContent.isNotEmpty) {
+                        await Clipboard.setData(
+                          ClipboardData(text: _sdkLogContent),
+                        );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('SDK日志已复制')),
+                          );
+                        }
+                      }
+                    },
                     tooltip: '复制全部',
                   ),
                   IconButton(
                     icon: const Icon(Icons.delete_outline, size: 18),
-                    onPressed: () => logService.clear(),
+                    onPressed: () async {
+                      if (_lastLogPath != null) {
+                        final file = File(_lastLogPath!);
+                        if (await file.exists()) {
+                          await file.writeAsString('');
+                          setState(() {
+                            _sdkLogContent = '';
+                          });
+                        }
+                      }
+                    },
                     tooltip: '清空日志',
                   ),
                 ],
@@ -436,22 +492,18 @@ class _TestDashboardPadState extends State<TestDashboardPad>
           ),
           const Divider(),
           Expanded(
-            child: ListView.builder(
+            child: SingleChildScrollView(
               controller: _logScrollController,
-              itemCount: logService.logs.length,
-              itemBuilder: (context, index) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Text(
-                    logService.logs[index],
-                    style: TextStyle(
-                      fontFamily: 'Courier',
-                      fontSize: 12,
-                      color: isDark ? Colors.greenAccent : Colors.black87,
-                    ),
-                  ),
-                );
-              },
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: SelectableText(
+                _sdkLogContent,
+                style: TextStyle(
+                  fontFamily: 'Courier',
+                  fontSize: 12,
+                  color: isDark ? Colors.greenAccent : Colors.black87,
+                  height: 1.5,
+                ),
+              ),
             ),
           ),
         ],
