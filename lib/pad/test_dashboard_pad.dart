@@ -25,6 +25,11 @@ class _TestDashboardPadState extends State<TestDashboardPad>
   String _currentUserId = 'Unknown';
   final ScrollController _logScrollController = ScrollController();
 
+  // 日志高度
+  double _logPanelHeight = 300.0;
+  // 最小日志高度
+  static const double _minLogHeight = 100.0;
+
   // 侧边栏索引: 0 - 测试, 1 - 设置
   int _navIndex = 0;
 
@@ -165,7 +170,9 @@ class _TestDashboardPadState extends State<TestDashboardPad>
           ),
           // 右侧内容区域
           Expanded(
-            child: _navIndex == 0 ? _buildTestDashboard(isDark) : _buildMeContent(isDark),
+            child: _navIndex == 0
+                ? _buildTestDashboard(isDark)
+                : _buildMeContent(isDark),
           ),
         ],
       ),
@@ -180,7 +187,6 @@ class _TestDashboardPadState extends State<TestDashboardPad>
         _buildMasterAppBar(isDark),
         // 上半部分内容 (列表或详情)
         Expanded(
-          flex: 1,
           child: _detailPage != null
               ? _detailPage!
               : TabBarView(
@@ -188,10 +194,7 @@ class _TestDashboardPadState extends State<TestDashboardPad>
                   children: [
                     TestSingleChatListPage(
                       onItemTap: (id) => _showDetail(
-                        TestSingleChatPage(
-                          userId: id,
-                          showAppBar: false,
-                        ),
+                        TestSingleChatPage(userId: id, showAppBar: false),
                         '单聊: $id',
                       ),
                     ),
@@ -210,14 +213,49 @@ class _TestDashboardPadState extends State<TestDashboardPad>
                   ],
                 ),
         ),
-        // 水平分割线
-        Divider(
-          height: 1,
-          thickness: 1,
-          color: AppColors.glassBorder(isDark),
+
+        // 可拖动的分割线手柄
+        GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onVerticalDragUpdate: (details) {
+            setState(() {
+              // 向上拖动 delta 是负的，日志高度增加
+              _logPanelHeight -= details.delta.dy;
+
+              // 限制最大高度不能超过屏幕高度的 80%
+              final maxHeight = MediaQuery.of(context).size.height * 0.8;
+              if (_logPanelHeight < _minLogHeight) {
+                _logPanelHeight = _minLogHeight;
+              } else if (_logPanelHeight > maxHeight) {
+                _logPanelHeight = maxHeight;
+              }
+            });
+          },
+          child: MouseRegion(
+            cursor: SystemMouseCursors.resizeUpDown,
+            child: Container(
+              height: 10,
+              width: double.infinity,
+              color: Colors.transparent, // 点击热区
+              child: Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.glassBorder(isDark),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
-        // 下半部分: 日志区域 (50%)
-        Expanded(flex: 1, child: _buildLogPanel(context, isDark)),
+
+        // 下半部分: 日志区域
+        SizedBox(
+          height: _logPanelHeight,
+          child: _buildLogPanel(context, isDark),
+        ),
       ],
     );
   }
@@ -253,9 +291,7 @@ class _TestDashboardPadState extends State<TestDashboardPad>
             ),
           ),
         ),
-        const Expanded(
-          child: MePageContent(showAppBar: false),
-        ),
+        const Expanded(child: MePageContent(showAppBar: false)),
       ],
     );
   }
