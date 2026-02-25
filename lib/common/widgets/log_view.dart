@@ -77,7 +77,6 @@ class LogView extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppColors.glassBorder(isDark)),
           ),
-          constraints: const BoxConstraints(minHeight: 600),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -125,84 +124,84 @@ class LogView extends StatelessWidget {
                         ),
                       ),
                     )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(8),
-                      itemCount: controller.logs.length,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemBuilder: (context, index) {
-                        final entry = controller.logs[index];
-                        return GestureDetector(
-                          onLongPressStart: (details) async {
-                            final position = details.globalPosition;
-                            final value = await showMenu<String>(
-                              context: context,
-                              position: RelativeRect.fromLTRB(
-                                position.dx,
-                                position.dy,
-                                position.dx,
-                                position.dy,
-                              ),
-                              items: [
-                                const PopupMenuItem(
-                                  value: 'copy',
-                                  child: Text('复制'),
+                  : Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(8),
+                        itemCount: controller.logs.length,
+                        itemBuilder: (context, index) {
+                          final entry = controller.logs[index];
+                          return GestureDetector(
+                            onLongPressStart: (details) async {
+                              final position = details.globalPosition;
+                              final value = await showMenu<String>(
+                                context: context,
+                                position: RelativeRect.fromLTRB(
+                                  position.dx,
+                                  position.dy,
+                                  position.dx,
+                                  position.dy,
                                 ),
-                                if (entry.message != null)
-                                  PopupMenuItem(
-                                    value: 'sendReadAck',
-                                    child: Text('发送已读ACK'),
+                                items: [
+                                  const PopupMenuItem(
+                                    value: 'copy',
+                                    child: Text('复制'),
                                   ),
-                                if (entry.message != null)
-                                  PopupMenuItem(
-                                    value: 'delete',
-                                    child: Text('从服务器删除'),
-                                  ),
-                                if (entry.message != null)
-                                  PopupMenuItem(
-                                    value: 'recall',
-                                    child: Text('撤回'),
-                                  ),
-                              ],
-                            );
-
-                            if (value == 'copy') {
-                              final text =
-                                  '${entry.timestamp}: ${entry.content}';
-                              await Clipboard.setData(
-                                ClipboardData(text: text),
+                                  if (entry.message != null)
+                                    PopupMenuItem(
+                                      value: 'sendReadAck',
+                                      child: Text('发送已读ACK'),
+                                    ),
+                                  if (entry.message != null)
+                                    PopupMenuItem(
+                                      value: 'delete',
+                                      child: Text('从服务器删除'),
+                                    ),
+                                  if (entry.message != null)
+                                    PopupMenuItem(
+                                      value: 'recall',
+                                      child: Text('撤回'),
+                                    ),
+                                ],
                               );
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('已复制到剪贴板'),
-                                    duration: Duration(milliseconds: 500),
-                                  ),
+
+                              if (value == 'copy') {
+                                final text =
+                                    '${entry.timestamp}: ${entry.content}';
+                                await Clipboard.setData(
+                                  ClipboardData(text: text),
                                 );
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('已复制到剪贴板'),
+                                      duration: Duration(milliseconds: 500),
+                                    ),
+                                  );
+                                }
                               }
-                            }
-                          },
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(vertical: 2),
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 4,
-                              horizontal: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: entry.color ?? Colors.transparent,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              '${entry.timestamp}: ${entry.content}',
-                              style: TextStyle(
-                                color: AppColors.textPrimary(isDark),
-                                fontSize: 12,
-                                fontFamily: 'monospace',
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 4,
+                                horizontal: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: entry.color ?? Colors.transparent,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '${entry.timestamp}: ${entry.content}',
+                                style: TextStyle(
+                                  color: AppColors.textPrimary(isDark),
+                                  fontSize: 12,
+                                  fontFamily: 'monospace',
+                                ),
                               ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
             ],
           ),
