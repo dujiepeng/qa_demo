@@ -220,12 +220,16 @@ class _TestSingleChatListPageState extends State<TestSingleChatListPage> {
                   ),
                 ),
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const TestSingleChatPage(),
-                    ),
-                  );
+                  if (widget.onItemTap != null) {
+                    widget.onItemTap!('');
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const TestSingleChatPage(),
+                      ),
+                    );
+                  }
                 },
               ),
             ],

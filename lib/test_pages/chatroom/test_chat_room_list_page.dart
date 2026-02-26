@@ -145,10 +145,16 @@ class _TestChatRoomListPageState extends State<TestChatRoomListPage> {
                   ),
                 ),
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => TestChatRoomPage()),
-                  );
+                  if (widget.onItemTap != null) {
+                    widget.onItemTap!('');
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => TestChatRoomPage(),
+                      ),
+                    );
+                  }
                 },
               ),
             ],

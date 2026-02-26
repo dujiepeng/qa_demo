@@ -153,10 +153,14 @@ class _TestGroupListPageState extends State<TestGroupListPage> {
                   ),
                 ),
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => TestGroupPage()),
-                  );
+                  if (widget.onItemTap != null) {
+                    widget.onItemTap!('');
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => TestGroupPage()),
+                    );
+                  }
                 },
               ),
             ],
@@ -281,9 +285,10 @@ class _TestGroupListPageState extends State<TestGroupListPage> {
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (context) => TestGroupPage(
-                                                groupId: group.groupId,
-                                              ),
+                                              builder: (context) =>
+                                                  TestGroupPage(
+                                                    groupId: group.groupId,
+                                                  ),
                                             ),
                                           );
                                         }

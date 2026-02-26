@@ -254,19 +254,19 @@ class _TestDashboardPadState extends State<TestDashboardPad>
                     TestSingleChatListPage(
                       onItemTap: (id) => _showDetail(
                         TestSingleChatPage(userId: id, showAppBar: false),
-                        '单聊: $id',
+                        id.isEmpty ? '新建单聊' : '单聊: $id',
                       ),
                     ),
                     TestGroupListPage(
                       onItemTap: (id) => _showDetail(
                         TestGroupPage(groupId: id, showAppBar: false),
-                        '群组: $id',
+                        id.isEmpty ? '加入群组' : '群组: $id',
                       ),
                     ),
                     TestChatRoomListPage(
                       onItemTap: (id) => _showDetail(
                         TestChatRoomPage(roomId: id, showAppBar: false),
-                        '聊天室: $id',
+                        id.isEmpty ? '加入聊天室' : '聊天室: $id',
                       ),
                     ),
                   ],
