@@ -344,7 +344,7 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
         ),
         if (countController != null) ...[
           const SizedBox(width: 8),
-          const Text('X', style: TextStyle(color: Colors.white)),
+          Text('X', style: TextStyle(color: AppColors.textPrimary(isDark))),
           const SizedBox(width: 8),
           SizedBox(
             width: 60,
@@ -370,6 +370,8 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
               ),
             ),
           ),
+          const SizedBox(width: 8),
+          Text('X', style: TextStyle(color: AppColors.textPrimary(isDark))),
         ],
         if (buttonText?.isNotEmpty == true && onPressed != null) ...[
           const SizedBox(width: 12),
