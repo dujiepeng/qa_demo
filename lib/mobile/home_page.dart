@@ -2,15 +2,10 @@ import 'package:provider/provider.dart';
 import 'package:qa_flutter/uikit/lib/chat_uikit.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_settings.dart';
 import '../common/utils/version_manager.dart';
 import '../common/widgets/update_dialog.dart';
 import '../common/utils/chat_event_widget.dart';
 import '../common/widgets/responsive_layout.dart';
-import '../common/conversations_page.dart';
-import '../common/contacts_page.dart';
-import '../common/groups_page.dart';
-import '../common/rooms_page.dart';
 import 'me_page.dart';
 import 'test_page.dart';
 import '../pad/test_dashboard_pad.dart';
@@ -26,10 +21,6 @@ class _HomePageState extends State<HomePage> with ChatUIKitThemeMixin {
   int _currentIndex = 0;
 
   // 缓存页面实例，避免每次 build 都重新创建
-  late final Widget _conversationsPage;
-  late final Widget _contactsPage;
-  late final Widget _groupsPage;
-  late final Widget _roomsPage;
   late final Widget _mePage;
   late final Widget _testPage;
 
@@ -37,10 +28,6 @@ class _HomePageState extends State<HomePage> with ChatUIKitThemeMixin {
   void initState() {
     super.initState();
     // 初始化所有页面实例
-    _conversationsPage = const ConversationsPage();
-    _contactsPage = const ContactsPage();
-    _groupsPage = const GroupsPage();
-    _roomsPage = const RoomsPage();
     _mePage = const MePage();
     _testPage = const TestPage();
 
@@ -68,62 +55,21 @@ class _HomePageState extends State<HomePage> with ChatUIKitThemeMixin {
   @override
   Widget themeBuilder(BuildContext context, ChatUIKitTheme theme) {
     // 监听设置变化
-    final settings = context.watch<AppSettings>();
     final isDark = theme.color.isDark;
 
-    final List<Widget> pages;
-    final List<BottomNavigationBarItem> items;
-
-    if (settings.isTestMode) {
-      pages = [_testPage, _mePage];
-      items = const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.bug_report),
-          activeIcon: Icon(Icons.bug_report),
-          label: '测试',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline),
-          activeIcon: Icon(Icons.person),
-          label: '我',
-        ),
-      ];
-    } else {
-      pages = [
-        _conversationsPage,
-        _contactsPage,
-        _groupsPage,
-        _roomsPage,
-        _mePage,
-      ];
-      items = const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.chat_bubble_outline),
-          activeIcon: Icon(Icons.chat_bubble),
-          label: '会话',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.people_outline),
-          activeIcon: Icon(Icons.people),
-          label: '好友',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.group_outlined),
-          activeIcon: Icon(Icons.group),
-          label: '群组',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.meeting_room_outlined),
-          activeIcon: Icon(Icons.meeting_room),
-          label: '聊天室',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline),
-          activeIcon: Icon(Icons.person),
-          label: '我',
-        ),
-      ];
-    }
+    final List<Widget> pages = [_testPage, _mePage];
+    final List<BottomNavigationBarItem> items = const [
+      BottomNavigationBarItem(
+        icon: Icon(Icons.bug_report),
+        activeIcon: Icon(Icons.bug_report),
+        label: '测试',
+      ),
+      BottomNavigationBarItem(
+        icon: Icon(Icons.person_outline),
+        activeIcon: Icon(Icons.person),
+        label: '我',
+      ),
+    ];
 
     // 索引越界保护
     int safeIndex = _currentIndex;
@@ -145,66 +91,8 @@ class _HomePageState extends State<HomePage> with ChatUIKitThemeMixin {
             safeIndex,
           ),
         ),
-        tablet: settings.isTestMode
-            ? const TestDashboardPad() // Pad 测试模式直接展示集成面板
-            : Scaffold(
-                backgroundColor: AppColors.backgroundStart(isDark),
-                body: Row(
-                  children: [
-                    _buildNavigationRail(context, isDark, items, safeIndex),
-                    const VerticalDivider(thickness: 1, width: 1),
-                    Expanded(child: body),
-                  ],
-                ),
-              ),
+        tablet: const TestDashboardPad(), // Pad 模式直接展示集成面板
       ),
-    );
-  }
-
-  /// 构建 Pad 侧边导航栏
-  Widget _buildNavigationRail(
-    BuildContext context,
-    bool isDark,
-    List<BottomNavigationBarItem> items,
-    int safeIndex,
-  ) {
-    return NavigationRail(
-      selectedIndex: safeIndex,
-      onDestinationSelected: (index) => setState(() => _currentIndex = index),
-      labelType: NavigationRailLabelType.all,
-      backgroundColor: isDark
-          ? ChatUIKitTheme.instance.color.neutralColor1
-          : ChatUIKitTheme.instance.color.neutralColor98,
-      selectedIconTheme: IconThemeData(color: AppColors.primary(isDark)),
-      unselectedIconTheme: IconThemeData(
-        color: AppColors.textSecondary(isDark),
-      ),
-      selectedLabelTextStyle: TextStyle(
-        color: AppColors.primary(isDark),
-        fontSize: 12,
-      ),
-      unselectedLabelTextStyle: TextStyle(
-        color: AppColors.textSecondary(isDark),
-        fontSize: 12,
-      ),
-      destinations: items.map((item) {
-        // 为“我”按钮处理红点提示
-        Widget icon = item.icon;
-        Widget activeIcon = item.activeIcon;
-
-        final hasUpdate = context.watch<VersionManager>().hasNewVersion;
-
-        if (item.label == '我' && hasUpdate) {
-          icon = _buildBadgeIcon(icon);
-          activeIcon = _buildBadgeIcon(activeIcon);
-        }
-
-        return NavigationRailDestination(
-          icon: icon,
-          selectedIcon: activeIcon,
-          label: Text(item.label ?? ''),
-        );
-      }).toList(),
     );
   }
 

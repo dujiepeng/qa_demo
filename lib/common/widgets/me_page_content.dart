@@ -59,18 +59,6 @@ class MePageContent extends StatelessWidget {
             onTap: () => Navigator.pushNamed(context, '/settings'),
           ),
         ),
-        const SizedBox(height: 10),
-        _buildSwitchItem(
-          title: '测试模式',
-          icon: Icons.bug_report_outlined,
-          value: settings.isTestMode,
-          onChanged: (val) {
-            settings.isTestMode = val;
-            settings.saveSettings();
-          },
-          isDark: isDark,
-        ),
-        const SizedBox(height: 10),
         Container(
           decoration: BoxDecoration(
             color: AppColors.inputBackground(isDark),

@@ -45,7 +45,7 @@ class AppSettings extends ChangeNotifier {
     }
   }
 
-  bool _isTestMode = false; // 测试模式
+  bool _isTestMode = true; // 测试模式
   bool get isTestMode => _isTestMode;
   set isTestMode(bool value) {
     if (_isTestMode != value) {
@@ -87,7 +87,7 @@ class AppSettings extends ChangeNotifier {
         prefs.getString(_keyRestServer) ?? 'https://a1-hsb.easemob.com';
     _isDarkMode = prefs.getBool(_keyIsDarkMode) ?? true;
     isLoggedIn = prefs.getBool(_keyIsLoggedIn) ?? false;
-    _isTestMode = prefs.getBool(_keyIsTestMode) ?? false;
+    _isTestMode = prefs.getBool(_keyIsTestMode) ?? true;
 
     // 加载历史记录
     final historyJson = prefs.getStringList(_keyConfigHistory);
