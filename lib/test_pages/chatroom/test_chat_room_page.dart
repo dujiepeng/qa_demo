@@ -584,24 +584,26 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       backgroundColor: Colors.transparent,
-      appBar: widget.showAppBar ? AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
-        title: Text(
-          _roomId.isNotEmpty ? '$_roomId(聊天室)' : '聊天室测试',
-          style: TextStyle(color: AppColors.textPrimary(isDark)),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.info),
-            onPressed: () {
-              Navigator.of(context).pushNamed('/settings');
-            },
-          ),
-        ],
-      ) : null,
+      appBar: widget.showAppBar
+          ? AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
+              title: Text(
+                _roomId.isNotEmpty ? '$_roomId(聊天室)' : '聊天室测试',
+                style: TextStyle(color: AppColors.textPrimary(isDark)),
+              ),
+              centerTitle: true,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.info),
+                  onPressed: () {
+                    Navigator.of(context).pushNamed('/settings');
+                  },
+                ),
+              ],
+            )
+          : null,
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -615,6 +617,133 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
         ),
         child: LayoutBuilder(
           builder: (context, constraints) {
+            final isWideScreen = constraints.maxWidth > 800;
+
+            if (isWideScreen) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 左侧: 操作区域
+                  Expanded(
+                    flex: 3,
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.only(
+                        top: widget.showAppBar ? (kToolbarHeight + 60) : 20,
+                        left: 15,
+                        right: 15,
+                        bottom: 30,
+                      ),
+                      child: Column(
+                        children: [
+                          _buildInputRow(
+                            controller: _roomIdController,
+                            hintText: '输入聊天室 ID',
+                            buttonText:
+                                _roomId.isNotEmpty &&
+                                    _roomIdController.text == _roomId
+                                ? 'Leave'
+                                : 'Join',
+                            onPressed: () async {
+                              final inputId = _roomIdController.text.trim();
+                              if (_roomId.isNotEmpty && _roomId == inputId) {
+                                _addLog('开始离开 $_roomId');
+                                try {
+                                  await EMClient.getInstance.chatRoomManager
+                                      .leaveChatRoom(_roomId);
+                                  _addLog('退出 $_roomId 成功');
+                                  setState(() {
+                                    _roomId = '';
+                                  });
+                                } catch (e) {
+                                  _addLog('退出 $_roomId 失败: ${e.toString()}');
+                                }
+                              } else {
+                                // Join
+                                final userId =
+                                    EMClient.getInstance.currentUserId;
+                                _addLog('$userId 开始加入 $inputId');
+                                String showMsg = '';
+                                try {
+                                  await EMClient.getInstance.chatRoomManager
+                                      .joinChatRoom(inputId);
+                                  setState(() {
+                                    _roomId = inputId;
+                                  });
+                                  showMsg = "加入成功， roomId: $inputId ";
+                                } catch (e) {
+                                  showMsg = '加入 $inputId 失败：${e.toString()}';
+                                } finally {
+                                  _addLog(showMsg);
+                                }
+                              }
+                            },
+                            isDark: isDark,
+                          ),
+                          const SizedBox(height: 20),
+                          _buildInputRow(
+                            controller: _messageController,
+                            hintText: '输入消息内容',
+                            buttonText: 'Send',
+                            onPressed: () async {
+                              String text = _messageController.text.trim();
+                              if (text.isEmpty) return;
+                              try {
+                                final msg = EMMessage.createTxtSendMessage(
+                                  targetId: _roomId,
+                                  content: text,
+                                  chatType: ChatType.ChatRoom,
+                                );
+                                await sendMessage(msg);
+                                _messageController.clear();
+                              } catch (e) {
+                                _addAppErrLog('发送文字失败: ${e.toString()}');
+                              }
+                            },
+                            isDark: isDark,
+                          ),
+                          const SizedBox(height: 10),
+                          _buildSectionTitle('消息', isDark),
+                          const SizedBox(height: 10),
+                          _buildMessageTypeButtons(isDark),
+                          const SizedBox(height: 10),
+                          _buildSectionTitle('控制', isDark),
+                          const SizedBox(height: 10),
+                          _buildChatRoomManagementButtons(isDark),
+                          const SizedBox(height: 10),
+                          _buildSectionTitle('工具', isDark),
+                          const SizedBox(height: 10),
+                          _buildItemsButtons(isDark),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // 分割线
+                  VerticalDivider(
+                    width: 1,
+                    thickness: 1,
+                    color: AppColors.glassBorder(isDark).withOpacity(0.2),
+                  ),
+                  // 右侧: 日志区域
+                  Expanded(
+                    flex: 2,
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        top: widget.showAppBar ? (kToolbarHeight + 60) : 20,
+                        left: 15,
+                        right: 15,
+                        bottom: 30,
+                      ),
+                      child: LogView(
+                        controller: _logController,
+                        isDark: isDark,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            // 移动端/窄屏布局
             return SingleChildScrollView(
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
@@ -623,7 +752,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                     top: widget.showAppBar ? (kToolbarHeight + 60) : 20,
                     left: 15,
                     right: 15,
-                    bottom: 30, // 增加底部间距
+                    bottom: 30,
                   ),
                   child: Column(
                     children: [
