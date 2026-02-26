@@ -12,7 +12,6 @@ import '../test_pages/chatroom/test_chat_room_list_page.dart';
 import '../test_pages/chatroom/test_chat_room_page.dart';
 import 'dart:io';
 import 'dart:async';
-import '../common/utils/log_service.dart';
 import '../common/widgets/me_page_content.dart';
 
 class TestDashboardPad extends StatefulWidget {
@@ -50,7 +49,18 @@ class _TestDashboardPadState extends State<TestDashboardPad>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _loadUserInfo();
-    _startLogSync();
+    _initAndStartLogSync();
+  }
+
+  Future<void> _initAndStartLogSync() async {
+    try {
+      // 仅在初始化时获取一次路径
+      final logZipPath = await EMClient.getInstance.compressLogs();
+      _lastLogPath = logZipPath.replaceFirst('log.gz', 'easemob.log');
+      _startLogSync();
+    } catch (e) {
+      debugPrint('Init log path error: $e');
+    }
   }
 
   void _startLogSync() {
@@ -63,21 +73,17 @@ class _TestDashboardPadState extends State<TestDashboardPad>
   int _lastFileLength = 0;
 
   Future<void> _syncSdkLogs() async {
+    if (_lastLogPath == null) return;
     try {
-      // 获取路径
-      final logZipPath = await EMClient.getInstance.compressLogs();
-      final logPath = logZipPath.replaceFirst('log.gz', 'easemob.log');
-
-      final file = File(logPath);
+      final file = File(_lastLogPath!);
       if (await file.exists()) {
         final stat = await file.stat();
-        // 只有当文件长度发生变化时才重新读取，减少不必要的 IO 和内存占用
+        // 只有当文件长度发生变化时才重新读取
         if (stat.size != _lastFileLength) {
           final content = await file.readAsString();
           if (mounted) {
             setState(() {
               _sdkLogContent = content;
-              _lastLogPath = logPath;
               _lastFileLength = stat.size;
             });
             // 滚动到底部
