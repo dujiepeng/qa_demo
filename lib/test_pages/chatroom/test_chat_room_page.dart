@@ -34,6 +34,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
   final _roomIdController = TextEditingController();
   final _messageController = TextEditingController();
   final _logController = LogController();
+  final _repeatCountController = TextEditingController(text: '1');
   String _roomId = '';
 
   @override
@@ -49,6 +50,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
   void dispose() {
     _roomIdController.dispose();
     _messageController.dispose();
+    _repeatCountController.dispose();
     super.dispose();
   }
 
@@ -180,6 +182,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
           buttonText: 'Send',
           onPressed: () => _sendTextMessage(_messageController.text),
           isDark: isDark,
+          countController: _repeatCountController,
         ),
         const SizedBox(height: 10),
         _buildSectionTitle('消息', isDark),
@@ -231,13 +234,16 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
   Future<void> _sendTextMessage(String text) async {
     final trimmedText = text.trim();
     if (trimmedText.isEmpty || _roomId.isEmpty) return;
+    int count = int.tryParse(_repeatCountController.text) ?? 1;
     try {
-      final msg = EMMessage.createTxtSendMessage(
-        targetId: _roomId,
-        content: trimmedText,
-        chatType: ChatType.ChatRoom,
-      );
-      await sendMessage(msg);
+      for (int i = 0; i < count; i++) {
+        final msg = EMMessage.createTxtSendMessage(
+          targetId: _roomId,
+          content: count > 1 ? '$trimmedText ($i)' : trimmedText,
+          chatType: ChatType.ChatRoom,
+        );
+        await sendMessage(msg);
+      }
       _messageController.clear();
     } catch (e) {
       _addAppErrLog('发送失败: $e');
@@ -494,6 +500,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
     required String buttonText,
     required Future<void> Function() onPressed,
     required bool isDark,
+    TextEditingController? countController,
   }) {
     return Row(
       children: [
@@ -525,6 +532,35 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
             ),
           ),
         ),
+        if (countController != null) ...[
+          const SizedBox(width: 8),
+          Text('X', style: TextStyle(color: AppColors.textPrimary(isDark))),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 60,
+            child: TextField(
+              controller: countController,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.textPrimary(isDark)),
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: InputDecoration(
+                hintText: '次数',
+                hintStyle: TextStyle(
+                  color: AppColors.textSecondary(isDark),
+                  fontSize: 12,
+                ),
+                filled: true,
+                fillColor: AppColors.inputBackground(isDark),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: AppColors.glassBorder(isDark)),
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+        ],
         const SizedBox(width: 12),
         AsyncButton(
           onPressed: onPressed,
