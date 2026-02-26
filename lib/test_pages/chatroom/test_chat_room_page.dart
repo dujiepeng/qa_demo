@@ -582,6 +582,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
   Widget build(BuildContext context) {
     final isDark = _settings.isDarkMode;
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       extendBodyBehindAppBar: true,
       backgroundColor: Colors.transparent,
       appBar: widget.showAppBar

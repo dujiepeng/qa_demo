@@ -113,6 +113,7 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
     final isDark = _settings.isDarkMode;
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       extendBodyBehindAppBar: true,
 
       backgroundColor: Colors.transparent,

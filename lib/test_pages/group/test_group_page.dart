@@ -650,6 +650,7 @@ class _TestGroupPageState extends State<TestGroupPage> {
   Widget build(BuildContext context) {
     final isDark = _settings.isDarkMode;
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       extendBodyBehindAppBar: true,
       backgroundColor: Colors.transparent,
       appBar: widget.showAppBar
