@@ -55,24 +55,40 @@ class _TestDashboardPadState extends State<TestDashboardPad>
 
   void _startLogSync() {
     _logTimer?.cancel();
-    _logTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+    _logTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       _syncSdkLogs();
     });
   }
 
+  int _lastFileLength = 0;
+
   Future<void> _syncSdkLogs() async {
     try {
+      // 获取路径
       final logZipPath = await EMClient.getInstance.compressLogs();
       final logPath = logZipPath.replaceFirst('log.gz', 'easemob.log');
 
       final file = File(logPath);
       if (await file.exists()) {
-        final content = await file.readAsString();
-        if (mounted && content != _sdkLogContent) {
-          setState(() {
-            _sdkLogContent = content;
-            _lastLogPath = logPath;
-          });
+        final stat = await file.stat();
+        // 只有当文件长度发生变化时才重新读取，减少不必要的 IO 和内存占用
+        if (stat.size != _lastFileLength) {
+          final content = await file.readAsString();
+          if (mounted) {
+            setState(() {
+              _sdkLogContent = content;
+              _lastLogPath = logPath;
+              _lastFileLength = stat.size;
+            });
+            // 滚动到底部
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (_logScrollController.hasClients) {
+                _logScrollController.jumpTo(
+                  _logScrollController.position.maxScrollExtent,
+                );
+              }
+            });
+          }
         }
       }
     } catch (e) {
