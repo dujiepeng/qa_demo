@@ -652,31 +652,33 @@ class _TestGroupPageState extends State<TestGroupPage> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       backgroundColor: Colors.transparent,
-      appBar: widget.showAppBar ? AppBar(
-        toolbarHeight: kToolbarHeight + 20, // 增加高度
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
-        title: Padding(
-          padding: const EdgeInsets.only(top: 20), // 标题下移
-          child: Text(
-            _groupId.isNotEmpty ? '$_groupId(群)' : '群组测试',
-            style: TextStyle(color: AppColors.textPrimary(isDark)),
-          ),
-        ),
-        centerTitle: true,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(top: 20),
-            child: IconButton(
-              icon: const Icon(Icons.info),
-              onPressed: () {
-                Navigator.of(context).pushNamed('/settings');
-              },
-            ),
-          ),
-        ],
-      ) : null,
+      appBar: widget.showAppBar
+          ? AppBar(
+              toolbarHeight: kToolbarHeight + 20, // 增加高度
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
+              title: Padding(
+                padding: const EdgeInsets.only(top: 20), // 标题下移
+                child: Text(
+                  _groupId.isNotEmpty ? '$_groupId(群)' : '群组测试',
+                  style: TextStyle(color: AppColors.textPrimary(isDark)),
+                ),
+              ),
+              centerTitle: true,
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 20),
+                  child: IconButton(
+                    icon: const Icon(Icons.info),
+                    onPressed: () {
+                      Navigator.of(context).pushNamed('/settings');
+                    },
+                  ),
+                ),
+              ],
+            )
+          : null,
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -690,15 +692,136 @@ class _TestGroupPageState extends State<TestGroupPage> {
         ),
         child: LayoutBuilder(
           builder: (context, constraints) {
+            final isWideScreen = constraints.maxWidth > 800;
+
+            if (isWideScreen) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 左侧: 操作区域
+                  Expanded(
+                    flex: 3,
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.only(
+                        top: widget.showAppBar ? (kToolbarHeight + 80) : 40,
+                        left: 15,
+                        right: 15,
+                        bottom: 30,
+                      ),
+                      child: Column(
+                        children: [
+                          _buildInputRow(
+                            controller: _groupIdController,
+                            hintText: '输入群组 ID',
+                            buttonText: _groupId.isNotEmpty ? 'Leave' : 'Join',
+                            onPressed: () async {
+                              final inputId = _groupIdController.text.trim();
+                              if (_groupId.isNotEmpty && _groupId == inputId) {
+                                _addLog('开始离开 $_groupId');
+                                try {
+                                  await EMClient.getInstance.groupManager
+                                      .leaveGroup(_groupId);
+                                  _addLog('退出 $_groupId 成功');
+                                  setState(() {
+                                    _groupId = '';
+                                  });
+                                } catch (e) {
+                                  _addLog('退出 $_groupId 失败: ${e.toString()}');
+                                }
+                              } else {
+                                // Join
+                                _addLog('开始加入 $inputId');
+                                String showMsg = '';
+                                try {
+                                  await EMClient.getInstance.groupManager
+                                      .joinPublicGroup(inputId);
+                                  setState(() {
+                                    _groupId = inputId;
+                                  });
+                                  showMsg = "加入成功， GroupId: $inputId ";
+                                } catch (e) {
+                                  showMsg = '加入 $inputId 失败：${e.toString()}';
+                                } finally {
+                                  _addLog(showMsg);
+                                }
+                              }
+                            },
+                            isDark: isDark,
+                          ),
+                          const SizedBox(height: 20),
+                          _buildInputRow(
+                            controller: _messageController,
+                            hintText: '输入消息内容',
+                            buttonText: 'Send',
+                            onPressed: () async {
+                              String text = _messageController.text.trim();
+                              if (text.isEmpty) return;
+                              try {
+                                final msg = EMMessage.createTxtSendMessage(
+                                  targetId: _groupId,
+                                  content: text,
+                                  chatType: ChatType.GroupChat,
+                                );
+                                await sendMessage(msg);
+                                _messageController.clear();
+                              } catch (e) {
+                                _addAppErrLog('发送文字失败: ${e.toString()}');
+                              }
+                            },
+                            isDark: isDark,
+                          ),
+                          const SizedBox(height: 10),
+                          _buildSectionTitle('消息', isDark),
+                          const SizedBox(height: 10),
+                          _buildMessageTypeButtons(isDark),
+                          const SizedBox(height: 10),
+                          _buildSectionTitle('控制', isDark),
+                          const SizedBox(height: 10),
+                          _buildGroupManagementButtons(isDark),
+                          const SizedBox(height: 10),
+                          _buildSectionTitle('工具', isDark),
+                          const SizedBox(height: 10),
+                          _buildItemsButtons(isDark),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // 分割线
+                  VerticalDivider(
+                    width: 1,
+                    thickness: 1,
+                    color: AppColors.glassBorder(isDark).withOpacity(0.2),
+                  ),
+                  // 右侧: 日志区域
+                  Expanded(
+                    flex: 2,
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        top: widget.showAppBar ? (kToolbarHeight + 80) : 40,
+                        left: 15,
+                        right: 15,
+                        bottom: 30,
+                      ),
+                      child: LogView(
+                        controller: _logController,
+                        isDark: isDark,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            // 移动端/窄屏布局
             return SingleChildScrollView(
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: Padding(
                   padding: EdgeInsets.only(
-                    top: widget.showAppBar ? (kToolbarHeight + 80) : 40, // 统一增加 20 像素
+                    top: widget.showAppBar ? (kToolbarHeight + 80) : 40,
                     left: 15,
                     right: 15,
-                    bottom: 30, // 增加底部间距
+                    bottom: 30,
                   ),
                   child: Column(
                     children: [
@@ -1129,4 +1252,3 @@ class _TestGroupPageState extends State<TestGroupPage> {
     );
   }
 }
-
