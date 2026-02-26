@@ -141,6 +141,7 @@ class _TestDashboardPadState extends State<TestDashboardPad>
     final isDark = settings.isDarkMode;
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: Row(
         children: [
           // 左侧细页签 (NavigationRail)
