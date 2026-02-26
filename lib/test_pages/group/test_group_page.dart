@@ -437,10 +437,11 @@ class _TestGroupPageState extends State<TestGroupPage> {
       initialValue: group.isAllMemberMuted ?? false,
       onChanged: (value) async {
         try {
-          if (value)
+          if (value) {
             await EMClient.getInstance.groupManager.muteAllMembers(_groupId);
-          else
+          } else {
             await EMClient.getInstance.groupManager.unMuteAllMembers(_groupId);
+          }
           _addLog('操作成功');
           return true;
         } catch (e) {
@@ -515,7 +516,7 @@ class _TestGroupPageState extends State<TestGroupPage> {
                     children: [
                       _buildControlPanel(isDark, false),
                       const SizedBox(height: 20),
-                      _buildLogPanel(isDark),
+                      SizedBox(height: 400, child: _buildLogPanel(isDark)),
                     ],
                   ),
                 ),

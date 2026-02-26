@@ -480,7 +480,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                     children: [
                       _buildControlPanel(isDark, false),
                       const SizedBox(height: 20),
-                      _buildLogPanel(isDark),
+                      SizedBox(height: 400, child: _buildLogPanel(isDark)),
                     ],
                   ),
                 ),

@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.47.0+133] - 2026-02-26
+
+### 修改内容
+- **[修复]** 解决测试页面发送消息时的渲染崩溃问题:
+    - 修复了 `TestSingleChatPage`、`TestGroupPage` 和 `TestChatRoomPage` 在手机端（窄屏）布局下，由于 `LogView` 组件在 `SingleChildScrollView` + `Column` 的 unbounded 高度约束环境下使用 `Expanded` 导致的渲染异常（Assertion failed: RenderFlex children have non-zero flex but incoming height constraints are unbounded）。
+    - 解决方案：在手机端布局中，为 `LogView` 指定了 400 的固定高度，确保列表能正常渲染。
+- **[版本]** 迭代项目版本号至 `1.47.0+133`。
+
 ## [1.47.0+132] - 2026-02-26
 
 ### 修改内容
