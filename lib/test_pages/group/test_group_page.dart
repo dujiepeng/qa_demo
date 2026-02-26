@@ -18,16 +18,7 @@ import 'test_group_mute_list_page.dart';
 import 'test_group_white_list_page.dart';
 
 /// 群组信息编辑类型
-enum GroupInfoEditType {
-  /// 名称
-  name,
-
-  /// 描述
-  description,
-
-  /// 公告
-  announcement,
-}
+enum GroupInfoEditType { name, description, announcement }
 
 class TestGroupPage extends StatefulWidget {
   const TestGroupPage({super.key, this.groupId, this.showAppBar = true});
@@ -51,10 +42,7 @@ class _TestGroupPageState extends State<TestGroupPage> {
     _groupIdController.text = _groupId;
     super.initState();
     _addListener();
-
-    _groupIdController.addListener(() {
-      setState(() {});
-    });
+    _groupIdController.addListener(() => setState(() {}));
   }
 
   @override
@@ -68,12 +56,10 @@ class _TestGroupPageState extends State<TestGroupPage> {
     EMClient.getInstance.chatManager.addMessageEvent(
       _eventKey,
       ChatMessageEvent(
-        onSuccess: (msgId, msg) {
-          _addSendLog('${msg.from}: ${msg.toJson().toString()}');
-        },
-        onError: (msgId, msg, error) {
-          _addSendLog('发送失败: ${error.toString()}');
-        },
+        onSuccess: (msgId, msg) =>
+            _addSendLog('${msg.from}: ${msg.toJson().toString()}'),
+        onError: (msgId, msg, error) =>
+            _addSendLog('发送失败: ${error.toString()}'),
       ),
     );
 
@@ -82,8 +68,9 @@ class _TestGroupPageState extends State<TestGroupPage> {
       EMChatEventHandler(
         onMessagesReceived: (messages) {
           for (var msg in messages) {
-            if (msg.conversationId != _groupId) return;
-            _addReceiveLog('${msg.from}: ${msg.toJson().toString()}');
+            if (msg.conversationId == _groupId) {
+              _addReceiveLog('${msg.from}: ${msg.toJson().toString()}');
+            }
           }
         },
       ),
@@ -92,205 +79,66 @@ class _TestGroupPageState extends State<TestGroupPage> {
     EMClient.getInstance.groupManager.addEventHandler(
       _eventKey,
       EMGroupEventHandler(
-        onAdminAddedFromGroup: (groupId, admin) {
-          if (groupId == _groupId) {
-            _addReceiveLog(
-              'onAdminAddedFromGroup: groupId: $groupId, admin: $admin',
-            );
-          }
-        },
-        onAdminRemovedFromGroup: (groupId, admin) {
-          if (groupId == _groupId) {
-            _addReceiveLog(
-              'onAdminRemovedFromGroup: groupId: $groupId, admin: $admin',
-            );
-          }
-        },
-        onAllGroupMemberMuteStateChanged: (groupId, isAllMuted) {
-          if (groupId == _groupId) {
-            _addReceiveLog(
-              'onAllGroupMemberMuteStateChanged: groupId: $groupId, isAllMuted: $isAllMuted',
-            );
-          }
-        },
-        onAllowListAddedFromGroup: (groupId, members) {
-          if (groupId == _groupId) {
-            _addReceiveLog(
-              'onAllowListAddedFromGroup: groupId: $groupId, members: $members',
-            );
-          }
-        },
-        onAllowListRemovedFromGroup: (groupId, members) {
-          if (groupId == _groupId) {
-            _addReceiveLog(
-              'onAllowListRemovedFromGroup: groupId: $groupId, members: $members',
-            );
-          }
-        },
-        onAnnouncementChangedFromGroup: (groupId, announcement) {
-          if (groupId == _groupId) {
-            _addReceiveLog(
-              'onAnnouncementChangedFromGroup: groupId: $groupId, announcement: $announcement',
-            );
-          }
-        },
+        onAdminAddedFromGroup: (groupId, admin) =>
+            _handleGroupEvent(groupId, 'onAdminAddedFromGroup: admin: $admin'),
+        onAdminRemovedFromGroup: (groupId, admin) => _handleGroupEvent(
+          groupId,
+          'onAdminRemovedFromGroup: admin: $admin',
+        ),
+        onAllGroupMemberMuteStateChanged: (groupId, isAllMuted) =>
+            _handleGroupEvent(
+              groupId,
+              'onAllGroupMemberMuteStateChanged: isAllMuted: $isAllMuted',
+            ),
+        onAllowListAddedFromGroup: (groupId, members) => _handleGroupEvent(
+          groupId,
+          'onAllowListAddedFromGroup: members: $members',
+        ),
+        onAllowListRemovedFromGroup: (groupId, members) => _handleGroupEvent(
+          groupId,
+          'onAllowListRemovedFromGroup: members: $members',
+        ),
+        onAnnouncementChangedFromGroup: (groupId, announcement) =>
+            _handleGroupEvent(
+              groupId,
+              'onAnnouncementChangedFromGroup: announcement: $announcement',
+            ),
         onAttributesChangedOfGroupMember:
-            (groupId, userId, attributes, operatorId) {
-              if (groupId == _groupId) {
-                _addReceiveLog(
-                  'onAttributesChangedOfGroupMember: groupId: $groupId, userId: $userId, attributes: $attributes, operatorId: $operatorId',
-                );
-              }
-            },
-        onAutoAcceptInvitationFromGroup: (groupId, inviter, inviteMessage) {
-          if (groupId == _groupId) {
-            _addReceiveLog(
-              'onAutoAcceptInvitationFromGroup: groupId: $groupId, inviter: $inviter, inviteMessage: $inviteMessage',
-            );
-          }
-        },
-        onDisableChanged: (groupId, isDisable) {
-          if (groupId == _groupId) {
-            _addReceiveLog(
-              'onDisableChanged: groupId: $groupId, isDisable: $isDisable',
-            );
-          }
-        },
+            (groupId, userId, attributes, operatorId) => _handleGroupEvent(
+              groupId,
+              'onAttributesChanged: userId: $userId, attributes: $attributes',
+            ),
         onGroupDestroyed: (groupId, groupName) {
           if (groupId == _groupId) {
-            _addReceiveLog(
-              'onGroupDestroyed: groupId: $groupId, groupName: $groupName',
-            );
-          }
-        },
-        onInvitationAcceptedFromGroup: (groupId, invitee, reason) {
-          if (groupId == _groupId) {
-            _addReceiveLog(
-              'onInvitationAcceptedFromGroup: groupId: $groupId, invitee: $invitee, reason: $reason',
-            );
-          }
-        },
-        onInvitationDeclinedFromGroup: (groupId, invitee, reason) {
-          if (groupId == _groupId) {
-            _addReceiveLog(
-              'onInvitationDeclinedFromGroup: groupId: $groupId, invitee: $invitee, reason: $reason',
-            );
-          }
-        },
-        onInvitationReceivedFromGroup: (groupId, groupName, inviter, reason) {
-          if (groupId == _groupId) {
-            _addReceiveLog(
-              'onInvitationReceivedFromGroup: groupId: $groupId, groupName: $groupName, inviter: $inviter, reason: $reason',
-            );
-          }
-        },
-        onMembersExitedFromGroup: (groupId, userIds) {
-          if (groupId == _groupId) {
-            _addReceiveLog(
-              'onMembersExitedFromGroup: groupId: $groupId, userIds: $userIds',
-            );
-          }
-        },
-        onMembersJoinedFromGroup: (groupId, userIds) {
-          if (groupId == _groupId) {
-            _addReceiveLog(
-              'onMembersJoinedFromGroup: groupId: $groupId, userIds: $userIds',
-            );
-          }
-        },
-        onMuteListAddedFromGroup: (groupId, mutes, muteExpire) {
-          if (groupId == _groupId) {
-            _addReceiveLog(
-              'onMuteListAddedFromGroup: groupId: $groupId, mutes: $mutes, muteExpire: $muteExpire',
-            );
-          }
-        },
-        onMuteListRemovedFromGroup: (groupId, mutes) {
-          if (groupId == _groupId) {
-            _addReceiveLog(
-              'onMuteListRemovedFromGroup: groupId: $groupId, mutes: $mutes',
-            );
-          }
-        },
-        onOwnerChangedFromGroup: (groupId, newOwner, oldOwner) {
-          if (groupId == _groupId) {
-            _addReceiveLog(
-              'onOwnerChangedFromGroup: groupId: $groupId, newOwner: $newOwner, oldOwner: $oldOwner',
-            );
-          }
-        },
-        onRequestToJoinAcceptedFromGroup: (groupId, groupName, accepter) {
-          if (groupId == _groupId) {
-            _addReceiveLog(
-              'onRequestToJoinAcceptedFromGroup: groupId: $groupId, groupName: $groupName, accepter: $accepter',
-            );
-          }
-        },
-        onRequestToJoinDeclinedFromGroup:
-            (groupId, groupName, decliner, reason, applicant) {
-              if (groupId == _groupId) {
-                _addReceiveLog(
-                  'onRequestToJoinDeclinedFromGroup: groupId: $groupId, groupName: $groupName, decliner: $decliner, reason: $reason, applicant: $applicant',
-                );
-              }
-            },
-        onRequestToJoinReceivedFromGroup: (groupId, groupName, applicant, reason) {
-          if (groupId == _groupId) {
-            _addReceiveLog(
-              'onRequestToJoinReceivedFromGroup: groupId: $groupId, groupName: $groupName, applicant: $applicant, reason: $reason',
-            );
-          }
-        },
-        onSharedFileAddedFromGroup: (groupId, sharedFile) {
-          if (groupId == _groupId) {
-            _addReceiveLog(
-              'onSharedFileAddedFromGroup: groupId: $groupId, sharedFile: ${sharedFile.fileId}',
-            );
-          }
-        },
-        onSharedFileDeletedFromGroup: (groupId, fileId) {
-          if (groupId == _groupId) {
-            _addReceiveLog(
-              'onSharedFileDeletedFromGroup: groupId: $groupId, fileId: $fileId',
-            );
-          }
-        },
-        onSpecificationDidUpdate: (group) {
-          if (group.groupId == _groupId) {
-            _addReceiveLog(
-              'onSpecificationDidUpdate: name: ${group.groupName}, description: ${group.desc}',
-            );
+            setState(() => _groupId = '');
+            _addReceiveLog('onGroupDestroyed: $groupName');
           }
         },
         onUserRemovedFromGroup: (groupId, groupName) {
           if (groupId == _groupId) {
-            setState(() {
-              _groupId = '';
-            });
-            _addReceiveLog(
-              'onUserRemovedFromGroup: groupId: $groupId, groupName: $groupName',
-            );
+            setState(() => _groupId = '');
+            _addReceiveLog('onUserRemovedFromGroup: $groupName');
           }
         },
+        onSpecificationDidUpdate: (group) => _handleGroupEvent(
+          group.groupId,
+          'onSpecificationDidUpdate: name: ${group.groupName}',
+        ),
       ),
     );
   }
 
-  void _addLog(String content) {
-    _logController.addLog(content);
+  void _handleGroupEvent(String groupId, String log) {
+    if (groupId == _groupId) _addReceiveLog(log);
   }
 
-  void _addAppErrLog(String content) {
-    _logController.addLog(content, color: Colors.red);
-  }
-
-  void _addSendLog(String content) {
-    _logController.addLog(content, color: Colors.green);
-  }
-
-  void _addReceiveLog(String content) {
-    _logController.addLog(content, color: Colors.blue);
-  }
+  void _addLog(String content) => _logController.addLog(content);
+  void _addAppErrLog(String content) =>
+      _logController.addLog(content, color: Colors.red);
+  void _addSendLog(String content) =>
+      _logController.addLog(content, color: Colors.green);
+  void _addReceiveLog(String content) =>
+      _logController.addLog(content, color: Colors.blue);
 
   Future<String> _getAssetFilePath(String assetPath) async {
     final byteData = await rootBundle.load(assetPath);
@@ -301,24 +149,144 @@ class _TestGroupPageState extends State<TestGroupPage> {
     return file.path;
   }
 
+  // --- UI 区块 ---
+
+  PreferredSizeWidget _buildAppBar(bool isDark) {
+    return AppBar(
+      toolbarHeight: kToolbarHeight + 20,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
+      title: Padding(
+        padding: const EdgeInsets.only(top: 20),
+        child: Text(
+          _groupId.isNotEmpty ? '$_groupId(群)' : '群组测试',
+          style: TextStyle(color: AppColors.textPrimary(isDark)),
+        ),
+      ),
+      centerTitle: true,
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(top: 20),
+          child: IconButton(
+            icon: const Icon(Icons.info),
+            onPressed: () => Navigator.of(context).pushNamed('/settings'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildControlPanel(bool isDark, bool isWide) {
+    return Column(
+      children: [
+        _buildInputRow(
+          controller: _groupIdController,
+          hintText: '输入群组 ID',
+          buttonText: _groupId.isNotEmpty ? 'Leave' : 'Join',
+          onPressed: _handleJoinLeaveGroup,
+          isDark: isDark,
+        ),
+        const SizedBox(height: 20),
+        _buildInputRow(
+          controller: _messageController,
+          hintText: '输入消息内容',
+          buttonText: 'Send',
+          onPressed: () => _sendTextMessage(_messageController.text),
+          isDark: isDark,
+        ),
+        const SizedBox(height: 10),
+        _buildSectionTitle('消息', isDark),
+        const SizedBox(height: 10),
+        _buildMessageTypeButtons(isDark),
+        const SizedBox(height: 10),
+        _buildSectionTitle('控制', isDark),
+        const SizedBox(height: 10),
+        _buildGroupManagementButtons(isDark),
+        const SizedBox(height: 10),
+        _buildSectionTitle('工具', isDark),
+        const SizedBox(height: 10),
+        _buildItemsButtons(isDark),
+      ],
+    );
+  }
+
+  Widget _buildLogPanel(bool isDark) {
+    return LogView(controller: _logController, isDark: isDark);
+  }
+
+  // --- 业务逻辑 ---
+
+  Future<void> _handleJoinLeaveGroup() async {
+    final inputId = _groupIdController.text.trim();
+    if (inputId.isEmpty) return;
+
+    if (_groupId.isNotEmpty && _groupId == inputId) {
+      _addLog('开始离开 $_groupId');
+      try {
+        await EMClient.getInstance.groupManager.leaveGroup(_groupId);
+        _addLog('退出 $_groupId 成功');
+        setState(() => _groupId = '');
+      } catch (e) {
+        _addLog('退出 $_groupId 失败: ${e.toString()}');
+      }
+    } else {
+      _addLog('开始加入 $inputId');
+      try {
+        await EMClient.getInstance.groupManager.joinPublicGroup(inputId);
+        setState(() => _groupId = inputId);
+        _addLog('加入成功， GroupId: $inputId');
+      } catch (e) {
+        _addLog('加入 $inputId 失败：${e.toString()}');
+      }
+    }
+  }
+
+  Future<void> _sendTextMessage(String text) async {
+    final trimmedText = text.trim();
+    if (trimmedText.isEmpty || _groupId.isEmpty) return;
+    try {
+      final msg = EMMessage.createTxtSendMessage(
+        targetId: _groupId,
+        content: trimmedText,
+        chatType: ChatType.GroupChat,
+      );
+      await sendMessage(msg);
+      _messageController.clear();
+    } catch (e) {
+      _addAppErrLog('发送文字失败: ${e.toString()}');
+    }
+  }
+
+  Future<void> sendMessage(EMMessage msg) async {
+    if (_groupId.isEmpty) {
+      _addSendLog('请先加入群组');
+      return;
+    }
+    try {
+      msg.attributes = {
+        'extKey1': 'extValue1',
+        'date': DateTime.now().toString(),
+      };
+      _addSendLog('开始发送消息');
+      await EMClient.getInstance.chatManager.sendMessage(msg);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // --- 弹窗相关逻辑已合并或抽离 ---
+
   Future<void> _showGroupInfoDialog(GroupInfoEditType type) async {
     if (_groupId.isEmpty) {
       _addSendLog('请先加入群组');
       return;
     }
-
     try {
-      // 获取群组信息
       final group = await EMClient.getInstance.groupManager
           .fetchGroupInfoFromServer(_groupId);
-
       if (!mounted) return;
-
-      // 根据类型确定标题和字段
-      String title;
-      String fieldTitle;
-      String placeholder;
-      String currentValue;
+      String title = '', fieldTitle = '', placeholder = '', currentValue = '';
       bool multiline = false;
 
       switch (type) {
@@ -344,7 +312,6 @@ class _TestGroupPageState extends State<TestGroupPage> {
           break;
       }
 
-      // 使用通用输入对话框
       final result = await showInputDialog(
         context: context,
         title: title,
@@ -357,43 +324,33 @@ class _TestGroupPageState extends State<TestGroupPage> {
           ),
         ],
       );
-
-      // 用户点击了确定
       if (result != null) {
         final newValue = result[0].text;
-
-        // 如果值没有变化，直接返回
-        if (currentValue == newValue) {
-          return;
-        }
-
-        // 调用对应的 API
+        if (currentValue == newValue) return;
         switch (type) {
           case GroupInfoEditType.name:
             await EMClient.getInstance.groupManager.updateGroupName(
               _groupId,
               newValue,
             );
-            _addSendLog('修改群组名称成功');
             break;
           case GroupInfoEditType.description:
             await EMClient.getInstance.groupManager.updateGroupDesc(
               _groupId,
               newValue,
             );
-            _addSendLog('修改群组描述成功');
             break;
           case GroupInfoEditType.announcement:
             await EMClient.getInstance.groupManager.updateGroupAnnouncement(
               _groupId,
               newValue,
             );
-            _addSendLog('修改群组公告成功');
             break;
         }
+        _addSendLog('修改成功');
       }
     } catch (e) {
-      _addSendLog('获取群组信息失败: ${e.toString()}');
+      _addSendLog('操作失败: ${e.toString()}');
     }
   }
 
@@ -405,52 +362,42 @@ class _TestGroupPageState extends State<TestGroupPage> {
     try {
       final group = await EMClient.getInstance.groupManager
           .fetchGroupInfoFromServer(_groupId);
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: Text(group.groupName ?? '群组详情'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('ID: ${group.groupId}'),
-                    const SizedBox(height: 8),
-                    Text('Name: ${group.groupName}'),
-                    const SizedBox(height: 8),
-                    Text('Description: ${group.desc}'),
-                    const SizedBox(height: 8),
-                    Text('Owner: ${group.owner}'),
-                    const SizedBox(height: 8),
-                    Text('Max Users: ${group.maxUserCount}'),
-                    const SizedBox(height: 8),
-                    Text('Member Count: ${group.memberCount}'),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('关闭'),
-                ),
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(group.groupName ?? '群组详情'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('ID: ${group.groupId}'),
+                const SizedBox(height: 8),
+                Text('Owner: ${group.owner}'),
+                const SizedBox(height: 8),
+                Text('Member Count: ${group.memberCount}'),
               ],
-            );
-          },
-        );
-      }
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('关闭'),
+            ),
+          ],
+        ),
+      );
     } catch (e) {
       _addSendLog('获取详情失败: $e');
     }
   }
 
-  void _showMembersBottomSheet() {
+  void _showBottomSheet(Widget page) {
     if (_groupId.isEmpty) {
       _addSendLog('请先加入群组');
       return;
     }
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -466,220 +413,53 @@ class _TestGroupPageState extends State<TestGroupPage> {
                 : Colors.white,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
-          child: TestGroupMembersPage(groupId: _groupId),
-        ),
-      ),
-    );
-  }
-
-  void _showAdminsBottomSheet() {
-    if (_groupId.isEmpty) {
-      _addSendLog('请先加入群组');
-      return;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.95,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: _settings.isDarkMode
-                ? const Color(0xFF1C1C1E)
-                : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: TestGroupAdminsPage(groupId: _groupId),
-        ),
-      ),
-    );
-  }
-
-  void _showWhiteListBottomSheet() {
-    if (_groupId.isEmpty) {
-      _addSendLog('请先加入群组');
-      return;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.95,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: _settings.isDarkMode
-                ? const Color(0xFF1C1C1E)
-                : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: TestGroupWhiteListPage(groupId: _groupId),
-        ),
-      ),
-    );
-  }
-
-  void _showMuteListBottomSheet() {
-    if (_groupId.isEmpty) {
-      _addSendLog('请先加入群组');
-      return;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.95,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: _settings.isDarkMode
-                ? const Color(0xFF1C1C1E)
-                : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: TestGroupMuteListPage(groupId: _groupId),
+          child: page,
         ),
       ),
     );
   }
 
   void _showMuteAllMuteAlert() async {
-    if (_groupId.isEmpty) {
-      _addSendLog('请先加入群组');
-      return;
-    }
+    if (_groupId.isEmpty) return;
     final group = await EMClient.getInstance.groupManager
         .fetchGroupInfoFromServer(_groupId);
-    if (mounted) {
-      showSwitchAlert(
-        context: context,
-        title: '全部禁言',
-        description: '确定要禁言所有成员吗？',
-        initialValue: group.isAllMemberMuted ?? false,
-        onChanged: (value) async {
-          try {
-            if (value) {
-              await EMClient.getInstance.groupManager.muteAllMembers(_groupId);
-            } else {
-              await EMClient.getInstance.groupManager.unMuteAllMembers(
-                _groupId,
-              );
-            }
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('设置成功'),
-                  backgroundColor: Colors.redAccent,
-                ),
-              );
-            }
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(e.toString()),
-                  backgroundColor: Colors.redAccent,
-                ),
-              );
-            }
-            return false;
-          }
-          return true;
-        },
-      );
-    }
-  }
-
-  void _setCustomExt() async {
-    if (_groupId.isEmpty) {
-      _addSendLog('请先加入群组');
-      return;
-    }
-
-    try {
-      _addSendLog('开始设置');
-      final value = 'att_${DateTime.now().toString()}';
-      await EMClient.getInstance.groupManager.setMemberAttributes(
-        groupId: _groupId,
-        attributes: {'attKey': value},
-      );
-      _addSendLog('设置成功: key: attKey, value: $value');
-    } catch (e) {
-      _addAppErrLog('设置失败: ${e.toString()}');
-    }
-  }
-
-  void _showChangeOwnerBottomSheet() {
-    if (_groupId.isEmpty) {
-      _addSendLog('请先加入群组');
-      return;
-    }
-
-    showModalBottomSheet(
+    if (!mounted) return;
+    showSwitchAlert(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.95,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: _settings.isDarkMode
-                ? const Color(0xFF1C1C1E)
-                : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: TestGroupChangeOwnerPage(groupId: _groupId),
-        ),
-      ),
+      title: '全部禁言',
+      description: '确定要操作吗？',
+      initialValue: group.isAllMemberMuted ?? false,
+      onChanged: (value) async {
+        try {
+          if (value)
+            await EMClient.getInstance.groupManager.muteAllMembers(_groupId);
+          else
+            await EMClient.getInstance.groupManager.unMuteAllMembers(_groupId);
+          _addLog('操作成功');
+          return true;
+        } catch (e) {
+          _addAppErrLog('报错: $e');
+          return false;
+        }
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = _settings.isDarkMode;
+    final padding = EdgeInsets.only(
+      top: widget.showAppBar ? (kToolbarHeight + 80) : 40,
+      left: 15,
+      right: 15,
+      bottom: 30,
+    );
+
     return Scaffold(
       resizeToAvoidBottomInset: false,
       extendBodyBehindAppBar: true,
       backgroundColor: Colors.transparent,
-      appBar: widget.showAppBar
-          ? AppBar(
-              toolbarHeight: kToolbarHeight + 20, // 增加高度
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
-              title: Padding(
-                padding: const EdgeInsets.only(top: 20), // 标题下移
-                child: Text(
-                  _groupId.isNotEmpty ? '$_groupId(群)' : '群组测试',
-                  style: TextStyle(color: AppColors.textPrimary(isDark)),
-                ),
-              ),
-              centerTitle: true,
-              actions: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 20),
-                  child: IconButton(
-                    icon: const Icon(Icons.info),
-                    onPressed: () {
-                      Navigator.of(context).pushNamed('/settings');
-                    },
-                  ),
-                ),
-              ],
-            )
-          : null,
+      appBar: widget.showAppBar ? _buildAppBar(isDark) : null,
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -693,214 +473,43 @@ class _TestGroupPageState extends State<TestGroupPage> {
         ),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final isWideScreen = constraints.maxWidth > 800;
-
-            if (isWideScreen) {
+            final isWide = constraints.maxWidth > 800;
+            if (isWide) {
               return Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 左侧: 操作区域
                   Expanded(
                     flex: 3,
                     child: SingleChildScrollView(
-                      padding: EdgeInsets.only(
-                        top: widget.showAppBar ? (kToolbarHeight + 80) : 40,
-                        left: 15,
-                        right: 15,
-                        bottom: 30,
-                      ),
-                      child: Column(
-                        children: [
-                          _buildInputRow(
-                            controller: _groupIdController,
-                            hintText: '输入群组 ID',
-                            buttonText: _groupId.isNotEmpty ? 'Leave' : 'Join',
-                            onPressed: () async {
-                              final inputId = _groupIdController.text.trim();
-                              if (_groupId.isNotEmpty && _groupId == inputId) {
-                                _addLog('开始离开 $_groupId');
-                                try {
-                                  await EMClient.getInstance.groupManager
-                                      .leaveGroup(_groupId);
-                                  _addLog('退出 $_groupId 成功');
-                                  setState(() {
-                                    _groupId = '';
-                                  });
-                                } catch (e) {
-                                  _addLog('退出 $_groupId 失败: ${e.toString()}');
-                                }
-                              } else {
-                                // Join
-                                _addLog('开始加入 $inputId');
-                                String showMsg = '';
-                                try {
-                                  await EMClient.getInstance.groupManager
-                                      .joinPublicGroup(inputId);
-                                  setState(() {
-                                    _groupId = inputId;
-                                  });
-                                  showMsg = "加入成功， GroupId: $inputId ";
-                                } catch (e) {
-                                  showMsg = '加入 $inputId 失败：${e.toString()}';
-                                } finally {
-                                  _addLog(showMsg);
-                                }
-                              }
-                            },
-                            isDark: isDark,
-                          ),
-                          const SizedBox(height: 20),
-                          _buildInputRow(
-                            controller: _messageController,
-                            hintText: '输入消息内容',
-                            buttonText: 'Send',
-                            onPressed: () async {
-                              String text = _messageController.text.trim();
-                              if (text.isEmpty) return;
-                              try {
-                                final msg = EMMessage.createTxtSendMessage(
-                                  targetId: _groupId,
-                                  content: text,
-                                  chatType: ChatType.GroupChat,
-                                );
-                                await sendMessage(msg);
-                                _messageController.clear();
-                              } catch (e) {
-                                _addAppErrLog('发送文字失败: ${e.toString()}');
-                              }
-                            },
-                            isDark: isDark,
-                          ),
-                          const SizedBox(height: 10),
-                          _buildSectionTitle('消息', isDark),
-                          const SizedBox(height: 10),
-                          _buildMessageTypeButtons(isDark),
-                          const SizedBox(height: 10),
-                          _buildSectionTitle('控制', isDark),
-                          const SizedBox(height: 10),
-                          _buildGroupManagementButtons(isDark),
-                          const SizedBox(height: 10),
-                          _buildSectionTitle('工具', isDark),
-                          const SizedBox(height: 10),
-                          _buildItemsButtons(isDark),
-                        ],
-                      ),
+                      padding: padding,
+                      child: _buildControlPanel(isDark, true),
                     ),
                   ),
-                  // 分割线
                   VerticalDivider(
                     width: 1,
                     thickness: 1,
-                    color: AppColors.glassBorder(isDark).withOpacity(0.2),
+                    color: AppColors.glassBorder(isDark).withValues(alpha: 0.2),
                   ),
-                  // 右侧: 日志区域
                   Expanded(
                     flex: 2,
                     child: Padding(
-                      padding: EdgeInsets.only(
-                        top: widget.showAppBar ? (kToolbarHeight + 80) : 40,
-                        left: 15,
-                        right: 15,
-                        bottom: 30,
-                      ),
-                      child: LogView(
-                        controller: _logController,
-                        isDark: isDark,
-                      ),
+                      padding: padding,
+                      child: _buildLogPanel(isDark),
                     ),
                   ),
                 ],
               );
             }
-
-            // 移动端/窄屏布局
             return SingleChildScrollView(
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: Padding(
-                  padding: EdgeInsets.only(
-                    top: widget.showAppBar ? (kToolbarHeight + 80) : 40,
-                    left: 15,
-                    right: 15,
-                    bottom: 30,
-                  ),
+                  padding: padding,
                   child: Column(
                     children: [
-                      _buildInputRow(
-                        controller: _groupIdController,
-                        hintText: '输入群组 ID',
-                        buttonText: _groupId.isNotEmpty ? 'Leave' : 'Join',
-                        onPressed: () async {
-                          final inputId = _groupIdController.text.trim();
-                          if (_groupId.isNotEmpty && _groupId == inputId) {
-                            _addLog('开始离开 $_groupId');
-                            try {
-                              await EMClient.getInstance.groupManager
-                                  .leaveGroup(_groupId);
-                              _addLog('退出 $_groupId 成功');
-                              setState(() {
-                                _groupId = '';
-                              });
-                            } catch (e) {
-                              _addLog('退出 $_groupId 失败: ${e.toString()}');
-                            }
-                          } else {
-                            // Join
-                            _addLog('开始加入 $inputId');
-                            String showMsg = '';
-                            try {
-                              await EMClient.getInstance.groupManager
-                                  .joinPublicGroup(inputId);
-                              setState(() {
-                                _groupId = inputId;
-                              });
-                              showMsg = "加入成功， GroupId: $inputId ";
-                            } catch (e) {
-                              showMsg = '加入 $inputId 失败：${e.toString()}';
-                            } finally {
-                              _addLog(showMsg);
-                            }
-                          }
-                        },
-                        isDark: isDark,
-                      ),
+                      _buildControlPanel(isDark, false),
                       const SizedBox(height: 20),
-                      _buildInputRow(
-                        controller: _messageController,
-                        hintText: '输入消息内容',
-                        buttonText: 'Send',
-                        onPressed: () async {
-                          String text = _messageController.text.trim();
-                          if (text.isEmpty) return;
-                          try {
-                            final msg = EMMessage.createTxtSendMessage(
-                              targetId: _groupId,
-                              content: text,
-                              chatType: ChatType.GroupChat,
-                            );
-                            await sendMessage(msg);
-                            _messageController.clear();
-                          } catch (e) {
-                            _addAppErrLog('发送文字失败: ${e.toString()}');
-                          }
-                        },
-                        isDark: isDark,
-                      ),
-                      const SizedBox(height: 10),
-                      _buildSectionTitle('消息', isDark),
-                      const SizedBox(height: 10),
-                      _buildMessageTypeButtons(isDark),
-                      const SizedBox(height: 10),
-                      _buildSectionTitle('控制', isDark),
-                      const SizedBox(height: 10),
-                      _buildGroupManagementButtons(isDark),
-                      const SizedBox(height: 10),
-                      _buildSectionTitle('工具', isDark),
-                      const SizedBox(height: 10),
-                      _buildItemsButtons(isDark),
-                      const SizedBox(height: 20),
-                      // 日志显示区域
-                      LogView(controller: _logController, isDark: isDark),
+                      _buildLogPanel(isDark),
                     ],
                   ),
                 ),
@@ -912,22 +521,7 @@ class _TestGroupPageState extends State<TestGroupPage> {
     );
   }
 
-  Future<void> sendMessage(msg) async {
-    if (_groupId.isEmpty) {
-      _addSendLog('请先加入群组');
-      return;
-    }
-    try {
-      msg.attributes = {
-        'extKey1': 'extValue1',
-        'date': DateTime.now().toString(),
-      };
-      _addSendLog('开始发送消息');
-      await EMClient.getInstance.chatManager.sendMessage(msg);
-    } catch (e) {
-      rethrow;
-    }
-  }
+  // --- 辅助组件 ---
 
   Widget _buildInputRow({
     required TextEditingController controller,
@@ -998,124 +592,94 @@ class _TestGroupPageState extends State<TestGroupPage> {
   }
 
   Widget _buildMessageTypeButtons(bool isDark) {
+    GridActionItem buildItem(
+      IconData icon,
+      String label,
+      Future<EMMessage> Function() creator,
+    ) {
+      return GridActionItem(
+        icon: icon,
+        label: label,
+        onTap: () async {
+          try {
+            await sendMessage(await creator());
+          } catch (e) {
+            _addAppErrLog('发送$label失败: $e');
+          }
+        },
+      );
+    }
+
     final items = [
-      GridActionItem(
-        icon: Icons.image_outlined,
-        label: '图片',
-        onTap: () async {
-          try {
-            final filePath = await _getAssetFilePath('assets/image.jpg');
-            final msg = EMMessage.createImageSendMessage(
-              targetId: _groupId,
-              filePath: filePath,
-              width: 1920,
-              height: 1080,
-              fileSize: 111916,
-              chatType: ChatType.GroupChat,
-            );
-            await sendMessage(msg);
-          } catch (e) {
-            _addAppErrLog('发送图片失败: ${e.toString()}');
-          }
-        },
+      buildItem(
+        Icons.image_outlined,
+        '图片',
+        () async => EMMessage.createImageSendMessage(
+          targetId: _groupId,
+          filePath: await _getAssetFilePath('assets/image.jpg'),
+          width: 1920,
+          height: 1080,
+          fileSize: 111916,
+          chatType: ChatType.GroupChat,
+        ),
       ),
-      GridActionItem(
-        icon: Icons.videocam_outlined,
-        label: '视频',
-        onTap: () async {
-          try {
-            final filePath = await _getAssetFilePath('assets/video.mp4');
-            final thumb = await _getAssetFilePath('assets/image.jpg');
-            final msg = EMMessage.createVideoSendMessage(
-              targetId: _groupId,
-              filePath: filePath,
-              thumbnailLocalPath: thumb,
-              width: 1920,
-              height: 1080,
-              duration: 10,
-              fileSize: 4006696,
-              chatType: ChatType.GroupChat,
-            );
-            await sendMessage(msg);
-          } catch (e) {
-            _addAppErrLog('发送视频失败: ${e.toString()}');
-          }
-        },
+      buildItem(
+        Icons.videocam_outlined,
+        '视频',
+        () async => EMMessage.createVideoSendMessage(
+          targetId: _groupId,
+          filePath: await _getAssetFilePath('assets/video.mp4'),
+          thumbnailLocalPath: await _getAssetFilePath('assets/image.jpg'),
+          width: 1920,
+          height: 1080,
+          duration: 10,
+          fileSize: 4006696,
+          chatType: ChatType.GroupChat,
+        ),
       ),
-      GridActionItem(
-        icon: Icons.mic_outlined,
-        label: '语音',
-        onTap: () async {
-          try {
-            final filePath = await _getAssetFilePath('assets/voice.mp3');
-            final msg = EMMessage.createVoiceSendMessage(
-              targetId: _groupId,
-              filePath: filePath,
-              duration: 10,
-              fileSize: 111916,
-              chatType: ChatType.GroupChat,
-            );
-            await sendMessage(msg);
-          } catch (e) {
-            _addAppErrLog('发送语音失败: ${e.toString()}');
-          }
-        },
+      buildItem(
+        Icons.mic_outlined,
+        '语音',
+        () async => EMMessage.createVoiceSendMessage(
+          targetId: _groupId,
+          filePath: await _getAssetFilePath('assets/voice.mp3'),
+          duration: 10,
+          fileSize: 111916,
+          chatType: ChatType.GroupChat,
+        ),
       ),
-      GridActionItem(
-        icon: Icons.description_outlined,
-        label: '文件',
-        onTap: () async {
-          try {
-            final filePath = await _getAssetFilePath('assets/voice.mp3');
-            final msg = EMMessage.createFileSendMessage(
-              targetId: _groupId,
-              filePath: filePath,
-              fileSize: 111916,
-              chatType: ChatType.GroupChat,
-            );
-            await sendMessage(msg);
-          } catch (e) {
-            _addAppErrLog('发送文件失败: ${e.toString()}');
-          }
-        },
+      buildItem(
+        Icons.description_outlined,
+        '文件',
+        () async => EMMessage.createFileSendMessage(
+          targetId: _groupId,
+          filePath: await _getAssetFilePath('assets/voice.mp3'),
+          fileSize: 111916,
+          chatType: ChatType.GroupChat,
+        ),
       ),
-      GridActionItem(
-        icon: Icons.location_on_outlined,
-        label: '位置',
-        onTap: () async {
-          try {
-            final msg = EMMessage.createLocationSendMessage(
-              targetId: _groupId,
-              latitude: 39.9042,
-              longitude: 116.4074,
-              address: '北京市海淀区中关村',
-              chatType: ChatType.GroupChat,
-            );
-            await sendMessage(msg);
-          } catch (e) {
-            _addAppErrLog('发送位置失败: ${e.toString()}');
-          }
-        },
+      buildItem(
+        Icons.location_on_outlined,
+        '位置',
+        () async => EMMessage.createLocationSendMessage(
+          targetId: _groupId,
+          latitude: 39.9042,
+          longitude: 116.4074,
+          address: '北京市海淀区中关村',
+          chatType: ChatType.GroupChat,
+        ),
       ),
-      GridActionItem(
-        icon: Icons.extension_outlined,
-        label: '自定义',
-        onTap: () async {
-          try {
-            final msg = EMMessage.createCustomSendMessage(
-              targetId: _groupId,
-              event: 'eventValue',
-              params: {'paramsKey': 'paramsValue'},
-              chatType: ChatType.GroupChat,
-            );
-            await sendMessage(msg);
-          } catch (e) {
-            _addAppErrLog('发送自定义失败: ${e.toString()}');
-          }
-        },
+      buildItem(
+        Icons.extension_outlined,
+        '自定义',
+        () async => EMMessage.createCustomSendMessage(
+          targetId: _groupId,
+          event: 'eventValue',
+          params: {'paramsKey': 'paramsValue'},
+          chatType: ChatType.GroupChat,
+        ),
       ),
     ];
-
     return SizedBox(
       width: MediaQuery.of(context).size.width,
       child: GridActionMenu(items: items, isDark: isDark, columns: 6),
@@ -1147,36 +711,52 @@ class _TestGroupPageState extends State<TestGroupPage> {
       GridActionItem(
         icon: Icons.group_outlined,
         label: '成员',
-        onTap: _showMembersBottomSheet,
+        onTap: () => _showBottomSheet(TestGroupMembersPage(groupId: _groupId)),
       ),
       GridActionItem(
         icon: Icons.admin_panel_settings_outlined,
         label: '管理员',
-        onTap: _showAdminsBottomSheet,
+        onTap: () => _showBottomSheet(TestGroupAdminsPage(groupId: _groupId)),
       ),
       GridActionItem(
         icon: Icons.verified_user_outlined,
         label: '白名单',
-        onTap: _showWhiteListBottomSheet,
+        onTap: () =>
+            _showBottomSheet(TestGroupWhiteListPage(groupId: _groupId)),
       ),
       GridActionItem(
         icon: Icons.mic_off_outlined,
         label: '禁言列表',
-        onTap: _showMuteListBottomSheet,
+        onTap: () => _showBottomSheet(TestGroupMuteListPage(groupId: _groupId)),
       ),
       GridActionItem(
         icon: Icons.voice_over_off_outlined,
         label: '全部禁言',
         onTap: _showMuteAllMuteAlert,
       ),
-      GridActionItem(icon: Icons.tune, label: '自定义', onTap: _setCustomExt),
+      GridActionItem(
+        icon: Icons.tune,
+        label: '自定义',
+        onTap: () async {
+          if (_groupId.isEmpty) return;
+          try {
+            await EMClient.getInstance.groupManager.setMemberAttributes(
+              groupId: _groupId,
+              attributes: {'attKey': 'att_${DateTime.now()}'},
+            );
+            _addLog('设置成功');
+          } catch (e) {
+            _addAppErrLog('失败: $e');
+          }
+        },
+      ),
       GridActionItem(
         icon: Icons.swap_horiz_outlined,
         label: '转移',
-        onTap: _showChangeOwnerBottomSheet,
+        onTap: () =>
+            _showBottomSheet(TestGroupChangeOwnerPage(groupId: _groupId)),
       ),
     ];
-
     return SizedBox(
       width: MediaQuery.of(context).size.width,
       child: GridActionMenu(items: items, isDark: isDark, columns: 6),
@@ -1190,63 +770,39 @@ class _TestGroupPageState extends State<TestGroupPage> {
         label: '日志',
         onTap: () async {
           final logZipPath = await EMClient.getInstance.compressLogs();
-          final logPath = logZipPath.replaceFirst('log.gz', 'easemob.log');
-          if (mounted) {
+          if (mounted)
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => LogContentPage(logPath: logPath),
+                builder: (context) => LogContentPage(
+                  logPath: logZipPath.replaceFirst('log.gz', 'easemob.log'),
+                ),
               ),
             );
-          }
         },
       ),
       GridActionItem(
         icon: Icons.info_outline,
         label: '信息',
         onTap: () async {
-          final currentUser = await EMClient.getInstance.getCurrentUserId();
+          final userId = await EMClient.getInstance.getCurrentUserId();
           final deviceId = await EMClient.getInstance.getCurrentDeviceId();
-          EMGroup? info;
-          bool? isMuted;
-          try {
-            info = await EMClient.getInstance.groupManager
-                .fetchGroupInfoFromServer(_groupId);
-            isMuted = await EMClient.getInstance.groupManager
-                .isMemberInGroupMuteList(_groupId);
-          } catch (_) {
-          } finally {
-            if (mounted) {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('个人信息'),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('当前用户: $currentUser'),
-                      const SizedBox(height: 8),
-                      Text('设备ID: $deviceId'),
-                      const SizedBox(height: 8),
-                      Text('房间权限: ${info?.permissionType?.name}'),
-                      const SizedBox(height: 8),
-                      Text('禁言状态: $isMuted'),
-                    ],
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('确定'),
-                    ),
-                  ],
+          if (!mounted) return;
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('个人信息'),
+              content: Text('用户: $userId\n设备: $deviceId'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('确定'),
                 ),
-              );
-            }
-          }
+              ],
+            ),
+          );
         },
       ),
     ];
-
     return SizedBox(
       width: MediaQuery.of(context).size.width,
       child: GridActionMenu(items: items, isDark: isDark, columns: 6),

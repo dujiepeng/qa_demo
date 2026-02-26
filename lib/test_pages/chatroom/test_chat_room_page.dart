@@ -4,7 +4,6 @@ import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:qa_flutter/common/widgets/switch_alert.dart';
-
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 import '../../common/widgets/async_button.dart';
@@ -19,16 +18,7 @@ import '../../common/widgets/grid_action_menu.dart';
 import '../../common/log_content_page.dart';
 
 /// 聊天室信息编辑类型
-enum RoomInfoEditType {
-  /// 名称
-  name,
-
-  /// 描述
-  description,
-
-  /// 公告
-  announcement,
-}
+enum RoomInfoEditType { name, description, announcement }
 
 class TestChatRoomPage extends StatefulWidget {
   const TestChatRoomPage({super.key, this.roomId, this.showAppBar = true});
@@ -48,12 +38,11 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
 
   @override
   void initState() {
-    _roomIdController.text = widget.roomId ?? '';
+    _roomId = widget.roomId ?? '';
+    _roomIdController.text = _roomId;
     super.initState();
     _addListener();
-    _roomIdController.addListener(() {
-      setState(() {});
-    });
+    _roomIdController.addListener(() => setState(() {}));
   }
 
   @override
@@ -67,12 +56,10 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
     EMClient.getInstance.chatManager.addMessageEvent(
       _eventKey,
       ChatMessageEvent(
-        onSuccess: (msgId, msg) {
-          _addSendLog('${msg.from}: ${msg.toJson().toString()}');
-        },
-        onError: (msgId, msg, error) {
-          _addSendLog('发送失败: ${error.toString()}');
-        },
+        onSuccess: (msgId, msg) =>
+            _addSendLog('${msg.from}: ${msg.toJson().toString()}'),
+        onError: (msgId, msg, error) =>
+            _addSendLog('发送失败: ${error.toString()}'),
       ),
     );
 
@@ -81,8 +68,9 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
       EMChatEventHandler(
         onMessagesReceived: (messages) {
           for (var msg in messages) {
-            if (msg.conversationId != _roomId) return;
-            _addReceiveLog('${msg.from}: ${msg.toJson().toString()}');
+            if (msg.conversationId == _roomId) {
+              _addReceiveLog('${msg.from}: ${msg.toJson().toString()}');
+            }
           }
         },
       ),
@@ -91,140 +79,57 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
     EMClient.getInstance.chatRoomManager.addEventHandler(
       _eventKey,
       EMChatRoomEventHandler(
-        onAdminAddedFromChatRoom: (roomId, admin) {
-          if (roomId == _roomId) {
-            _addReceiveLog(
-              'onAdminAddedFromChatRoom: roomId: $roomId, admin: $admin',
-            );
-          }
-        },
-        onAdminRemovedFromChatRoom: (roomId, admin) {
-          if (roomId == _roomId) {
-            _addReceiveLog(
-              'onAdminRemovedFromChatRoom: roomId: $roomId, admin: $admin',
-            );
-          }
-        },
-        onAllChatRoomMemberMuteStateChanged: (roomId, isAllMuted) {
-          if (roomId == _roomId) {
-            _addReceiveLog(
-              'onAllChatRoomMemberMuteStateChanged: roomId: $roomId, isAllMuted: $isAllMuted',
-            );
-          }
-        },
-        onAllowListAddedFromChatRoom: (roomId, members) {
-          if (roomId == _roomId) {
-            _addReceiveLog(
-              'onAllowListAddedFromChatRoom: roomId: $roomId, members: $members',
-            );
-          }
-        },
-        onAllowListRemovedFromChatRoom: (roomId, members) {
-          if (roomId == _roomId) {
-            _addReceiveLog(
-              'onAllowListRemovedFromChatRoom: roomId: $roomId, members: $members',
-            );
-          }
-        },
-        onAnnouncementChangedFromChatRoom: (roomId, announcement) {
-          if (roomId == _roomId) {
-            _addReceiveLog(
-              'onAnnouncementChangedFromChatRoom: roomId: $roomId, announcement: $announcement',
-            );
-          }
-        },
-        onAttributesRemoved: (roomId, removedKeys, from) {
-          if (roomId == _roomId) {
-            _addReceiveLog(
-              'onAttributesRemoved: roomId: $roomId, removedKeys: $removedKeys, from: $from',
-            );
-          }
-        },
-        onAttributesUpdated: (roomId, attributes, from) {
-          if (roomId == _roomId) {
-            _addReceiveLog(
-              'onAttributesUpdated: roomId: $roomId, attributes: $attributes, from: $from',
-            );
-          }
-        },
+        onAdminAddedFromChatRoom: (roomId, admin) =>
+            _handleRoomEvent(roomId, 'onAdminAdded: $admin'),
+        onAdminRemovedFromChatRoom: (roomId, admin) =>
+            _handleRoomEvent(roomId, 'onAdminRemoved: $admin'),
+        onAllChatRoomMemberMuteStateChanged: (roomId, isAllMuted) =>
+            _handleRoomEvent(roomId, 'onAllMutedChanged: $isAllMuted'),
+        onAllowListAddedFromChatRoom: (roomId, members) =>
+            _handleRoomEvent(roomId, 'onAllowListAdded: $members'),
+        onAllowListRemovedFromChatRoom: (roomId, members) =>
+            _handleRoomEvent(roomId, 'onAllowListRemoved: $members'),
+        onAnnouncementChangedFromChatRoom: (roomId, announcement) =>
+            _handleRoomEvent(roomId, 'onAnnouncementChanged: $announcement'),
+        onAttributesRemoved: (roomId, removedKeys, from) => _handleRoomEvent(
+          roomId,
+          'onAttributesRemoved: keys: $removedKeys, from: $from',
+        ),
+        onAttributesUpdated: (roomId, attributes, from) => _handleRoomEvent(
+          roomId,
+          'onAttributesUpdated: attrs: $attributes, from: $from',
+        ),
         onChatRoomDestroyed: (roomId, roomName) {
           if (roomId == _roomId) {
-            _addReceiveLog(
-              'onChatRoomDestroyed: roomId: $roomId, roomName: $roomName',
-            );
-          }
-        },
-        onMemberExitedFromChatRoom: (roomId, roomName, participant) {
-          if (roomId == _roomId) {
-            _addReceiveLog(
-              'onMemberExitedFromChatRoom: roomId: $roomId, roomName: $roomName, participant: $participant',
-            );
-          }
-        },
-        onMemberJoinedFromChatRoom: (roomId, participant, ext) {
-          if (roomId == _roomId) {
-            _addReceiveLog(
-              'onMemberJoinedFromChatRoom: roomId: $roomId, participant: $participant, ext: $ext',
-            );
-          }
-        },
-        onMuteListAddedFromChatRoom: (roomId, mutes) {
-          if (roomId == _roomId) {
-            _addReceiveLog(
-              'onMuteListAddedFromChatRoom: roomId: $roomId, mutes: $mutes',
-            );
-          }
-        },
-        onMuteListRemovedFromChatRoom: (roomId, mutes) {
-          if (roomId == _roomId) {
-            _addReceiveLog(
-              'onMuteListRemovedFromChatRoom: roomId: $roomId, mutes: $mutes',
-            );
-          }
-        },
-        onOwnerChangedFromChatRoom: (roomId, newOwner, oldOwner) {
-          if (roomId == _roomId) {
-            _addReceiveLog(
-              'onOwnerChangedFromChatRoom: roomId: $roomId, newOwner: $newOwner, oldOwner: $oldOwner',
-            );
+            setState(() => _roomId = '');
+            _addReceiveLog('onChatRoomDestroyed: $roomName');
           }
         },
         onRemovedFromChatRoom: (roomId, roomName, participant, reason) {
           if (roomId == _roomId) {
-            setState(() {
-              _roomId = '';
-            });
-            _addReceiveLog(
-              'onRemovedFromChatRoom: roomId: $roomId, roomName: $roomName, participant: $participant, reason: $reason',
-            );
+            setState(() => _roomId = '');
+            _addReceiveLog('onRemoved: reason: $reason');
           }
         },
-        onSpecificationChanged: (room) {
-          if (room.roomId == _roomId) {
-            _addReceiveLog(
-              'onSpecificationChanged: name: ${room.name}, description: ${room.description}',
-            );
-          }
-        },
+        onSpecificationChanged: (room) => _handleRoomEvent(
+          room.roomId,
+          'onSpecificationChanged: name: ${room.name}',
+        ),
       ),
     );
   }
 
-  void _addLog(String content) {
-    _logController.addLog(content);
+  void _handleRoomEvent(String roomId, String log) {
+    if (roomId == _roomId) _addReceiveLog(log);
   }
 
-  void _addAppErrLog(String content) {
-    _logController.addLog(content, color: Colors.red);
-  }
-
-  void _addSendLog(String content) {
-    _logController.addLog(content, color: Colors.green);
-  }
-
-  void _addReceiveLog(String content) {
-    _logController.addLog(content, color: Colors.blue);
-  }
+  void _addLog(String content) => _logController.addLog(content);
+  void _addAppErrLog(String content) =>
+      _logController.addLog(content, color: Colors.red);
+  void _addSendLog(String content) =>
+      _logController.addLog(content, color: Colors.green);
+  void _addReceiveLog(String content) =>
+      _logController.addLog(content, color: Colors.blue);
 
   Future<String> _getAssetFilePath(String assetPath) async {
     final byteData = await rootBundle.load(assetPath);
@@ -235,620 +140,111 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
     return file.path;
   }
 
-  Future<void> _showRoomInfoDialog(RoomInfoEditType type) async {
-    if (_roomId.isEmpty) {
-      _addSendLog('请先加入聊天室');
-      return;
-    }
+  // --- UI 区块 ---
 
-    try {
-      // 获取聊天室信息
-      final room = await EMClient.getInstance.chatRoomManager
-          .fetchChatRoomInfoFromServer(_roomId);
+  PreferredSizeWidget _buildAppBar(bool isDark) {
+    return AppBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
+      title: Text(
+        _roomId.isNotEmpty ? '$_roomId(聊天室)' : '聊天室测试',
+        style: TextStyle(color: AppColors.textPrimary(isDark)),
+      ),
+      centerTitle: true,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.info),
+          onPressed: () => Navigator.of(context).pushNamed('/settings'),
+        ),
+      ],
+    );
+  }
 
-      if (!mounted) return;
+  Widget _buildControlPanel(bool isDark, bool isWide) {
+    return Column(
+      children: [
+        _buildInputRow(
+          controller: _roomIdController,
+          hintText: '输入聊天室 ID',
+          buttonText: _roomId.isNotEmpty && _roomIdController.text == _roomId
+              ? 'Leave'
+              : 'Join',
+          onPressed: _handleJoinLeaveRoom,
+          isDark: isDark,
+        ),
+        const SizedBox(height: 20),
+        _buildInputRow(
+          controller: _messageController,
+          hintText: '输入消息内容',
+          buttonText: 'Send',
+          onPressed: () => _sendTextMessage(_messageController.text),
+          isDark: isDark,
+        ),
+        const SizedBox(height: 10),
+        _buildSectionTitle('消息', isDark),
+        const SizedBox(height: 10),
+        _buildMessageTypeButtons(isDark),
+        const SizedBox(height: 10),
+        _buildSectionTitle('控制', isDark),
+        const SizedBox(height: 10),
+        _buildChatRoomManagementButtons(isDark),
+        const SizedBox(height: 10),
+        _buildSectionTitle('工具', isDark),
+        const SizedBox(height: 10),
+        _buildItemsButtons(isDark),
+      ],
+    );
+  }
 
-      // 根据类型确定标题和字段
-      String title;
-      String fieldTitle;
-      String placeholder;
-      String currentValue;
-      bool multiline = false;
+  Widget _buildLogPanel(bool isDark) {
+    return LogView(controller: _logController, isDark: isDark);
+  }
 
-      switch (type) {
-        case RoomInfoEditType.name:
-          title = '编辑聊天室名称';
-          fieldTitle = '聊天室名称';
-          placeholder = '请输入聊天室名称';
-          currentValue = room.name ?? '';
-          break;
-        case RoomInfoEditType.description:
-          title = '编辑聊天室描述';
-          fieldTitle = '聊天室描述';
-          placeholder = '请输入聊天室描述';
-          currentValue = room.description ?? '';
-          multiline = true;
-          break;
-        case RoomInfoEditType.announcement:
-          title = '编辑聊天室公告';
-          fieldTitle = '聊天室公告';
-          placeholder = '请输入聊天室公告';
-          currentValue = room.announcement ?? '';
-          multiline = true;
-          break;
+  // --- 业务逻辑 ---
+
+  Future<void> _handleJoinLeaveRoom() async {
+    final inputId = _roomIdController.text.trim();
+    if (inputId.isEmpty) return;
+
+    if (_roomId.isNotEmpty && _roomId == inputId) {
+      _addLog('开始离开 $_roomId');
+      try {
+        await EMClient.getInstance.chatRoomManager.leaveChatRoom(_roomId);
+        _addLog('退出 $_roomId 成功');
+        setState(() => _roomId = '');
+      } catch (e) {
+        _addLog('退出失败: $e');
       }
-
-      // 使用通用输入对话框
-      final result = await showInputDialog(
-        context: context,
-        title: title,
-        fields: [
-          InputFieldData(
-            title: fieldTitle,
-            placeholder: placeholder,
-            text: currentValue,
-            multiline: multiline,
-          ),
-        ],
-      );
-
-      // 用户点击了确定
-      if (result != null) {
-        final newValue = result[0].text;
-
-        // 如果值没有变化，直接返回
-        if (currentValue == newValue) {
-          return;
-        }
-
-        // 调用对应的 API
-        switch (type) {
-          case RoomInfoEditType.name:
-            await EMClient.getInstance.chatRoomManager.changeChatRoomName(
-              _roomId,
-              newValue,
-            );
-            _addSendLog('修改聊天室名称成功');
-            break;
-          case RoomInfoEditType.description:
-            await EMClient.getInstance.chatRoomManager
-                .changeChatRoomDescription(_roomId, newValue);
-            _addSendLog('修改聊天室描述成功');
-            break;
-          case RoomInfoEditType.announcement:
-            await EMClient.getInstance.chatRoomManager
-                .updateChatRoomAnnouncement(_roomId, newValue);
-            _addSendLog('修改聊天室公告成功');
-            break;
-        }
+    } else {
+      _addLog('开始加入 $inputId');
+      try {
+        await EMClient.getInstance.chatRoomManager.joinChatRoom(inputId);
+        setState(() => _roomId = inputId);
+        _addLog('加入成功: $inputId');
+      } catch (e) {
+        _addLog('加入失败: $e');
       }
-    } catch (e) {
-      _addSendLog('获取聊天室信息失败: ${e.toString()}');
     }
   }
 
-  Future<void> _showChatRoomDetails() async {
-    if (_roomId.isEmpty) {
-      _addSendLog('请先加入聊天室');
-      return;
-    }
+  Future<void> _sendTextMessage(String text) async {
+    final trimmedText = text.trim();
+    if (trimmedText.isEmpty || _roomId.isEmpty) return;
     try {
-      final room = await EMClient.getInstance.chatRoomManager
-          .fetchChatRoomInfoFromServer(_roomId);
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: Text(room.name ?? '聊天室详情'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('ID: ${room.roomId}'),
-                    const SizedBox(height: 8),
-                    Text('Name: ${room.name}'),
-                    const SizedBox(height: 8),
-                    Text('Description: ${room.description}'),
-                    const SizedBox(height: 8),
-                    Text('Owner: ${room.owner}'),
-                    const SizedBox(height: 8),
-                    Text('Max Users: ${room.maxUsers}'),
-                    const SizedBox(height: 8),
-                    Text('Member Count: ${room.memberCount}'),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('关闭'),
-                ),
-              ],
-            );
-          },
-        );
-      }
-    } catch (e) {
-      _addSendLog('获取详情失败: $e');
-    }
-  }
-
-  void _showMembersBottomSheet() {
-    if (_roomId.isEmpty) {
-      _addSendLog('请先加入聊天室');
-      return;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.95,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: _settings.isDarkMode
-                ? const Color(0xFF1C1C1E)
-                : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: TestChatRoomMembersPage(roomId: _roomId),
-        ),
-      ),
-    );
-  }
-
-  void _showAdminsBottomSheet() {
-    if (_roomId.isEmpty) {
-      _addSendLog('请先加入聊天室');
-      return;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.95,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: _settings.isDarkMode
-                ? const Color(0xFF1C1C1E)
-                : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: TestChatRoomAdminsPage(roomId: _roomId),
-        ),
-      ),
-    );
-  }
-
-  void _showWhiteListBottomSheet() {
-    if (_roomId.isEmpty) {
-      _addSendLog('请先加入聊天室');
-      return;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.95,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: _settings.isDarkMode
-                ? const Color(0xFF1C1C1E)
-                : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: TestChatRoomWhiteListPage(roomId: _roomId),
-        ),
-      ),
-    );
-  }
-
-  void _showMuteListBottomSheet() {
-    if (_roomId.isEmpty) {
-      _addSendLog('请先加入聊天室');
-      return;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.95,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: _settings.isDarkMode
-                ? const Color(0xFF1C1C1E)
-                : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: TestChatRoomMuteListPage(roomId: _roomId),
-        ),
-      ),
-    );
-  }
-
-  void _showMuteAllMuteAlert() async {
-    if (_roomId.isEmpty) {
-      _addSendLog('请先加入聊天室');
-      return;
-    }
-    final room = await EMClient.getInstance.chatRoomManager
-        .fetchChatRoomInfoFromServer(_roomId);
-    if (mounted) {
-      showSwitchAlert(
-        context: context,
-        title: '全部禁言',
-        description: '确定要禁言所有成员吗？',
-        initialValue: room.isAllMemberMuted ?? false,
-        onChanged: (value) async {
-          try {
-            if (value) {
-              await EMClient.getInstance.chatRoomManager.muteAllChatRoomMembers(
-                _roomId,
-              );
-            } else {
-              await EMClient.getInstance.chatRoomManager
-                  .unMuteAllChatRoomMembers(_roomId);
-            }
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('设置成功'),
-                  backgroundColor: Colors.redAccent,
-                ),
-              );
-            }
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(e.toString()),
-                  backgroundColor: Colors.redAccent,
-                ),
-              );
-            }
-            return false;
-          }
-          return true;
-        },
+      final msg = EMMessage.createTxtSendMessage(
+        targetId: _roomId,
+        content: trimmedText,
+        chatType: ChatType.ChatRoom,
       );
-    }
-  }
-
-  void _setCustomExt() async {
-    if (_roomId.isEmpty) {
-      _addSendLog('请先加入聊天室');
-      return;
-    }
-
-    try {
-      _addSendLog('开始设置');
-      final value = 'att_${DateTime.now().toString()}';
-      await EMClient.getInstance.chatRoomManager.addAttributes(
-        _roomId,
-        attributes: {'attKey': value},
-        overwrite: true,
-      );
-      _addSendLog('设置成功: key: attKey, value: $value');
+      await sendMessage(msg);
+      _messageController.clear();
     } catch (e) {
-      _addAppErrLog('设置失败: ${e.toString()}');
+      _addAppErrLog('发送失败: $e');
     }
   }
 
-  void _showChangeOwnerBottomSheet() {
-    if (_roomId.isEmpty) {
-      _addSendLog('请先加入聊天室');
-      return;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.95,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: _settings.isDarkMode
-                ? const Color(0xFF1C1C1E)
-                : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: TestChatRoomChangeOwnerPage(roomId: _roomId),
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = _settings.isDarkMode;
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      extendBodyBehindAppBar: true,
-      backgroundColor: Colors.transparent,
-      appBar: widget.showAppBar
-          ? AppBar(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
-              title: Text(
-                _roomId.isNotEmpty ? '$_roomId(聊天室)' : '聊天室测试',
-                style: TextStyle(color: AppColors.textPrimary(isDark)),
-              ),
-              centerTitle: true,
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.info),
-                  onPressed: () {
-                    Navigator.of(context).pushNamed('/settings');
-                  },
-                ),
-              ],
-            )
-          : null,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.backgroundStart(isDark),
-              AppColors.backgroundEnd(isDark),
-            ],
-          ),
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isWideScreen = constraints.maxWidth > 800;
-
-            if (isWideScreen) {
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 左侧: 操作区域
-                  Expanded(
-                    flex: 3,
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.only(
-                        top: widget.showAppBar ? (kToolbarHeight + 60) : 20,
-                        left: 15,
-                        right: 15,
-                        bottom: 30,
-                      ),
-                      child: Column(
-                        children: [
-                          _buildInputRow(
-                            controller: _roomIdController,
-                            hintText: '输入聊天室 ID',
-                            buttonText:
-                                _roomId.isNotEmpty &&
-                                    _roomIdController.text == _roomId
-                                ? 'Leave'
-                                : 'Join',
-                            onPressed: () async {
-                              final inputId = _roomIdController.text.trim();
-                              if (_roomId.isNotEmpty && _roomId == inputId) {
-                                _addLog('开始离开 $_roomId');
-                                try {
-                                  await EMClient.getInstance.chatRoomManager
-                                      .leaveChatRoom(_roomId);
-                                  _addLog('退出 $_roomId 成功');
-                                  setState(() {
-                                    _roomId = '';
-                                  });
-                                } catch (e) {
-                                  _addLog('退出 $_roomId 失败: ${e.toString()}');
-                                }
-                              } else {
-                                // Join
-                                final userId =
-                                    EMClient.getInstance.currentUserId;
-                                _addLog('$userId 开始加入 $inputId');
-                                String showMsg = '';
-                                try {
-                                  await EMClient.getInstance.chatRoomManager
-                                      .joinChatRoom(inputId);
-                                  setState(() {
-                                    _roomId = inputId;
-                                  });
-                                  showMsg = "加入成功， roomId: $inputId ";
-                                } catch (e) {
-                                  showMsg = '加入 $inputId 失败：${e.toString()}';
-                                } finally {
-                                  _addLog(showMsg);
-                                }
-                              }
-                            },
-                            isDark: isDark,
-                          ),
-                          const SizedBox(height: 20),
-                          _buildInputRow(
-                            controller: _messageController,
-                            hintText: '输入消息内容',
-                            buttonText: 'Send',
-                            onPressed: () async {
-                              String text = _messageController.text.trim();
-                              if (text.isEmpty) return;
-                              try {
-                                final msg = EMMessage.createTxtSendMessage(
-                                  targetId: _roomId,
-                                  content: text,
-                                  chatType: ChatType.ChatRoom,
-                                );
-                                await sendMessage(msg);
-                                _messageController.clear();
-                              } catch (e) {
-                                _addAppErrLog('发送文字失败: ${e.toString()}');
-                              }
-                            },
-                            isDark: isDark,
-                          ),
-                          const SizedBox(height: 10),
-                          _buildSectionTitle('消息', isDark),
-                          const SizedBox(height: 10),
-                          _buildMessageTypeButtons(isDark),
-                          const SizedBox(height: 10),
-                          _buildSectionTitle('控制', isDark),
-                          const SizedBox(height: 10),
-                          _buildChatRoomManagementButtons(isDark),
-                          const SizedBox(height: 10),
-                          _buildSectionTitle('工具', isDark),
-                          const SizedBox(height: 10),
-                          _buildItemsButtons(isDark),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // 分割线
-                  VerticalDivider(
-                    width: 1,
-                    thickness: 1,
-                    color: AppColors.glassBorder(isDark).withOpacity(0.2),
-                  ),
-                  // 右侧: 日志区域
-                  Expanded(
-                    flex: 2,
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        top: widget.showAppBar ? (kToolbarHeight + 60) : 20,
-                        left: 15,
-                        right: 15,
-                        bottom: 30,
-                      ),
-                      child: LogView(
-                        controller: _logController,
-                        isDark: isDark,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            }
-
-            // 移动端/窄屏布局
-            return SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    top: widget.showAppBar ? (kToolbarHeight + 60) : 20,
-                    left: 15,
-                    right: 15,
-                    bottom: 30,
-                  ),
-                  child: Column(
-                    children: [
-                      _buildInputRow(
-                        controller: _roomIdController,
-                        hintText: '输入聊天室 ID',
-                        buttonText:
-                            _roomId.isNotEmpty &&
-                                _roomIdController.text == _roomId
-                            ? 'Leave'
-                            : 'Join',
-                        onPressed: () async {
-                          final inputId = _roomIdController.text.trim();
-                          if (_roomId.isNotEmpty && _roomId == inputId) {
-                            _addLog('开始离开 $_roomId');
-                            try {
-                              await EMClient.getInstance.chatRoomManager
-                                  .leaveChatRoom(_roomId);
-                              _addLog('退出 $_roomId 成功');
-                              setState(() {
-                                _roomId = '';
-                              });
-                            } catch (e) {
-                              _addLog('退出 $_roomId 失败: ${e.toString()}');
-                            }
-                          } else {
-                            // Join
-                            final userId = EMClient.getInstance.currentUserId;
-                            _addLog('$userId 开始加入 $inputId');
-                            String showMsg = '';
-                            try {
-                              await EMClient.getInstance.chatRoomManager
-                                  .joinChatRoom(inputId);
-                              setState(() {
-                                _roomId = inputId;
-                              });
-                              showMsg = "加入成功， roomId: $inputId ";
-                            } catch (e) {
-                              showMsg = '加入 $inputId 失败：${e.toString()}';
-                            } finally {
-                              _addLog(showMsg);
-                            }
-                          }
-                        },
-                        isDark: isDark,
-                      ),
-                      const SizedBox(height: 20),
-                      _buildInputRow(
-                        controller: _messageController,
-                        hintText: '输入消息内容',
-                        buttonText: 'Send',
-                        onPressed: () async {
-                          String text = _messageController.text.trim();
-                          if (text.isEmpty) return;
-                          try {
-                            final msg = EMMessage.createTxtSendMessage(
-                              targetId: _roomId,
-                              content: text,
-                              chatType: ChatType.ChatRoom,
-                            );
-                            await sendMessage(msg);
-                            _messageController.clear();
-                          } catch (e) {
-                            _addAppErrLog('发送文字失败: ${e.toString()}');
-                          }
-                        },
-                        isDark: isDark,
-                      ),
-                      const SizedBox(height: 10),
-                      _buildSectionTitle('消息', isDark),
-                      const SizedBox(height: 10),
-                      _buildMessageTypeButtons(isDark),
-                      const SizedBox(height: 10),
-                      _buildSectionTitle('控制', isDark),
-                      const SizedBox(height: 10),
-                      _buildChatRoomManagementButtons(isDark),
-                      const SizedBox(height: 10),
-                      _buildSectionTitle('工具', isDark),
-                      const SizedBox(height: 10),
-                      _buildItemsButtons(isDark),
-                      const SizedBox(height: 20),
-                      // 日志显示区域
-                      LogView(controller: _logController, isDark: isDark),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Future<void> sendMessage(msg) async {
+  Future<void> sendMessage(EMMessage msg) async {
     if (_roomId.isEmpty) {
       _addSendLog('请先加入聊天室');
       return;
@@ -864,6 +260,233 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
       rethrow;
     }
   }
+
+  // --- 弹窗/抽屉逻辑 ---
+
+  Future<void> _showRoomInfoDialog(RoomInfoEditType type) async {
+    if (_roomId.isEmpty) return;
+    try {
+      final room = await EMClient.getInstance.chatRoomManager
+          .fetchChatRoomInfoFromServer(_roomId);
+      if (!mounted) return;
+      String title = '', fieldTitle = '', placeholder = '', currentValue = '';
+      bool multiline = false;
+
+      switch (type) {
+        case RoomInfoEditType.name:
+          title = '编辑名称';
+          fieldTitle = '名称';
+          placeholder = '输入名称';
+          currentValue = room.name ?? '';
+          break;
+        case RoomInfoEditType.description:
+          title = '编辑描述';
+          fieldTitle = '描述';
+          placeholder = '输入描述';
+          currentValue = room.description ?? '';
+          multiline = true;
+          break;
+        case RoomInfoEditType.announcement:
+          title = '编辑公告';
+          fieldTitle = '公告';
+          placeholder = '输入公告';
+          currentValue = room.announcement ?? '';
+          multiline = true;
+          break;
+      }
+
+      final result = await showInputDialog(
+        context: context,
+        title: title,
+        fields: [
+          InputFieldData(
+            title: fieldTitle,
+            placeholder: placeholder,
+            text: currentValue,
+            multiline: multiline,
+          ),
+        ],
+      );
+      if (result != null) {
+        final newValue = result[0].text;
+        if (currentValue == newValue) return;
+        switch (type) {
+          case RoomInfoEditType.name:
+            await EMClient.getInstance.chatRoomManager.changeChatRoomName(
+              _roomId,
+              newValue,
+            );
+            break;
+          case RoomInfoEditType.description:
+            await EMClient.getInstance.chatRoomManager
+                .changeChatRoomDescription(_roomId, newValue);
+            break;
+          case RoomInfoEditType.announcement:
+            await EMClient.getInstance.chatRoomManager
+                .updateChatRoomAnnouncement(_roomId, newValue);
+            break;
+        }
+        _addSendLog('修改成功');
+      }
+    } catch (e) {
+      _addSendLog('报错: $e');
+    }
+  }
+
+  Future<void> _showChatRoomDetails() async {
+    if (_roomId.isEmpty) return;
+    try {
+      final room = await EMClient.getInstance.chatRoomManager
+          .fetchChatRoomInfoFromServer(_roomId);
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(room.name ?? '详情'),
+          content: Text(
+            'ID: ${room.roomId}\nOwner: ${room.owner}\nMembers: ${room.memberCount}',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('关闭'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      _addLog('失败: $e');
+    }
+  }
+
+  void _showBottomSheet(Widget page) {
+    if (_roomId.isEmpty) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.95,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) => Container(
+          decoration: BoxDecoration(
+            color: _settings.isDarkMode
+                ? const Color(0xFF1C1C1E)
+                : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: page,
+        ),
+      ),
+    );
+  }
+
+  void _showMuteAllMuteAlert() async {
+    if (_roomId.isEmpty) return;
+    final room = await EMClient.getInstance.chatRoomManager
+        .fetchChatRoomInfoFromServer(_roomId);
+    if (!mounted) return;
+    showSwitchAlert(
+      context: context,
+      title: '全部禁言',
+      description: '操作全部禁言？',
+      initialValue: room.isAllMemberMuted ?? false,
+      onChanged: (value) async {
+        try {
+          if (value)
+            await EMClient.getInstance.chatRoomManager.muteAllChatRoomMembers(
+              _roomId,
+            );
+          else
+            await EMClient.getInstance.chatRoomManager.unMuteAllChatRoomMembers(
+              _roomId,
+            );
+          return true;
+        } catch (e) {
+          return false;
+        }
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = _settings.isDarkMode;
+    final padding = EdgeInsets.only(
+      top: widget.showAppBar ? (kToolbarHeight + 60) : 20,
+      left: 15,
+      right: 15,
+      bottom: 30,
+    );
+
+    return Scaffold(
+      resizeToAvoidBottomInset: false,
+      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.transparent,
+      appBar: widget.showAppBar ? _buildAppBar(isDark) : null,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.backgroundStart(isDark),
+              AppColors.backgroundEnd(isDark),
+            ],
+          ),
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth > 800;
+            if (isWide) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: SingleChildScrollView(
+                      padding: padding,
+                      child: _buildControlPanel(isDark, true),
+                    ),
+                  ),
+                  VerticalDivider(
+                    width: 1,
+                    thickness: 1,
+                    color: AppColors.glassBorder(isDark).withValues(alpha: 0.2),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Padding(
+                      padding: padding,
+                      child: _buildLogPanel(isDark),
+                    ),
+                  ),
+                ],
+              );
+            }
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Padding(
+                  padding: padding,
+                  child: Column(
+                    children: [
+                      _buildControlPanel(isDark, false),
+                      const SizedBox(height: 20),
+                      _buildLogPanel(isDark),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  // --- 辅助组件 ---
 
   Widget _buildInputRow({
     required TextEditingController controller,
@@ -934,124 +557,94 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
   }
 
   Widget _buildMessageTypeButtons(bool isDark) {
+    GridActionItem bi(
+      IconData icon,
+      String label,
+      Future<EMMessage> Function() creator,
+    ) {
+      return GridActionItem(
+        icon: icon,
+        label: label,
+        onTap: () async {
+          try {
+            await sendMessage(await creator());
+          } catch (e) {
+            _addAppErrLog('失败: $e');
+          }
+        },
+      );
+    }
+
     final items = [
-      GridActionItem(
-        icon: Icons.image_outlined,
-        label: '图片',
-        onTap: () async {
-          try {
-            final filePath = await _getAssetFilePath('assets/image.jpg');
-            final msg = EMMessage.createImageSendMessage(
-              targetId: _roomId,
-              filePath: filePath,
-              width: 1920,
-              height: 1080,
-              fileSize: 111916,
-              chatType: ChatType.ChatRoom,
-            );
-            await sendMessage(msg);
-          } catch (e) {
-            _addAppErrLog('发送图片失败: ${e.toString()}');
-          }
-        },
+      bi(
+        Icons.image_outlined,
+        '图片',
+        () async => EMMessage.createImageSendMessage(
+          targetId: _roomId,
+          filePath: await _getAssetFilePath('assets/image.jpg'),
+          width: 1920,
+          height: 1080,
+          fileSize: 111916,
+          chatType: ChatType.ChatRoom,
+        ),
       ),
-      GridActionItem(
-        icon: Icons.videocam_outlined,
-        label: '视频',
-        onTap: () async {
-          try {
-            final filePath = await _getAssetFilePath('assets/video.mp4');
-            final thumb = await _getAssetFilePath('assets/image.jpg');
-            final msg = EMMessage.createVideoSendMessage(
-              targetId: _roomId,
-              filePath: filePath,
-              thumbnailLocalPath: thumb,
-              width: 1920,
-              height: 1080,
-              duration: 10,
-              fileSize: 4006696,
-              chatType: ChatType.ChatRoom,
-            );
-            await sendMessage(msg);
-          } catch (e) {
-            _addAppErrLog('发送视频失败: ${e.toString()}');
-          }
-        },
+      bi(
+        Icons.videocam_outlined,
+        '视频',
+        () async => EMMessage.createVideoSendMessage(
+          targetId: _roomId,
+          filePath: await _getAssetFilePath('assets/video.mp4'),
+          thumbnailLocalPath: await _getAssetFilePath('assets/image.jpg'),
+          width: 1920,
+          height: 1080,
+          duration: 10,
+          fileSize: 4006696,
+          chatType: ChatType.ChatRoom,
+        ),
       ),
-      GridActionItem(
-        icon: Icons.mic_outlined,
-        label: '语音',
-        onTap: () async {
-          try {
-            final filePath = await _getAssetFilePath('assets/voice.mp3');
-            final msg = EMMessage.createVoiceSendMessage(
-              targetId: _roomId,
-              filePath: filePath,
-              duration: 10,
-              fileSize: 111916,
-              chatType: ChatType.ChatRoom,
-            );
-            await sendMessage(msg);
-          } catch (e) {
-            _addAppErrLog('发送语音失败: ${e.toString()}');
-          }
-        },
+      bi(
+        Icons.mic_outlined,
+        '语音',
+        () async => EMMessage.createVoiceSendMessage(
+          targetId: _roomId,
+          filePath: await _getAssetFilePath('assets/voice.mp3'),
+          duration: 10,
+          fileSize: 111916,
+          chatType: ChatType.ChatRoom,
+        ),
       ),
-      GridActionItem(
-        icon: Icons.description_outlined,
-        label: '文件',
-        onTap: () async {
-          try {
-            final filePath = await _getAssetFilePath('assets/voice.mp3');
-            final msg = EMMessage.createFileSendMessage(
-              targetId: _roomId,
-              filePath: filePath,
-              fileSize: 111916,
-              chatType: ChatType.ChatRoom,
-            );
-            await sendMessage(msg);
-          } catch (e) {
-            _addAppErrLog('发送文件失败: ${e.toString()}');
-          }
-        },
+      bi(
+        Icons.description_outlined,
+        '文件',
+        () async => EMMessage.createFileSendMessage(
+          targetId: _roomId,
+          filePath: await _getAssetFilePath('assets/voice.mp3'),
+          fileSize: 111916,
+          chatType: ChatType.ChatRoom,
+        ),
       ),
-      GridActionItem(
-        icon: Icons.location_on_outlined,
-        label: '位置',
-        onTap: () async {
-          try {
-            final msg = EMMessage.createLocationSendMessage(
-              targetId: _roomId,
-              latitude: 39.9042,
-              longitude: 116.4074,
-              address: '北京市海淀区中关村',
-              chatType: ChatType.ChatRoom,
-            );
-            await sendMessage(msg);
-          } catch (e) {
-            _addAppErrLog('发送位置失败: ${e.toString()}');
-          }
-        },
+      bi(
+        Icons.location_on_outlined,
+        '位置',
+        () async => EMMessage.createLocationSendMessage(
+          targetId: _roomId,
+          latitude: 39.9042,
+          longitude: 116.4074,
+          address: '北京市海淀区中关村',
+          chatType: ChatType.ChatRoom,
+        ),
       ),
-      GridActionItem(
-        icon: Icons.extension_outlined,
-        label: '自定义',
-        onTap: () async {
-          try {
-            final msg = EMMessage.createCustomSendMessage(
-              targetId: _roomId,
-              event: 'eventValue',
-              params: {'paramsKey': 'paramsValue'},
-              chatType: ChatType.ChatRoom,
-            );
-            await sendMessage(msg);
-          } catch (e) {
-            _addAppErrLog('发送自定义失败: ${e.toString()}');
-          }
-        },
+      bi(
+        Icons.extension_outlined,
+        '自定义',
+        () async => EMMessage.createCustomSendMessage(
+          targetId: _roomId,
+          event: 'ev',
+          params: {'p': 'v'},
+          chatType: ChatType.ChatRoom,
+        ),
       ),
     ];
-
     return SizedBox(
       width: MediaQuery.of(context).size.width,
       child: GridActionMenu(items: items, isDark: isDark, columns: 6),
@@ -1083,36 +676,54 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
       GridActionItem(
         icon: Icons.group_outlined,
         label: '成员',
-        onTap: _showMembersBottomSheet,
+        onTap: () => _showBottomSheet(TestChatRoomMembersPage(roomId: _roomId)),
       ),
       GridActionItem(
         icon: Icons.admin_panel_settings_outlined,
         label: '管理员',
-        onTap: _showAdminsBottomSheet,
+        onTap: () => _showBottomSheet(TestChatRoomAdminsPage(roomId: _roomId)),
       ),
       GridActionItem(
         icon: Icons.verified_user_outlined,
         label: '白名单',
-        onTap: _showWhiteListBottomSheet,
+        onTap: () =>
+            _showBottomSheet(TestChatRoomWhiteListPage(roomId: _roomId)),
       ),
       GridActionItem(
         icon: Icons.mic_off_outlined,
         label: '禁言列表',
-        onTap: _showMuteListBottomSheet,
+        onTap: () =>
+            _showBottomSheet(TestChatRoomMuteListPage(roomId: _roomId)),
       ),
       GridActionItem(
         icon: Icons.voice_over_off_outlined,
         label: '全部禁言',
         onTap: _showMuteAllMuteAlert,
       ),
-      GridActionItem(icon: Icons.tune, label: '自定义', onTap: _setCustomExt),
+      GridActionItem(
+        icon: Icons.tune,
+        label: '自定义',
+        onTap: () async {
+          if (_roomId.isEmpty) return;
+          try {
+            await EMClient.getInstance.chatRoomManager.addAttributes(
+              _roomId,
+              attributes: {'attKey': 'att_${DateTime.now()}'},
+              overwrite: true,
+            );
+            _addLog('成功');
+          } catch (e) {
+            _addLog('失败: $e');
+          }
+        },
+      ),
       GridActionItem(
         icon: Icons.swap_horiz_outlined,
         label: '转移',
-        onTap: _showChangeOwnerBottomSheet,
+        onTap: () =>
+            _showBottomSheet(TestChatRoomChangeOwnerPage(roomId: _roomId)),
       ),
     ];
-
     return SizedBox(
       width: MediaQuery.of(context).size.width,
       child: GridActionMenu(items: items, isDark: isDark, columns: 6),
@@ -1126,63 +737,39 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
         label: '日志',
         onTap: () async {
           final logZipPath = await EMClient.getInstance.compressLogs();
-          final logPath = logZipPath.replaceFirst('log.gz', 'easemob.log');
-          if (mounted) {
+          if (mounted)
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => LogContentPage(logPath: logPath),
+                builder: (context) => LogContentPage(
+                  logPath: logZipPath.replaceFirst('log.gz', 'easemob.log'),
+                ),
               ),
             );
-          }
         },
       ),
       GridActionItem(
         icon: Icons.info_outline,
         label: '信息',
         onTap: () async {
-          final currentUser = await EMClient.getInstance.getCurrentUserId();
-          final deviceId = await EMClient.getInstance.getCurrentDeviceId();
-          EMChatRoom? info;
-          bool? isMuted;
-          try {
-            info = await EMClient.getInstance.chatRoomManager
-                .fetchChatRoomInfoFromServer(_roomId);
-            isMuted = await EMClient.getInstance.chatRoomManager
-                .isMemberInChatRoomMuteList(_roomId);
-          } catch (_) {
-          } finally {
-            if (mounted) {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('个人信息'),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('当前用户: $currentUser'),
-                      const SizedBox(height: 8),
-                      Text('设备ID: $deviceId'),
-                      const SizedBox(height: 8),
-                      Text('房间权限: ${info?.permissionType.name}'),
-                      const SizedBox(height: 8),
-                      Text('禁言状态: $isMuted'),
-                    ],
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('确定'),
-                    ),
-                  ],
+          final u = await EMClient.getInstance.getCurrentUserId();
+          final d = await EMClient.getInstance.getCurrentDeviceId();
+          if (!mounted) return;
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('个人信息'),
+              content: Text('用户: $u\n设备: $d'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('确定'),
                 ),
-              );
-            }
-          }
+              ],
+            ),
+          );
         },
       ),
     ];
-
     return SizedBox(
       width: MediaQuery.of(context).size.width,
       child: GridActionMenu(items: items, isDark: isDark, columns: 6),
