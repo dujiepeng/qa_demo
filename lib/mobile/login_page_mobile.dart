@@ -5,14 +5,14 @@ import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
 import '../common/widgets/common_gradient_background.dart';
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class LoginPageMobile extends StatefulWidget {
+  const LoginPageMobile({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<LoginPageMobile> createState() => _LoginPageMobileState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageMobileState extends State<LoginPageMobile> {
   final TextEditingController _uidController = TextEditingController();
   final TextEditingController _pwdController = TextEditingController();
   bool _isLoading = false;

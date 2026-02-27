@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.50.0+139] - 2026-02-27
+
+### 修改内容
+- **[重构]** 项目目录架构全方位对称化与响应式重组:
+    - **建立 `lib/pages/` 统一入口**：将 `LoginPage` 和 `HomePage` 移出 `mobile` 目录，并重构为纯粹的响应式分发器（Switchers），根据设备类型自动投射到对应的平台视图。
+    - **规范 `lib/mobile/` 目录**：统一命名为 `*_mobile.dart` (包括 `home_page_mobile.dart`, `login_page_mobile.dart`, `me_page_mobile.dart`, `test_page_mobile.dart`)，仅保留移动端特有的布局实现。
+    - **补全 `lib/pad/` 目录**：独立出 `me_page_pad.dart` 和 `test_page_pad.dart` 组件，并新增了 Pad 端专属的登录页 `login_page_pad.dart`，实现了与移动端的完美结构对称。
+    - **逻辑解耦**：从大型组件中抽离业务块，提升了代码的可维护性和跨端复用率。
+- **[版本]** 迭代项目版本号至 `1.50.0+139`。
+
 ## [1.49.0+138] - 2026-02-27
 
 ### 修改内容

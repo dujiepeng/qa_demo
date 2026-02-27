@@ -5,25 +5,20 @@ import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
-import '../test_pages/single/test_single_chat_list_page.dart';
-import '../test_pages/single/test_single_chat_page.dart';
-import '../test_pages/group/test_group_list_page.dart';
-import '../test_pages/group/test_group_page.dart';
-import '../test_pages/chatroom/test_chat_room_list_page.dart';
-import '../test_pages/chatroom/test_chat_room_page.dart';
 import 'dart:io';
 import 'dart:async';
-import '../common/widgets/me_page_content.dart';
 import '../common/widgets/common_dialogs.dart';
+import 'me_page_pad.dart';
+import 'test_page_pad.dart';
 
-class TestDashboardPad extends StatefulWidget {
-  const TestDashboardPad({super.key});
+class HomePagePad extends StatefulWidget {
+  const HomePagePad({super.key});
 
   @override
-  State<TestDashboardPad> createState() => _TestDashboardPadState();
+  State<HomePagePad> createState() => _HomePagePadState();
 }
 
-class _TestDashboardPadState extends State<TestDashboardPad>
+class _HomePagePadState extends State<HomePagePad>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final ScrollController _logScrollController = ScrollController();
@@ -223,7 +218,7 @@ class _TestDashboardPadState extends State<TestDashboardPad>
           Expanded(
             child: _navIndex == 0
                 ? _buildTestDashboard(isDark)
-                : _buildMeContent(isDark),
+                : MePagePad(isDark: isDark),
           ),
         ],
       ),
@@ -240,28 +235,9 @@ class _TestDashboardPadState extends State<TestDashboardPad>
         Expanded(
           child: _detailPage != null
               ? _detailPage!
-              : TabBarView(
-                  controller: _tabController,
-                  children: [
-                    TestSingleChatListPage(
-                      onItemTap: (id) => _showDetail(
-                        TestSingleChatPage(userId: id, showAppBar: false),
-                        id.isEmpty ? '新建单聊' : '单聊: $id',
-                      ),
-                    ),
-                    TestGroupListPage(
-                      onItemTap: (id) => _showDetail(
-                        TestGroupPage(groupId: id, showAppBar: false),
-                        id.isEmpty ? '加入群组' : '群组: $id',
-                      ),
-                    ),
-                    TestChatRoomListPage(
-                      onItemTap: (id) => _showDetail(
-                        TestChatRoomPage(roomId: id, showAppBar: false),
-                        id.isEmpty ? '加入聊天室' : '聊天室: $id',
-                      ),
-                    ),
-                  ],
+              : TestPagePad(
+                  tabController: _tabController,
+                  onShowDetail: _showDetail,
                 ),
         ),
 
@@ -307,42 +283,6 @@ class _TestDashboardPadState extends State<TestDashboardPad>
           height: _logPanelHeight,
           child: _buildLogPanel(context, isDark),
         ),
-      ],
-    );
-  }
-
-  // 构建“我”的设置页面内容
-  Widget _buildMeContent(bool isDark) {
-    return Column(
-      children: [
-        // 顶层工具栏 (仅标题)
-        Material(
-          color: isDark
-              ? ChatUIKitTheme.instance.color.neutralColor1
-              : ChatUIKitTheme.instance.color.neutralColor98,
-          child: Container(
-            height: 70,
-            padding: const EdgeInsets.only(top: 20),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: AppColors.glassBorder(isDark),
-                  width: 0.5,
-                ),
-              ),
-            ),
-            child: Text(
-              '设置',
-              style: TextStyle(
-                color: AppColors.textPrimary(isDark),
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-        const Expanded(child: MePageContent(showAppBar: false)),
       ],
     );
   }

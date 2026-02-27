@@ -18,15 +18,15 @@ class TestGridItem {
   });
 }
 
-class TestPage extends StatefulWidget {
+class TestPageMobile extends StatefulWidget {
   final bool isDark;
-  const TestPage({super.key, this.isDark = true});
+  const TestPageMobile({super.key, this.isDark = true});
 
   @override
-  State<TestPage> createState() => _TestPageState();
+  State<TestPageMobile> createState() => _TestPageMobileState();
 }
 
-class _TestPageState extends State<TestPage> {
+class _TestPageMobileState extends State<TestPageMobile> {
   final _settings = AppSettings();
   late final List<TestGridItem> _testItems;
 

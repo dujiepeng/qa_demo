@@ -3,60 +3,32 @@ import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../common/utils/version_manager.dart';
-import '../common/widgets/update_dialog.dart';
 import '../common/utils/chat_event_widget.dart';
-import '../common/widgets/responsive_layout.dart';
-import 'me_page.dart';
-import 'test_page.dart';
-import '../pad/test_dashboard_pad.dart';
+import 'me_page_mobile.dart';
+import 'test_page_mobile.dart';
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+class HomePageMobile extends StatefulWidget {
+  const HomePageMobile({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<HomePageMobile> createState() => _HomePageMobileState();
 }
 
-class _HomePageState extends State<HomePage> with ChatUIKitThemeMixin {
+class _HomePageMobileState extends State<HomePageMobile> {
   int _currentIndex = 0;
-
-  // 缓存页面实例，避免每次 build 都重新创建
   late final Widget _mePage;
   late final Widget _testPage;
 
   @override
   void initState() {
     super.initState();
-    // 初始化所有页面实例
-    _mePage = const MePage();
-    _testPage = const TestPage();
-
-    VersionManager().addListener(_checkAndShowUpdateDialog);
+    _mePage = const MePageMobile();
+    _testPage = const TestPageMobile();
   }
 
   @override
-  void dispose() {
-    VersionManager().removeListener(_checkAndShowUpdateDialog);
-    super.dispose();
-  }
-
-  bool _hasShownUpdateDialog = false;
-
-  void _checkAndShowUpdateDialog() {
-    if (!mounted) return;
-
-    // 如果有新版本，且还没弹过窗
-    if (VersionManager().hasNewVersion && !_hasShownUpdateDialog) {
-      _hasShownUpdateDialog = true;
-      UpdateDialog.show(context);
-    }
-  }
-
-  @override
-  Widget themeBuilder(BuildContext context, ChatUIKitTheme theme) {
-    // 监听设置变化
-    final isDark = theme.color.isDark;
-
+  Widget build(BuildContext context) {
+    final isDark = ChatUIKitTheme.instance.color.isDark;
     final List<Widget> pages = [_testPage, _mePage];
     final List<BottomNavigationBarItem> items = const [
       BottomNavigationBarItem(
@@ -71,32 +43,23 @@ class _HomePageState extends State<HomePage> with ChatUIKitThemeMixin {
       ),
     ];
 
-    // 索引越界保护
     int safeIndex = _currentIndex;
-    if (safeIndex >= pages.length) {
-      safeIndex = pages.length - 1;
-    }
-
-    final body = IndexedStack(index: safeIndex, children: pages);
+    if (safeIndex >= pages.length) safeIndex = pages.length - 1;
 
     return ChatEventWidget(
-      child: ResponsiveLayout(
-        mobile: Scaffold(
-          backgroundColor: AppColors.backgroundStart(isDark),
-          body: body,
-          bottomNavigationBar: _buildBottomNavigationBar(
-            context,
-            isDark,
-            items,
-            safeIndex,
-          ),
+      child: Scaffold(
+        backgroundColor: AppColors.backgroundStart(isDark),
+        body: IndexedStack(index: safeIndex, children: pages),
+        bottomNavigationBar: _buildBottomNavigationBar(
+          context,
+          isDark,
+          items,
+          safeIndex,
         ),
-        tablet: const TestDashboardPad(), // Pad 模式直接展示集成面板
       ),
     );
   }
 
-  /// 构建手机端底部导航栏
   Widget _buildBottomNavigationBar(
     BuildContext context,
     bool isDark,
@@ -143,7 +106,6 @@ class _HomePageState extends State<HomePage> with ChatUIKitThemeMixin {
     );
   }
 
-  /// 为图标添加红点通知
   Widget _buildBadgeIcon(Widget icon) {
     return Stack(
       clipBehavior: Clip.none,

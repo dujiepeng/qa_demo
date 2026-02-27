@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../common/widgets/me_page_content.dart';
 
-class MePage extends StatelessWidget {
-  const MePage({super.key});
+class MePageMobile extends StatelessWidget {
+  const MePageMobile({super.key});
 
   @override
   Widget build(BuildContext context) {
