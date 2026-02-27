@@ -18,7 +18,7 @@ class LogEntry {
   });
 }
 
-enum LogMenuAction { sendReadAck, delete, recall }
+enum LogMenuAction { sendReadAck, delete, recall, modify }
 
 /// 日志控制器，用于管理日志数据的增加、清空和监听
 class LogController extends ChangeNotifier {
@@ -159,6 +159,11 @@ class LogView extends StatelessWidget {
                                     ),
                                   if (entry.message != null)
                                     PopupMenuItem(
+                                      value: 'modify',
+                                      child: Text('修改'),
+                                    ),
+                                  if (entry.message != null)
+                                    PopupMenuItem(
                                       value: 'recall',
                                       child: Text('撤回'),
                                     ),
@@ -178,6 +183,15 @@ class LogView extends StatelessWidget {
                                       duration: Duration(milliseconds: 500),
                                     ),
                                   );
+                                }
+                              } else if (value != null) {
+                                // 映射并执行回调
+                                try {
+                                  final action = LogMenuAction.values
+                                      .firstWhere((e) => e.name == value);
+                                  longPassCallback?.call(entry.message, action);
+                                } catch (e) {
+                                  // 忽略映射失败的情况
                                 }
                               }
                             },

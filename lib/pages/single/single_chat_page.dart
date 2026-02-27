@@ -20,8 +20,7 @@ class SingleChatPage extends StatefulWidget {
   State<SingleChatPage> createState() => _SingleChatPageState();
 }
 
-class _SingleChatPageState extends State<SingleChatPage>
-    with BaseMixin {
+class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
   final _eventKey = 'single_test';
   final _settings = AppSettings();
   final _userIdController = TextEditingController();
@@ -160,6 +159,12 @@ class _SingleChatPageState extends State<SingleChatPage>
           break;
         case LogMenuAction.recall:
           await EMClient.getInstance.chatManager.recallMessage(message.msgId);
+          break;
+        case LogMenuAction.modify:
+          await EMClient.getInstance.chatManager.modifyMessage(
+            messageId: message.msgId,
+            msgBody: EMTextMessageBody(content: 'modify content'),
+          );
           break;
       }
     } catch (e) {
