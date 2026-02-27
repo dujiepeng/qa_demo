@@ -27,6 +27,7 @@ class _HomePagePadState extends State<HomePagePad>
   String _sdkLogContent = '正在加载 SDK 日志...';
   Timer? _logTimer;
   String? _lastLogPath;
+  bool _autoScroll = true; // 自动滚动开关
 
   // 日志高度
   double _logPanelHeight = 300.0;
@@ -81,14 +82,16 @@ class _HomePagePadState extends State<HomePagePad>
               _sdkLogContent = content;
               _lastFileLength = stat.size;
             });
-            // 滚动到底部
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (_logScrollController.hasClients) {
-                _logScrollController.jumpTo(
-                  _logScrollController.position.maxScrollExtent,
-                );
-              }
-            });
+            // 只有开启自动滚动时才滚动到底部
+            if (_autoScroll) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (_logScrollController.hasClients) {
+                  _logScrollController.jumpTo(
+                    _logScrollController.position.maxScrollExtent,
+                  );
+                }
+              });
+            }
           }
         }
       }
@@ -386,13 +389,15 @@ class _HomePagePadState extends State<HomePagePad>
   }
 
   Widget _buildLogPanel(BuildContext context, bool isDark) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_logScrollController.hasClients) {
-        _logScrollController.jumpTo(
-          _logScrollController.position.maxScrollExtent,
-        );
-      }
-    });
+    if (_autoScroll) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_logScrollController.hasClients) {
+          _logScrollController.jumpTo(
+            _logScrollController.position.maxScrollExtent,
+          );
+        }
+      });
+    }
 
     return Container(
       color: isDark ? Colors.black87 : Colors.grey[100],
@@ -413,6 +418,20 @@ class _HomePagePadState extends State<HomePagePad>
               ),
               Row(
                 children: [
+                  IconButton(
+                    icon: Icon(
+                      _autoScroll
+                          ? Icons.pause_circle_outline
+                          : Icons.play_circle_outline,
+                      size: 18,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _autoScroll = !_autoScroll;
+                      });
+                    },
+                    tooltip: _autoScroll ? '暂停滚动' : '继续滚动',
+                  ),
                   IconButton(
                     icon: const Icon(Icons.copy_all, size: 18),
                     onPressed: () async {
@@ -450,16 +469,31 @@ class _HomePagePadState extends State<HomePagePad>
           ),
           const Divider(),
           Expanded(
-            child: SingleChildScrollView(
-              controller: _logScrollController,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: SelectableText(
-                _sdkLogContent,
-                style: TextStyle(
-                  fontFamily: 'Courier',
-                  fontSize: 12,
-                  color: isDark ? Colors.greenAccent : Colors.black87,
-                  height: 1.5,
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                if (notification is ScrollUpdateNotification &&
+                    notification.scrollDelta != null &&
+                    notification.scrollDelta! < 0) {
+                  // 如果是向上滚动，且当前是自动滚动状态，则切换为手动状态
+                  if (_autoScroll) {
+                    setState(() {
+                      _autoScroll = false;
+                    });
+                  }
+                }
+                return false;
+              },
+              child: SingleChildScrollView(
+                controller: _logScrollController,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: SelectableText(
+                  _sdkLogContent,
+                  style: TextStyle(
+                    fontFamily: 'Courier',
+                    fontSize: 12,
+                    color: isDark ? Colors.greenAccent : Colors.black87,
+                    height: 1.5,
+                  ),
                 ),
               ),
             ),
