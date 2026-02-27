@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
+import 'common_gradient_background.dart';
 
 /// 通用的测试页面布局组件
 /// 封装了背景渐变、AppBar、以及 Pad/Mobile 的响应式布局
@@ -35,17 +36,8 @@ class CommonTestLayout extends StatelessWidget {
       extendBodyBehindAppBar: true,
       backgroundColor: Colors.transparent,
       appBar: appBar,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.backgroundStart(isDark),
-              AppColors.backgroundEnd(isDark),
-            ],
-          ),
-        ),
+      body: CommonGradientBackground(
+        isDark: isDark,
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isWide = constraints.maxWidth > 800;

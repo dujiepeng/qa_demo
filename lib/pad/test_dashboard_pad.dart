@@ -14,6 +14,7 @@ import '../test_pages/chatroom/test_chat_room_page.dart';
 import 'dart:io';
 import 'dart:async';
 import '../common/widgets/me_page_content.dart';
+import '../common/widgets/common_dialogs.dart';
 
 class TestDashboardPad extends StatefulWidget {
   const TestDashboardPad({super.key});
@@ -25,7 +26,6 @@ class TestDashboardPad extends StatefulWidget {
 class _TestDashboardPadState extends State<TestDashboardPad>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  String _currentUserId = 'Unknown';
   final ScrollController _logScrollController = ScrollController();
 
   // SDK 日志文件相关
@@ -49,7 +49,6 @@ class _TestDashboardPadState extends State<TestDashboardPad>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _loadUserInfo();
     _initAndStartLogSync();
   }
 
@@ -109,15 +108,6 @@ class _TestDashboardPadState extends State<TestDashboardPad>
     _logScrollController.dispose();
     _logTimer?.cancel();
     super.dispose();
-  }
-
-  Future<void> _loadUserInfo() async {
-    final user = await EMClient.getInstance.getCurrentUserId();
-    if (mounted) {
-      setState(() {
-        _currentUserId = user ?? 'Not logged in';
-      });
-    }
   }
 
   // 切换到详情页
@@ -536,28 +526,6 @@ class _TestDashboardPadState extends State<TestDashboardPad>
   }
 
   void _showUserDetail(BuildContext context, bool isDark) async {
-    final deviceId = await EMClient.getInstance.getCurrentDeviceId();
-    if (!context.mounted) return;
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('当前用户'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('用户 ID: $_currentUserId'),
-            const SizedBox(height: 8),
-            Text('设备 ID: $deviceId'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('确定'),
-          ),
-        ],
-      ),
-    );
+    CommonDialogs.showUserInfoDialog(context, isDark);
   }
 }

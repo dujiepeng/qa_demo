@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
+import '../common/widgets/common_gradient_background.dart';
+import '../common/widgets/common_dialogs.dart';
 
 class TestGridItem {
   final String title;
@@ -36,32 +37,20 @@ class _TestPageState extends State<TestPage> {
       TestGridItem(
         title: '单聊',
         icon: Icons.person_outlined,
-        onTap: () {
-          Navigator.pushNamed(context, '/test_single_chat_list');
-        },
+        onTap: () => Navigator.pushNamed(context, '/test_single_chat_list'),
       ),
       TestGridItem(
         title: '群聊',
         icon: Icons.group_outlined,
-        onTap: () {
-          Navigator.pushNamed(context, '/test_group_list');
-        },
+        onTap: () => Navigator.pushNamed(context, '/test_group_list'),
       ),
       TestGridItem(
         title: '聊天室',
         icon: Icons.list_alt_outlined,
-        onTap: () {
-          Navigator.pushNamed(context, '/test_chat_room_list');
-        },
+        onTap: () => Navigator.pushNamed(context, '/test_chat_room_list'),
       ),
     ];
   }
-
-  // void _noSupportYet() {
-  //   ScaffoldMessenger.of(
-  //     context,
-  //   ).showSnackBar(const SnackBar(content: Text('功能暂未支持')));
-  // }
 
   @override
   Widget build(BuildContext context) {
@@ -81,71 +70,14 @@ class _TestPageState extends State<TestPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.info_outline),
-            onPressed: () async {
-              final currentUser = await EMClient.getInstance.getCurrentUserId();
-              final deviceId = await EMClient.getInstance.getCurrentDeviceId();
-
-              if (!mounted || !context.mounted) return;
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  backgroundColor: isDark
-                      ? const Color(0xFF2C2C2E)
-                      : Colors.white,
-                  title: Text(
-                    '用户信息',
-                    style: TextStyle(
-                      color: AppColors.textPrimary(isDark),
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '当前用户: $currentUser',
-                        style: TextStyle(color: AppColors.textPrimary(isDark)),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '设备ID: $deviceId',
-                        style: TextStyle(color: AppColors.textPrimary(isDark)),
-                      ),
-                    ],
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(
-                        '确定',
-                        style: TextStyle(color: AppColors.primary(isDark)),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
+            onPressed: () => CommonDialogs.showUserInfoDialog(context, isDark),
           ),
         ],
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.backgroundStart(isDark),
-              AppColors.backgroundEnd(isDark),
-            ],
-          ),
-        ),
+      body: CommonGradientBackground(
+        isDark: isDark,
         child: Padding(
-          padding: const EdgeInsets.only(left: 10, right: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
           child: GridView.builder(
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
@@ -154,9 +86,8 @@ class _TestPageState extends State<TestPage> {
               childAspectRatio: 1.0,
             ),
             itemCount: _testItems.length,
-            itemBuilder: (context, index) {
-              return _buildGridItem(_testItems[index], isDark);
-            },
+            itemBuilder: (context, index) =>
+                _buildGridItem(_testItems[index], isDark),
           ),
         ),
       ),

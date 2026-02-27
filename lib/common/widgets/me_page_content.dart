@@ -6,6 +6,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 import '../utils/version_manager.dart';
 import 'update_dialog.dart';
+import 'common_gradient_background.dart';
 
 class MePageContent extends StatelessWidget {
   final bool showAppBar;
@@ -147,19 +148,7 @@ class MePageContent extends StatelessWidget {
       ],
     );
 
-    Widget content = Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.backgroundStart(isDark),
-            AppColors.backgroundEnd(isDark),
-          ],
-        ),
-      ),
-      child: body,
-    );
+    Widget content = CommonGradientBackground(isDark: isDark, child: body);
 
     if (showAppBar) {
       return Scaffold(

@@ -3,6 +3,7 @@ import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
+import '../common/widgets/common_gradient_background.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -122,17 +123,8 @@ class _LoginPageState extends State<LoginPage> {
       ),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.backgroundStart(isDark),
-                AppColors.backgroundEnd(isDark),
-              ],
-            ),
-          ),
+        child: CommonGradientBackground(
+          isDark: isDark,
           child: SafeArea(
             child: Center(
               child: SingleChildScrollView(
