@@ -243,7 +243,7 @@ class _HomePagePadState extends State<HomePagePad>
 
         // 可拖动的分割线手柄
         GestureDetector(
-          behavior: HitBehavior.translucent,
+          behavior: HitTestBehavior.translucent,
           onVerticalDragUpdate: (details) {
             setState(() {
               // 向上拖动 delta 是负的，日志高度增加

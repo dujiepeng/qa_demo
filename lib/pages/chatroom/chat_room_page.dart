@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
-import 'package:qa_flutter/common/widgets/switch_alert.dart';
+import '../../common/widgets/switch_alert.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 import '../../common/widgets/input_dialog.dart';
@@ -28,8 +28,7 @@ class ChatRoomPage extends StatefulWidget {
   State<ChatRoomPage> createState() => _ChatRoomPageState();
 }
 
-class _ChatRoomPageState extends State<ChatRoomPage>
-    with BaseMixin {
+class _ChatRoomPageState extends State<ChatRoomPage> with BaseMixin {
   final _eventKey = 'room_test';
   final _settings = AppSettings();
   final _roomIdController = TextEditingController();
@@ -650,14 +649,12 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       GridActionItem(
         icon: Icons.verified_user_outlined,
         label: '白名单',
-        onTap: () =>
-            _showBottomSheet(ChatRoomWhiteListPage(roomId: _roomId)),
+        onTap: () => _showBottomSheet(ChatRoomWhiteListPage(roomId: _roomId)),
       ),
       GridActionItem(
         icon: Icons.mic_off_outlined,
         label: '禁言列表',
-        onTap: () =>
-            _showBottomSheet(ChatRoomMuteListPage(roomId: _roomId)),
+        onTap: () => _showBottomSheet(ChatRoomMuteListPage(roomId: _roomId)),
       ),
       GridActionItem(
         icon: Icons.voice_over_off_outlined,
@@ -684,8 +681,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       GridActionItem(
         icon: Icons.swap_horiz_outlined,
         label: '转移',
-        onTap: () =>
-            _showBottomSheet(ChatRoomChangeOwnerPage(roomId: _roomId)),
+        onTap: () => _showBottomSheet(ChatRoomChangeOwnerPage(roomId: _roomId)),
       ),
       GridActionItem(
         icon: Icons.add_circle_outline,
