@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.48.0+137] - 2026-02-27
+
+### 修改内容
+- **[重构]** 核心测试页面架构大规模重构:
+    - 提取公用 UI 组件：抽离 `CommonInputRow`、`CommonSectionTitle` 和 `CommonTestLayout` 到 `lib/common/widgets/`，统一了全平台的视觉风格和响应式布局逻辑。
+    - 引入 `TestBaseMixin`：抽离了日志打印 (`addLog`) 和媒体资产处理 (`getAssetFilePath`) 的重复代码，显著减少了单文件代码量。
+    - 精简代码：`TestSingleChatPage`、`TestGroupPage` 和 `TestChatRoomPage` 合计删除了超过 1000 行冗余代码，提高了可读性和可维护性。
+    - 多端适配优化：统一了 Pad 和 Mobile 的布局差异处理机制。
+- **[版本]** 迭代项目版本号至 `1.48.0+137`。
+
 ## [1.47.0+136] - 2026-02-27
 
 ### 修改内容

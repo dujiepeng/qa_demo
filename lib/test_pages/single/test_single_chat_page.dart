@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 import '../../common/widgets/log_view.dart';
 import '../../common/widgets/grid_action_menu.dart';
 import '../../common/log_content_page.dart';
+import '../../common/widgets/common_input_row.dart';
+import '../../common/widgets/common_section_title.dart';
+import '../../common/widgets/common_test_layout.dart';
+import '../../common/mixins/test_base_mixin.dart';
 
 class TestSingleChatPage extends StatefulWidget {
   const TestSingleChatPage({super.key, this.userId, this.showAppBar = true});
@@ -19,13 +20,17 @@ class TestSingleChatPage extends StatefulWidget {
   State<TestSingleChatPage> createState() => _TestSingleChatPageState();
 }
 
-class _TestSingleChatPageState extends State<TestSingleChatPage> {
+class _TestSingleChatPageState extends State<TestSingleChatPage>
+    with TestBaseMixin {
   final _eventKey = 'single_test';
   final _settings = AppSettings();
   final _userIdController = TextEditingController();
   final _messageController = TextEditingController();
   final _logController = LogController();
   final _repeatCountController = TextEditingController(text: '1');
+
+  @override
+  LogController get logController => _logController;
 
   @override
   void initState() {
@@ -55,10 +60,10 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
       _eventKey,
       ChatMessageEvent(
         onSuccess: (msgId, msg) {
-          _addSendLog('${msg.from}: ${msg.toJson().toString()}', message: msg);
+          addSendLog('${msg.from}: ${msg.toJson().toString()}', message: msg);
         },
         onError: (msgId, msg, error) {
-          _addSendLog('发送失败: ${error.toString()}');
+          addSendLog('发送失败: ${error.toString()}');
         },
       ),
     );
@@ -69,7 +74,7 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
         onMessagesReceived: (messages) {
           for (var msg in messages) {
             if (msg.chatType == ChatType.Chat) {
-              _addReceiveLog(
+              addReceiveLog(
                 '${msg.from}: ${msg.toJson().toString()}',
                 message: msg,
               );
@@ -79,25 +84,6 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
       ),
     );
   }
-
-  void _addLog(String content) => _logController.addLog(content);
-  void _addAppErrLog(String content) =>
-      _logController.addLog(content, color: Colors.red);
-  void _addSendLog(String content, {EMMessage? message}) =>
-      _logController.addLog(content, color: Colors.green);
-  void _addReceiveLog(String content, {EMMessage? message}) =>
-      _logController.addLog(content, color: Colors.blue);
-
-  Future<String> _getAssetFilePath(String assetPath) async {
-    final byteData = await rootBundle.load(assetPath);
-    final tempDir = await getTemporaryDirectory();
-    final fileName = assetPath.split('/').last;
-    final file = File('${tempDir.path}/$fileName');
-    await file.writeAsBytes(byteData.buffer.asUint8List());
-    return file.path;
-  }
-
-  // --- 优化后的 UI 区块 ---
 
   PreferredSizeWidget _buildAppBar(bool isDark) {
     return AppBar(
@@ -128,13 +114,13 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
   Widget _buildControlPanel(bool isDark, bool isWide) {
     return Column(
       children: [
-        _buildInputRow(
+        CommonInputRow(
           controller: _userIdController,
           hintText: '输入对方 ID',
           isDark: isDark,
         ),
         const SizedBox(height: 20),
-        _buildInputRow(
+        CommonInputRow(
           controller: _messageController,
           hintText: '输入消息内容',
           buttonText: 'Send',
@@ -143,11 +129,11 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
           countController: _repeatCountController,
         ),
         const SizedBox(height: 10),
-        _buildSectionTitle('消息', isDark),
+        CommonSectionTitle(title: '消息', isDark: isDark),
         SizedBox(height: isWide ? 20 : 10),
         _buildMessageTypeButtons(isDark),
         const SizedBox(height: 10),
-        _buildSectionTitle('工具', isDark),
+        CommonSectionTitle(title: '工具', isDark: isDark),
         SizedBox(height: isWide ? 20 : 10),
         _buildItemsButtons(isDark),
       ],
@@ -184,7 +170,7 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
           break;
       }
     } catch (e) {
-      _addAppErrLog('日志操作失败: ${e.toString()}');
+      addAppErrLog('日志操作失败: ${e.toString()}');
     }
   }
 
@@ -203,13 +189,13 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
       }
       _messageController.clear();
     } catch (e) {
-      _addAppErrLog('发送文字失败: ${e.toString()}');
+      addAppErrLog('发送文字失败: ${e.toString()}');
     }
   }
 
   Future<void> sendMessage(EMMessage msg) async {
     if (_userIdController.text.trim().isEmpty) {
-      _addLog('请先输入对方ID');
+      addLog('请先输入对方ID');
       return;
     }
     try {
@@ -217,7 +203,7 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
         'extKey1': 'extValue1',
         'date': DateTime.now().toString(),
       };
-      _addSendLog('开始发送消息');
+      addSendLog('开始发送消息');
       await EMClient.getInstance.chatManager.sendMessage(msg);
     } catch (e) {
       rethrow;
@@ -227,182 +213,20 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = _settings.isDarkMode;
-    final padding = EdgeInsets.only(
-      top: widget.showAppBar ? (kToolbarHeight + 80) : 40,
-      left: 15,
-      right: 15,
-      bottom: 30,
-    );
-
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      extendBodyBehindAppBar: true,
-      backgroundColor: Colors.transparent,
+    return CommonTestLayout(
+      isDark: isDark,
+      showAppBar: widget.showAppBar,
       appBar: widget.showAppBar ? _buildAppBar(isDark) : null,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.backgroundStart(isDark),
-              AppColors.backgroundEnd(isDark),
-            ],
-          ),
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isWide = constraints.maxWidth > 800;
-
-            if (isWide) {
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: SingleChildScrollView(
-                      padding: padding,
-                      child: _buildControlPanel(isDark, true),
-                    ),
-                  ),
-                  VerticalDivider(
-                    width: 1,
-                    thickness: 1,
-                    color: AppColors.glassBorder(isDark).withValues(alpha: 0.2),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Padding(
-                      padding: padding,
-                      child: _buildLogPanel(isDark),
-                    ),
-                  ),
-                ],
-              );
-            }
-
-            return SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Padding(
-                  padding: padding,
-                  child: Column(
-                    children: [
-                      _buildControlPanel(isDark, false),
-                      const SizedBox(height: 20),
-                      SizedBox(height: 400, child: _buildLogPanel(isDark)),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
+      controlPanel: LayoutBuilder(
+        builder: (context, constraints) {
+          return _buildControlPanel(isDark, constraints.maxWidth > 800);
+        },
       ),
+      logPanel: _buildLogPanel(isDark),
     );
   }
 
   // --- 辅助组件 ---
-
-  Widget _buildInputRow({
-    required TextEditingController controller,
-    required String hintText,
-    String? buttonText,
-    VoidCallback? onPressed,
-    required bool isDark,
-    TextEditingController? countController,
-  }) {
-    return Row(
-      children: [
-        Expanded(
-          child: TextField(
-            controller: controller,
-            style: TextStyle(color: AppColors.textPrimary(isDark)),
-            decoration: InputDecoration(
-              hintText: hintText,
-              hintStyle: TextStyle(color: AppColors.textSecondary(isDark)),
-              filled: true,
-              fillColor: AppColors.inputBackground(isDark),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.glassBorder(isDark)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.glassBorder(isDark)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.primary(isDark)),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 15,
-                vertical: 12,
-              ),
-            ),
-          ),
-        ),
-        if (countController != null) ...[
-          const SizedBox(width: 8),
-          Text('X', style: TextStyle(color: AppColors.textPrimary(isDark))),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 60,
-            child: TextField(
-              controller: countController,
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textPrimary(isDark)),
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: InputDecoration(
-                hintText: '次数',
-                hintStyle: TextStyle(
-                  color: AppColors.textSecondary(isDark),
-                  fontSize: 12,
-                ),
-                filled: true,
-                fillColor: AppColors.inputBackground(isDark),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: AppColors.glassBorder(isDark)),
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ),
-        ],
-        if (buttonText?.isNotEmpty == true && onPressed != null) ...[
-          const SizedBox(width: 12),
-          ElevatedButton(
-            onPressed: onPressed,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary(isDark),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text(buttonText!),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildSectionTitle(String title, bool isDark) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Text(
-        title,
-        style: TextStyle(
-          color: AppColors.textPrimary(isDark),
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
 
   Widget _buildMessageTypeButtons(bool isDark) {
     final items = [
@@ -411,7 +235,7 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
         label: '图片',
         onTap: () async {
           try {
-            final filePath = await _getAssetFilePath('assets/image.jpg');
+            final filePath = await getAssetFilePath('assets/image.jpg');
             await sendMessage(
               EMMessage.createImageSendMessage(
                 targetId: _userIdController.text.trim().toLowerCase(),
@@ -423,7 +247,7 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
               ),
             );
           } catch (e) {
-            _addAppErrLog('发送图片失败: ${e.toString()}');
+            addAppErrLog('发送图片失败: ${e.toString()}');
           }
         },
       ),
@@ -432,8 +256,8 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
         label: '视频',
         onTap: () async {
           try {
-            final filePath = await _getAssetFilePath('assets/video.mp4');
-            final thumb = await _getAssetFilePath('assets/image.jpg');
+            final filePath = await getAssetFilePath('assets/video.mp4');
+            final thumb = await getAssetFilePath('assets/image.jpg');
             await sendMessage(
               EMMessage.createVideoSendMessage(
                 targetId: _userIdController.text.trim().toLowerCase(),
@@ -447,7 +271,7 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
               ),
             );
           } catch (e) {
-            _addAppErrLog('发送视频失败: ${e.toString()}');
+            addAppErrLog('发送视频失败: ${e.toString()}');
           }
         },
       ),
@@ -456,7 +280,7 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
         label: '语音',
         onTap: () async {
           try {
-            final filePath = await _getAssetFilePath('assets/voice.mp3');
+            final filePath = await getAssetFilePath('assets/voice.mp3');
             await sendMessage(
               EMMessage.createVoiceSendMessage(
                 targetId: _userIdController.text.trim().toLowerCase(),
@@ -467,7 +291,7 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
               ),
             );
           } catch (e) {
-            _addAppErrLog('发送语音失败: ${e.toString()}');
+            addAppErrLog('发送语音失败: ${e.toString()}');
           }
         },
       ),
@@ -476,7 +300,7 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
         label: '文件',
         onTap: () async {
           try {
-            final filePath = await _getAssetFilePath('assets/voice.mp3');
+            final filePath = await getAssetFilePath('assets/voice.mp3');
             await sendMessage(
               EMMessage.createFileSendMessage(
                 targetId: _userIdController.text.trim().toLowerCase(),
@@ -486,7 +310,7 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
               ),
             );
           } catch (e) {
-            _addAppErrLog('发送文件失败: ${e.toString()}');
+            addAppErrLog('发送文件失败: ${e.toString()}');
           }
         },
       ),
@@ -505,7 +329,7 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
               ),
             );
           } catch (e) {
-            _addAppErrLog('发送位置失败: ${e.toString()}');
+            addAppErrLog('发送位置失败: ${e.toString()}');
           }
         },
       ),
@@ -523,7 +347,7 @@ class _TestSingleChatPageState extends State<TestSingleChatPage> {
               ),
             );
           } catch (e) {
-            _addAppErrLog('发送自定义失败: ${e.toString()}');
+            addAppErrLog('发送自定义失败: ${e.toString()}');
           }
         },
       ),

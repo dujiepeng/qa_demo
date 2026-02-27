@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
 import 'package:qa_flutter/common/widgets/switch_alert.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
-import '../../common/widgets/async_button.dart';
 import '../../common/widgets/input_dialog.dart';
 import '../../common/widgets/log_view.dart';
 import '../../common/widgets/grid_action_menu.dart';
 import '../../common/log_content_page.dart';
+import '../../common/widgets/common_input_row.dart';
+import '../../common/widgets/common_section_title.dart';
+import '../../common/widgets/common_test_layout.dart';
+import '../../common/mixins/test_base_mixin.dart';
 import 'test_group_admins_page.dart';
 import 'test_group_change_owner_page.dart';
 import 'test_group_members_page.dart';
@@ -28,7 +28,7 @@ class TestGroupPage extends StatefulWidget {
   State<TestGroupPage> createState() => _TestGroupPageState();
 }
 
-class _TestGroupPageState extends State<TestGroupPage> {
+class _TestGroupPageState extends State<TestGroupPage> with TestBaseMixin {
   final _eventKey = 'group_test';
   final _settings = AppSettings();
   final _groupIdController = TextEditingController();
@@ -36,6 +36,9 @@ class _TestGroupPageState extends State<TestGroupPage> {
   final _logController = LogController();
   final _repeatCountController = TextEditingController(text: '1');
   String _groupId = '';
+
+  @override
+  LogController get logController => _logController;
 
   @override
   void initState() {
@@ -59,9 +62,8 @@ class _TestGroupPageState extends State<TestGroupPage> {
       _eventKey,
       ChatMessageEvent(
         onSuccess: (msgId, msg) =>
-            _addSendLog('${msg.from}: ${msg.toJson().toString()}'),
-        onError: (msgId, msg, error) =>
-            _addSendLog('发送失败: ${error.toString()}'),
+            addSendLog('${msg.from}: ${msg.toJson().toString()}', message: msg),
+        onError: (msgId, msg, error) => addSendLog('发送失败: ${error.toString()}'),
       ),
     );
 
@@ -71,7 +73,10 @@ class _TestGroupPageState extends State<TestGroupPage> {
         onMessagesReceived: (messages) {
           for (var msg in messages) {
             if (msg.conversationId == _groupId) {
-              _addReceiveLog('${msg.from}: ${msg.toJson().toString()}');
+              addReceiveLog(
+                '${msg.from}: ${msg.toJson().toString()}',
+                message: msg,
+              );
             }
           }
         },
@@ -113,13 +118,13 @@ class _TestGroupPageState extends State<TestGroupPage> {
         onGroupDestroyed: (groupId, groupName) {
           if (groupId == _groupId) {
             setState(() => _groupId = '');
-            _addReceiveLog('onGroupDestroyed: $groupName');
+            addReceiveLog('onGroupDestroyed: $groupName');
           }
         },
         onUserRemovedFromGroup: (groupId, groupName) {
           if (groupId == _groupId) {
             setState(() => _groupId = '');
-            _addReceiveLog('onUserRemovedFromGroup: $groupName');
+            addReceiveLog('onUserRemovedFromGroup: $groupName');
           }
         },
         onSpecificationDidUpdate: (group) => _handleGroupEvent(
@@ -131,27 +136,8 @@ class _TestGroupPageState extends State<TestGroupPage> {
   }
 
   void _handleGroupEvent(String groupId, String log) {
-    if (groupId == _groupId) _addReceiveLog(log);
+    if (groupId == _groupId) addReceiveLog(log);
   }
-
-  void _addLog(String content) => _logController.addLog(content);
-  void _addAppErrLog(String content) =>
-      _logController.addLog(content, color: Colors.red);
-  void _addSendLog(String content) =>
-      _logController.addLog(content, color: Colors.green);
-  void _addReceiveLog(String content) =>
-      _logController.addLog(content, color: Colors.blue);
-
-  Future<String> _getAssetFilePath(String assetPath) async {
-    final byteData = await rootBundle.load(assetPath);
-    final tempDir = await getTemporaryDirectory();
-    final fileName = assetPath.split('/').last;
-    final file = File('${tempDir.path}/$fileName');
-    await file.writeAsBytes(byteData.buffer.asUint8List());
-    return file.path;
-  }
-
-  // --- UI 区块 ---
 
   PreferredSizeWidget _buildAppBar(bool isDark) {
     return AppBar(
@@ -182,7 +168,7 @@ class _TestGroupPageState extends State<TestGroupPage> {
   Widget _buildControlPanel(bool isDark, bool isWide) {
     return Column(
       children: [
-        _buildInputRow(
+        CommonInputRow(
           controller: _groupIdController,
           hintText: '输入群组 ID',
           buttonText: _groupId.isNotEmpty ? 'Leave' : 'Join',
@@ -190,7 +176,7 @@ class _TestGroupPageState extends State<TestGroupPage> {
           isDark: isDark,
         ),
         const SizedBox(height: 20),
-        _buildInputRow(
+        CommonInputRow(
           controller: _messageController,
           hintText: '输入消息内容',
           buttonText: 'Send',
@@ -199,15 +185,15 @@ class _TestGroupPageState extends State<TestGroupPage> {
           countController: _repeatCountController,
         ),
         const SizedBox(height: 10),
-        _buildSectionTitle('消息', isDark),
+        CommonSectionTitle(title: '消息', isDark: isDark),
         const SizedBox(height: 10),
         _buildMessageTypeButtons(isDark),
         const SizedBox(height: 10),
-        _buildSectionTitle('控制', isDark),
+        CommonSectionTitle(title: '控制', isDark: isDark),
         const SizedBox(height: 10),
         _buildGroupManagementButtons(isDark),
         const SizedBox(height: 10),
-        _buildSectionTitle('工具', isDark),
+        CommonSectionTitle(title: '工具', isDark: isDark),
         const SizedBox(height: 10),
         _buildItemsButtons(isDark),
       ],
@@ -218,29 +204,27 @@ class _TestGroupPageState extends State<TestGroupPage> {
     return LogView(controller: _logController, isDark: isDark);
   }
 
-  // --- 业务逻辑 ---
-
   Future<void> _handleJoinLeaveGroup() async {
     final inputId = _groupIdController.text.trim();
     if (inputId.isEmpty) return;
 
     if (_groupId.isNotEmpty && _groupId == inputId) {
-      _addLog('开始离开 $_groupId');
+      addLog('开始离开 $_groupId');
       try {
         await EMClient.getInstance.groupManager.leaveGroup(_groupId);
-        _addLog('退出 $_groupId 成功');
+        addLog('退出 $_groupId 成功');
         setState(() => _groupId = '');
       } catch (e) {
-        _addLog('退出 $_groupId 失败: ${e.toString()}');
+        addLog('退出 $_groupId 失败: ${e.toString()}');
       }
     } else {
-      _addLog('开始加入 $inputId');
+      addLog('开始加入 $inputId');
       try {
         await EMClient.getInstance.groupManager.joinPublicGroup(inputId);
         setState(() => _groupId = inputId);
-        _addLog('加入成功， GroupId: $inputId');
+        addLog('加入成功， GroupId: $inputId');
       } catch (e) {
-        _addLog('加入 $inputId 失败：${e.toString()}');
+        addLog('加入 $inputId 失败：${e.toString()}');
       }
     }
   }
@@ -260,13 +244,13 @@ class _TestGroupPageState extends State<TestGroupPage> {
       }
       _messageController.clear();
     } catch (e) {
-      _addAppErrLog('发送文字失败: ${e.toString()}');
+      addAppErrLog('发送文字失败: ${e.toString()}');
     }
   }
 
   Future<void> sendMessage(EMMessage msg) async {
     if (_groupId.isEmpty) {
-      _addSendLog('请先加入群组');
+      addSendLog('请先加入群组');
       return;
     }
     try {
@@ -274,18 +258,16 @@ class _TestGroupPageState extends State<TestGroupPage> {
         'extKey1': 'extValue1',
         'date': DateTime.now().toString(),
       };
-      _addSendLog('开始发送消息');
+      addSendLog('开始发送消息');
       await EMClient.getInstance.chatManager.sendMessage(msg);
     } catch (e) {
       rethrow;
     }
   }
 
-  // --- 弹窗相关逻辑已合并或抽离 ---
-
   Future<void> _showGroupInfoDialog(GroupInfoEditType type) async {
     if (_groupId.isEmpty) {
-      _addSendLog('请先加入群组');
+      addSendLog('请先加入群组');
       return;
     }
     try {
@@ -353,16 +335,16 @@ class _TestGroupPageState extends State<TestGroupPage> {
             );
             break;
         }
-        _addSendLog('修改成功');
+        addSendLog('修改成功');
       }
     } catch (e) {
-      _addSendLog('操作失败: ${e.toString()}');
+      addSendLog('操作失败: ${e.toString()}');
     }
   }
 
   Future<void> _showGroupDetails() async {
     if (_groupId.isEmpty) {
-      _addSendLog('请先加入群组');
+      addSendLog('请先加入群组');
       return;
     }
     try {
@@ -395,13 +377,13 @@ class _TestGroupPageState extends State<TestGroupPage> {
         ),
       );
     } catch (e) {
-      _addSendLog('获取详情失败: $e');
+      addSendLog('获取详情失败: $e');
     }
   }
 
   void _showBottomSheet(Widget page) {
     if (_groupId.isEmpty) {
-      _addSendLog('请先加入群组');
+      addSendLog('请先加入群组');
       return;
     }
     showModalBottomSheet(
@@ -442,10 +424,10 @@ class _TestGroupPageState extends State<TestGroupPage> {
           } else {
             await EMClient.getInstance.groupManager.unMuteAllMembers(_groupId);
           }
-          _addLog('操作成功');
+          addLog('操作成功');
           return true;
         } catch (e) {
-          _addAppErrLog('报错: $e');
+          addAppErrLog('报错: $e');
           return false;
         }
       },
@@ -455,178 +437,20 @@ class _TestGroupPageState extends State<TestGroupPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = _settings.isDarkMode;
-    final padding = EdgeInsets.only(
-      top: widget.showAppBar ? (kToolbarHeight + 80) : 40,
-      left: 15,
-      right: 15,
-      bottom: 30,
-    );
-
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      extendBodyBehindAppBar: true,
-      backgroundColor: Colors.transparent,
+    return CommonTestLayout(
+      isDark: isDark,
+      showAppBar: widget.showAppBar,
       appBar: widget.showAppBar ? _buildAppBar(isDark) : null,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.backgroundStart(isDark),
-              AppColors.backgroundEnd(isDark),
-            ],
-          ),
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isWide = constraints.maxWidth > 800;
-            if (isWide) {
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: SingleChildScrollView(
-                      padding: padding,
-                      child: _buildControlPanel(isDark, true),
-                    ),
-                  ),
-                  VerticalDivider(
-                    width: 1,
-                    thickness: 1,
-                    color: AppColors.glassBorder(isDark).withValues(alpha: 0.2),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Padding(
-                      padding: padding,
-                      child: _buildLogPanel(isDark),
-                    ),
-                  ),
-                ],
-              );
-            }
-            return SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Padding(
-                  padding: padding,
-                  child: Column(
-                    children: [
-                      _buildControlPanel(isDark, false),
-                      const SizedBox(height: 20),
-                      SizedBox(height: 400, child: _buildLogPanel(isDark)),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
+      controlPanel: LayoutBuilder(
+        builder: (context, constraints) {
+          return _buildControlPanel(isDark, constraints.maxWidth > 800);
+        },
       ),
+      logPanel: _buildLogPanel(isDark),
     );
   }
 
   // --- 辅助组件 ---
-
-  Widget _buildInputRow({
-    required TextEditingController controller,
-    required String hintText,
-    required String buttonText,
-    required Future<void> Function() onPressed,
-    required bool isDark,
-    TextEditingController? countController,
-  }) {
-    return Row(
-      children: [
-        Expanded(
-          child: TextField(
-            controller: controller,
-            style: TextStyle(color: AppColors.textPrimary(isDark)),
-            decoration: InputDecoration(
-              hintText: hintText,
-              hintStyle: TextStyle(color: AppColors.textSecondary(isDark)),
-              filled: true,
-              fillColor: AppColors.inputBackground(isDark),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.glassBorder(isDark)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.glassBorder(isDark)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.primary(isDark)),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 15,
-                vertical: 12,
-              ),
-            ),
-          ),
-        ),
-        if (countController != null) ...[
-          const SizedBox(width: 8),
-          Text('X', style: TextStyle(color: AppColors.textPrimary(isDark))),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 60,
-            child: TextField(
-              controller: countController,
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textPrimary(isDark)),
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: InputDecoration(
-                hintText: '次数',
-                hintStyle: TextStyle(
-                  color: AppColors.textSecondary(isDark),
-                  fontSize: 12,
-                ),
-                filled: true,
-                fillColor: AppColors.inputBackground(isDark),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: AppColors.glassBorder(isDark)),
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ),
-        ],
-        const SizedBox(width: 12),
-        AsyncButton(
-          onPressed: onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary(isDark),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          child: Text(buttonText),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSectionTitle(String title, bool isDark) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Text(
-        title,
-        style: TextStyle(
-          color: AppColors.textPrimary(isDark),
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
 
   Widget _buildMessageTypeButtons(bool isDark) {
     GridActionItem buildItem(
@@ -641,7 +465,7 @@ class _TestGroupPageState extends State<TestGroupPage> {
           try {
             await sendMessage(await creator());
           } catch (e) {
-            _addAppErrLog('发送$label失败: $e');
+            addAppErrLog('发送$label失败: $e');
           }
         },
       );
@@ -653,7 +477,7 @@ class _TestGroupPageState extends State<TestGroupPage> {
         '图片',
         () async => EMMessage.createImageSendMessage(
           targetId: _groupId,
-          filePath: await _getAssetFilePath('assets/image.jpg'),
+          filePath: await getAssetFilePath('assets/image.jpg'),
           width: 1920,
           height: 1080,
           fileSize: 111916,
@@ -665,8 +489,8 @@ class _TestGroupPageState extends State<TestGroupPage> {
         '视频',
         () async => EMMessage.createVideoSendMessage(
           targetId: _groupId,
-          filePath: await _getAssetFilePath('assets/video.mp4'),
-          thumbnailLocalPath: await _getAssetFilePath('assets/image.jpg'),
+          filePath: await getAssetFilePath('assets/video.mp4'),
+          thumbnailLocalPath: await getAssetFilePath('assets/image.jpg'),
           width: 1920,
           height: 1080,
           duration: 10,
@@ -679,7 +503,7 @@ class _TestGroupPageState extends State<TestGroupPage> {
         '语音',
         () async => EMMessage.createVoiceSendMessage(
           targetId: _groupId,
-          filePath: await _getAssetFilePath('assets/voice.mp3'),
+          filePath: await getAssetFilePath('assets/voice.mp3'),
           duration: 10,
           fileSize: 111916,
           chatType: ChatType.GroupChat,
@@ -690,7 +514,7 @@ class _TestGroupPageState extends State<TestGroupPage> {
         '文件',
         () async => EMMessage.createFileSendMessage(
           targetId: _groupId,
-          filePath: await _getAssetFilePath('assets/voice.mp3'),
+          filePath: await getAssetFilePath('assets/voice.mp3'),
           fileSize: 111916,
           chatType: ChatType.GroupChat,
         ),
@@ -781,9 +605,9 @@ class _TestGroupPageState extends State<TestGroupPage> {
               groupId: _groupId,
               attributes: {'attKey': 'att_${DateTime.now()}'},
             );
-            _addLog('设置成功');
+            addLog('设置成功');
           } catch (e) {
-            _addAppErrLog('失败: $e');
+            addAppErrLog('失败: $e');
           }
         },
       ),
@@ -807,37 +631,14 @@ class _TestGroupPageState extends State<TestGroupPage> {
         label: '日志',
         onTap: () async {
           final logZipPath = await EMClient.getInstance.compressLogs();
+          final logPath = logZipPath.replaceFirst('log.gz', 'easemob.log');
           if (mounted) {
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => LogContentPage(
-                  logPath: logZipPath.replaceFirst('log.gz', 'easemob.log'),
-                ),
+                builder: (context) => LogContentPage(logPath: logPath),
               ),
             );
           }
-        },
-      ),
-      GridActionItem(
-        icon: Icons.info_outline,
-        label: '信息',
-        onTap: () async {
-          final userId = await EMClient.getInstance.getCurrentUserId();
-          final deviceId = await EMClient.getInstance.getCurrentDeviceId();
-          if (!mounted) return;
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('个人信息'),
-              content: Text('用户: $userId\n设备: $deviceId'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('确定'),
-                ),
-              ],
-            ),
-          );
         },
       ),
     ];
