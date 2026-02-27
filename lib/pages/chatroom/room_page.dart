@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../../common/widgets/switch_alert.dart';
 import '../../theme/app_colors.dart';
@@ -54,13 +55,12 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
   void _checkChatRoomStatus() async {
     if (_roomId.isEmpty) return;
     try {
-      addLog('正在检查聊天室状态: $_roomId...');
       final room = await EMClient.getInstance.chatRoomManager
           .fetchChatRoomInfoFromServer(_roomId);
-      addLog('已获取聊天室详情: ${room.name} (Owner: ${room.owner})');
-      _isJoined = true;
+      if (room.permissionType != EMChatRoomPermissionType.None) {
+        _isJoined = true;
+      }
     } catch (e) {
-      addLog('获取聊天室信息失败，请尝试重新 Join: $e');
       _isJoined = false;
     } finally {
       if (mounted) setState(() {});
@@ -209,7 +209,29 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
   }
 
   Widget _buildLogPanel(bool isDark) {
-    return LogView(controller: _logController, isDark: isDark);
+    return LogView(
+      controller: _logController,
+      isDark: isDark,
+      menuBuilder: (entry) {
+        return [
+          LogMenuItem(
+            title: '复制',
+            onTap: () async {
+              final text = '${entry.timestamp}: ${entry.content}';
+              await Clipboard.setData(ClipboardData(text: text));
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('已复制到剪贴板'),
+                    duration: Duration(milliseconds: 500),
+                  ),
+                );
+              }
+            },
+          ),
+        ];
+      },
+    );
   }
 
   Future<void> _handleJoinLeaveRoom() async {

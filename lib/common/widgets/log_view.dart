@@ -18,7 +18,12 @@ class LogEntry {
   });
 }
 
-enum LogMenuAction { sendReadAck, delete, recall, modify }
+/// 日志菜单项模型
+class LogMenuItem {
+  final String title;
+  final VoidCallback onTap;
+  LogMenuItem({required this.title, required this.onTap});
+}
 
 /// 日志控制器，用于管理日志数据的增加、清空和监听
 class LogController extends ChangeNotifier {
@@ -56,15 +61,13 @@ class LogController extends ChangeNotifier {
 class LogView extends StatelessWidget {
   final LogController controller;
   final bool isDark;
-  final bool enableMessageManager;
-  final void Function(EMMessage? message, LogMenuAction action)?
-  longPassCallback;
+  final List<LogMenuItem> Function(LogEntry entry)? menuBuilder;
+
   const LogView({
     super.key,
     required this.controller,
     required this.isDark,
-    this.enableMessageManager = false,
-    this.longPassCallback,
+    this.menuBuilder,
   });
 
   @override
@@ -133,67 +136,31 @@ class LogView extends StatelessWidget {
                           final entry = controller.logs[index];
                           return GestureDetector(
                             onLongPressStart: (details) async {
-                              final position = details.globalPosition;
-                              final value = await showMenu<String>(
-                                context: context,
-                                position: RelativeRect.fromLTRB(
-                                  position.dx,
-                                  position.dy,
-                                  position.dx,
-                                  position.dy,
-                                ),
-                                items: [
-                                  const PopupMenuItem(
-                                    value: 'copy',
-                                    child: Text('复制'),
-                                  ),
-                                  if (entry.message != null)
-                                    PopupMenuItem(
-                                      value: 'sendReadAck',
-                                      child: Text('发送已读ACK'),
-                                    ),
-                                  if (entry.message != null)
-                                    PopupMenuItem(
-                                      value: 'delete',
-                                      child: Text('从服务器删除'),
-                                    ),
-                                  if (entry.message != null)
-                                    PopupMenuItem(
-                                      value: 'modify',
-                                      child: Text('修改'),
-                                    ),
-                                  if (entry.message != null)
-                                    PopupMenuItem(
-                                      value: 'recall',
-                                      child: Text('撤回'),
-                                    ),
-                                ],
-                              );
+                              if (menuBuilder == null) return;
+                              final items = menuBuilder!(entry);
+                              if (items.isEmpty) return;
 
-                              if (value == 'copy') {
-                                final text =
-                                    '${entry.timestamp}: ${entry.content}';
-                                await Clipboard.setData(
-                                  ClipboardData(text: text),
-                                );
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('已复制到剪贴板'),
-                                      duration: Duration(milliseconds: 500),
+                              final position = details.globalPosition;
+                              final LogMenuItem? selectedItem =
+                                  await showMenu<LogMenuItem>(
+                                    context: context,
+                                    position: RelativeRect.fromLTRB(
+                                      position.dx,
+                                      position.dy,
+                                      position.dx,
+                                      position.dy,
                                     ),
+                                    items: items
+                                        .map(
+                                          (item) => PopupMenuItem<LogMenuItem>(
+                                            value: item,
+                                            child: Text(item.title),
+                                          ),
+                                        )
+                                        .toList(),
                                   );
-                                }
-                              } else if (value != null) {
-                                // 映射并执行回调
-                                try {
-                                  final action = LogMenuAction.values
-                                      .firstWhere((e) => e.name == value);
-                                  longPassCallback?.call(entry.message, action);
-                                } catch (e) {
-                                  // 忽略映射失败的情况
-                                }
-                              }
+
+                              selectedItem?.onTap();
                             },
                             child: Container(
                               margin: const EdgeInsets.symmetric(vertical: 2),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
@@ -80,6 +81,12 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
             }
           }
         },
+        onMessageContentChanged: (msg, operator, operationTime) {
+          addReceiveLog(
+            '${msg.from}: ${msg.toJson().toString()}',
+            message: msg,
+          );
+        },
       ),
     );
   }
@@ -136,40 +143,105 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
     return LogView(
       controller: _logController,
       isDark: isDark,
-      longPassCallback: _handleLogLongPress,
-    );
-  }
+      menuBuilder: (entry) {
+        final items = <LogMenuItem>[];
+        // 复制按钮始终显示
+        items.add(
+          LogMenuItem(
+            title: '复制',
+            onTap: () async {
+              final text = '${entry.timestamp}: ${entry.content}';
+              await Clipboard.setData(ClipboardData(text: text));
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('已复制到剪贴板'),
+                    duration: Duration(milliseconds: 500),
+                  ),
+                );
+              }
+            },
+          ),
+        );
 
-  Future<void> _handleLogLongPress(
-    EMMessage? message,
-    LogMenuAction action,
-  ) async {
-    if (message == null) return;
-    try {
-      switch (action) {
-        case LogMenuAction.sendReadAck:
-          await EMClient.getInstance.chatManager.sendMessageReadAck(message);
-          break;
-        case LogMenuAction.delete:
-          await EMClient.getInstance.chatManager.deleteRemoteMessagesWithIds(
-            conversationId: message.conversationId!,
-            type: EMConversationType.values[message.chatType.index],
-            msgIds: [message.msgId],
+        // 如果包含消息，增加功能按钮
+        final message = entry.message;
+        if (message != null) {
+          items.add(
+            LogMenuItem(
+              title: '发送已读ACK',
+              onTap: () async {
+                try {
+                  await EMClient.getInstance.chatManager.sendMessageReadAck(
+                    message,
+                  );
+                  addLog('已发送已读确认');
+                } catch (e) {
+                  addAppErrLog('发送已读确认失败: $e');
+                }
+              },
+            ),
           );
-          break;
-        case LogMenuAction.recall:
-          await EMClient.getInstance.chatManager.recallMessage(message.msgId);
-          break;
-        case LogMenuAction.modify:
-          await EMClient.getInstance.chatManager.modifyMessage(
-            messageId: message.msgId,
-            msgBody: EMTextMessageBody(content: 'modify content'),
+          items.add(
+            LogMenuItem(
+              title: '从服务器删除',
+              onTap: () async {
+                try {
+                  addSendLog('开始删除消息');
+                  await EMClient.getInstance.chatManager
+                      .deleteRemoteMessagesWithIds(
+                        conversationId: message.conversationId!,
+                        type: EMConversationType.values[message.chatType.index],
+                        msgIds: [message.msgId],
+                      );
+                  addReceiveLog('删除消息成功');
+                } catch (e) {
+                  addAppErrLog('删除失败: $e');
+                }
+              },
+            ),
           );
-          break;
-      }
-    } catch (e) {
-      addAppErrLog('日志操作失败: ${e.toString()}');
-    }
+          items.add(
+            LogMenuItem(
+              title: '修改',
+              onTap: () async {
+                try {
+                  addSendLog('开始修改消息');
+                  final msg = await EMClient.getInstance.chatManager
+                      .modifyMessage(
+                        messageId: message.msgId,
+                        msgBody: EMTextMessageBody(content: 'modify content'),
+                      );
+                  addSendLog(
+                    '${msg.from}: ${msg.toJson().toString()}',
+                    message: msg,
+                  );
+                } catch (e) {
+                  addAppErrLog('修改失败: $e');
+                }
+              },
+            ),
+          );
+          items.add(
+            LogMenuItem(
+              title: '撤回',
+              onTap: () async {
+                try {
+                  addSendLog('开始撤回消息');
+                  await EMClient.getInstance.chatManager.recallMessage(
+                    message.msgId,
+                  );
+                  addReceiveLog('撤回消息成功');
+                } catch (e) {
+                  addAppErrLog('撤回失败: $e');
+                }
+              },
+            ),
+          );
+        }
+        return items;
+      },
+    );
   }
 
   Future<void> _sendTextMessage(String text) async {
