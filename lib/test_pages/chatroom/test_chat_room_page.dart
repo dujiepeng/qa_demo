@@ -36,6 +36,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
   final _logController = LogController();
   final _repeatCountController = TextEditingController(text: '1');
   String _roomId = '';
+  bool _isJoined = false;
 
   @override
   void initState() {
@@ -54,10 +55,12 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
       final room = await EMClient.getInstance.chatRoomManager
           .fetchChatRoomInfoFromServer(_roomId);
       _addLog('已获取聊天室详情: ${room.name} (Owner: ${room.owner})');
-      // 如果获取成功，说明 ID 有效且当前处于可操作状态
+      _isJoined = true;
     } catch (e) {
       _addLog('获取聊天室信息失败，请尝试重新 Join: $e');
-      // 此时界面仍由于 _roomId 不为空显示 Leave，但用户操作会报错并可重新 Join
+      _isJoined = false;
+    } finally {
+      setState(() {});
     }
   }
 
