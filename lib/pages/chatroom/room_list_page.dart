@@ -47,9 +47,9 @@ class _RoomListPageState extends State<RoomListPage> {
     }
   }
 
-  Future<void> _fetchChatRooms() async {
+  Future<void> _fetchChatRooms({bool silent = false}) async {
     setState(() {
-      _isLoading = true;
+      if (!silent) _isLoading = true;
       _pageNum = 1;
       _hasMore = true;
     });
@@ -166,14 +166,14 @@ class _RoomListPageState extends State<RoomListPage> {
               elevation: 0,
               iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
             ),
-            body: _isLoading
+            body: (_isLoading && _chatRooms.isEmpty)
                 ? Center(
                     child: CircularProgressIndicator(
                       color: AppColors.primary(isDark),
                     ),
                   )
                 : RefreshIndicator(
-                    onRefresh: _fetchChatRooms,
+                    onRefresh: () => _fetchChatRooms(silent: true),
                     child: _chatRooms.isEmpty
                         ? Center(
                             child: Text(
@@ -267,9 +267,7 @@ class _RoomListPageState extends State<RoomListPage> {
                                             context,
                                             MaterialPageRoute(
                                               builder: (context) =>
-                                                  RoomPage(
-                                                    roomId: room.roomId,
-                                                  ),
+                                                  RoomPage(roomId: room.roomId),
                                             ),
                                           );
                                         }
