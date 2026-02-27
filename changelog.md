@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.57.0+146] - 2025-02-14
+### Fix
+- 修复了由于过度替换 `Test` 字符串导致的 Flutter 核心类名错误（`HitTestBehavior` 被错误修改为 `HitBehavior`）。
+- 修正了 `CommonTestLayout` 组件在物理重命名为 `CommonLayout.dart` 后的引用一致性。
+
 ## [1.56.0+145] - 2025-02-14
 ### Refactor
 - 全局移除了文件名以及类名中的 `test_` 和 `Test` 前缀，使命名更加正规和简洁。
