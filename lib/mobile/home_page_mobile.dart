@@ -5,7 +5,7 @@ import '../theme/app_colors.dart';
 import '../common/utils/version_manager.dart';
 import '../common/utils/chat_event_widget.dart';
 import 'me_page_mobile.dart';
-import 'test_page_mobile.dart';
+import 'page_mobile.dart';
 
 class HomePageMobile extends StatefulWidget {
   const HomePageMobile({super.key});
@@ -23,7 +23,7 @@ class _HomePageMobileState extends State<HomePageMobile> {
   void initState() {
     super.initState();
     _mePage = const MePageMobile();
-    _testPage = const TestPageMobile();
+    _testPage = const PageMobile();
   }
 
   @override

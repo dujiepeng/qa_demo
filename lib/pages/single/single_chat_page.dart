@@ -7,21 +7,21 @@ import '../../common/widgets/grid_action_menu.dart';
 import '../../common/log_content_page.dart';
 import '../../common/widgets/common_input_row.dart';
 import '../../common/widgets/common_section_title.dart';
-import '../../common/widgets/common_test_layout.dart';
-import '../../common/mixins/test_base_mixin.dart';
+import '../../common/widgets/common_layout.dart';
+import '../../common/mixins/base_mixin.dart';
 
-class TestSingleChatPage extends StatefulWidget {
-  const TestSingleChatPage({super.key, this.userId, this.showAppBar = true});
+class SingleChatPage extends StatefulWidget {
+  const SingleChatPage({super.key, this.userId, this.showAppBar = true});
 
   final String? userId;
   final bool showAppBar;
 
   @override
-  State<TestSingleChatPage> createState() => _TestSingleChatPageState();
+  State<SingleChatPage> createState() => _SingleChatPageState();
 }
 
-class _TestSingleChatPageState extends State<TestSingleChatPage>
-    with TestBaseMixin {
+class _SingleChatPageState extends State<SingleChatPage>
+    with BaseMixin {
   final _eventKey = 'single_test';
   final _settings = AppSettings();
   final _userIdController = TextEditingController();
@@ -206,7 +206,7 @@ class _TestSingleChatPageState extends State<TestSingleChatPage>
   @override
   Widget build(BuildContext context) {
     final isDark = _settings.isDarkMode;
-    return CommonTestLayout(
+    return CommonLayout(
       isDark: isDark,
       showAppBar: widget.showAppBar,
       appBar: widget.showAppBar ? _buildAppBar(isDark) : null,

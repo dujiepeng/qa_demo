@@ -3,25 +3,24 @@ import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 
-/// 群组禁言列表页面
-class TestGroupMuteListPage extends StatefulWidget {
-  const TestGroupMuteListPage({super.key, required this.groupId});
+class ChatRoomMembersPage extends StatefulWidget {
+  const ChatRoomMembersPage({super.key, required this.roomId});
 
-  final String groupId;
+  final String roomId;
 
   @override
-  State<TestGroupMuteListPage> createState() => _TestGroupMuteListPageState();
+  State<ChatRoomMembersPage> createState() =>
+      _ChatRoomMembersPageState();
 }
 
-class _TestGroupMuteListPageState extends State<TestGroupMuteListPage> {
+class _ChatRoomMembersPageState extends State<ChatRoomMembersPage> {
   final _settings = AppSettings();
   final _scrollController = ScrollController();
   List<String> _members = [];
-  Map<String, int> _muteMap = {}; // 用户ID -> 禁言时长(毫秒)
   bool _isLoading = false;
   bool _isLoadingMore = false;
   String? _errorMessage;
-  int _pageNum = 1;
+  String _cursor = '';
   bool _hasMore = true;
 
   @override
@@ -37,7 +36,6 @@ class _TestGroupMuteListPageState extends State<TestGroupMuteListPage> {
     super.dispose();
   }
 
-  /// 滚动监听
   void _onScroll() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
@@ -47,30 +45,23 @@ class _TestGroupMuteListPageState extends State<TestGroupMuteListPage> {
     }
   }
 
-  /// 获取群组禁言列表
   Future<void> _fetchMembers() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
-      _pageNum = 1;
+      _cursor = '';
       _hasMore = true;
     });
 
     try {
-      // 获取群组禁言列表
-      final result = await EMClient.getInstance.groupManager
-          .fetchMuteListFromServer(
-            widget.groupId,
-            pageNum: _pageNum,
-            pageSize: 50,
-          );
+      // 获取聊天室成员列表
+      final result = await EMClient.getInstance.chatRoomManager
+          .fetchChatRoomMembers(widget.roomId, cursor: '', pageSize: 50);
 
       setState(() {
-        _muteMap = result;
-        _members = result.keys.toList();
-        _pageNum += 1;
-        // 如果返回的数据少于请求的数量，说明没有更多数据了
-        _hasMore = result.length >= 50;
+        _members = result.data;
+        _cursor = result.cursor ?? '';
+        _hasMore = _cursor.isNotEmpty;
         _isLoading = false;
       });
     } catch (e) {
@@ -81,7 +72,6 @@ class _TestGroupMuteListPageState extends State<TestGroupMuteListPage> {
     }
   }
 
-  /// 加载更多成员
   Future<void> _loadMore() async {
     if (_isLoadingMore || !_hasMore) return;
 
@@ -90,33 +80,28 @@ class _TestGroupMuteListPageState extends State<TestGroupMuteListPage> {
     });
 
     try {
-      // 增加页码
-      _pageNum++;
-
-      final result = await EMClient.getInstance.groupManager
-          .fetchMuteListFromServer(
-            widget.groupId,
-            pageNum: _pageNum,
-            pageSize: 50,
-          );
+      final result = await EMClient.getInstance.chatRoomManager
+          .fetchChatRoomMembers(widget.roomId, cursor: _cursor, pageSize: 50);
 
       setState(() {
-        _muteMap.addAll(result);
-        _members.addAll(result.keys);
-        // 如果返回的数据少于请求的数量，说明没有更多数据了
-        _hasMore = result.length >= 50;
+        _members.addAll(result.data);
+        _cursor = result.cursor ?? '';
+        _hasMore = _cursor.isNotEmpty;
         _isLoadingMore = false;
       });
     } catch (e) {
       setState(() {
-        // 加载失败时回退页码
-        _pageNum--;
         _isLoadingMore = false;
       });
+      // 加载更多失败时显示提示
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载更多失败: ${e.toString()}')));
+      }
     }
   }
 
-  /// 显示成员操作菜单
   void _showMemberActions(String memberId, bool isDark) {
     showDialog(
       context: context,
@@ -137,19 +122,51 @@ class _TestGroupMuteListPageState extends State<TestGroupMuteListPage> {
           children: [
             Divider(height: 1, color: AppColors.glassBorder(isDark)),
 
-            // 移除禁言
+            // 设置管理员
             ListTile(
               leading: Icon(
-                Icons.mic_outlined,
+                Icons.admin_panel_settings_outlined,
                 color: AppColors.primary(isDark),
               ),
               title: Text(
-                '移除禁言',
+                '设置管理员',
                 style: TextStyle(color: AppColors.textPrimary(isDark)),
               ),
               onTap: () {
                 Navigator.pop(context);
-                _removeMute(memberId);
+                _setAdmin(memberId);
+              },
+            ),
+
+            // 禁言
+            ListTile(
+              leading: Icon(
+                Icons.mic_off_outlined,
+                color: AppColors.primary(isDark),
+              ),
+              title: Text(
+                '禁言',
+                style: TextStyle(color: AppColors.textPrimary(isDark)),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _muteMember(memberId);
+              },
+            ),
+
+            // 加入白名单
+            ListTile(
+              leading: Icon(
+                Icons.verified_user_outlined,
+                color: AppColors.primary(isDark),
+              ),
+              title: Text(
+                '加入白名单',
+                style: TextStyle(color: AppColors.textPrimary(isDark)),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _addToWhitelist(memberId);
               },
             ),
           ],
@@ -167,24 +184,54 @@ class _TestGroupMuteListPageState extends State<TestGroupMuteListPage> {
     );
   }
 
-  /// 移除禁言
-  Future<void> _removeMute(String memberId) async {
+  Future<void> _setAdmin(String memberId) async {
     try {
-      await EMClient.getInstance.groupManager.unMuteMembers(widget.groupId, [
+      await EMClient.getInstance.chatRoomManager.addChatRoomAdmin(
+        widget.roomId,
         memberId,
-      ]);
+      );
       if (mounted) {
-        _fetchMembers();
-        _showResultDialog('移除 $memberId 禁言成功', true);
+        _showResultDialog('已设置 $memberId 为管理员', true);
       }
     } catch (e) {
       if (mounted) {
-        _showResultDialog('移除 $memberId 禁言失败: ${e.toString()}', false);
+        _showResultDialog('设置管理员失败: ${e.toString()}', false);
       }
     }
   }
 
-  /// 显示操作结果对话框
+  Future<void> _muteMember(String memberId) async {
+    try {
+      await EMClient.getInstance.chatRoomManager.muteChatRoomMembers(
+        widget.roomId,
+        [memberId],
+      );
+      if (mounted) {
+        _showResultDialog('已禁言 $memberId', true);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showResultDialog('禁言失败: ${e.toString()}', false);
+      }
+    }
+  }
+
+  Future<void> _addToWhitelist(String memberId) async {
+    try {
+      await EMClient.getInstance.chatRoomManager.addMembersToChatRoomAllowList(
+        widget.roomId,
+        [memberId],
+      );
+      if (mounted) {
+        _showResultDialog('已将 $memberId 加入白名单', true);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showResultDialog('加入白名单失败: ${e.toString()}', false);
+      }
+    }
+  }
+
   void _showResultDialog(String message, bool isSuccess) {
     final isDark = _settings.isDarkMode;
     showDialog(
@@ -220,28 +267,6 @@ class _TestGroupMuteListPageState extends State<TestGroupMuteListPage> {
     );
   }
 
-  /// 格式化禁言时长
-  String _formatMuteDuration(int milliseconds) {
-    if (milliseconds <= 0) {
-      return '永久禁言';
-    }
-
-    final duration = Duration(milliseconds: milliseconds);
-    final days = duration.inDays;
-    final hours = duration.inHours % 24;
-    final minutes = duration.inMinutes % 60;
-
-    if (days > 0) {
-      return '$days天$hours小时';
-    } else if (hours > 0) {
-      return '$hours小时$minutes分钟';
-    } else if (minutes > 0) {
-      return '$minutes分钟';
-    } else {
-      return '少于1分钟';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = _settings.isDarkMode;
@@ -263,7 +288,7 @@ class _TestGroupMuteListPageState extends State<TestGroupMuteListPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '禁言列表 (${_members.length})',
+                '聊天室成员 (${_members.length})',
                 style: TextStyle(
                   color: AppColors.textPrimary(isDark),
                   fontSize: 18,
@@ -316,7 +341,7 @@ class _TestGroupMuteListPageState extends State<TestGroupMuteListPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              '获取禁言列表失败',
+              '获取成员列表失败',
               style: TextStyle(
                 color: AppColors.textPrimary(isDark),
                 fontSize: 16,
@@ -351,13 +376,13 @@ class _TestGroupMuteListPageState extends State<TestGroupMuteListPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.mic_off_outlined,
+              Icons.people_outline,
               size: 64,
               color: AppColors.textSecondary(isDark),
             ),
             const SizedBox(height: 16),
             Text(
-              '暂无禁言成员',
+              '暂无成员',
               style: TextStyle(
                 color: AppColors.textSecondary(isDark),
                 fontSize: 16,
@@ -417,26 +442,12 @@ class _TestGroupMuteListPageState extends State<TestGroupMuteListPage> {
                 fontSize: 16,
               ),
             ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'ID: $member',
-                  style: TextStyle(
-                    color: AppColors.textSecondary(isDark),
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '禁言时长: ${_formatMuteDuration(_muteMap[member] ?? 0)}',
-                  style: TextStyle(
-                    color: Colors.orange,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+            subtitle: Text(
+              'ID: $member',
+              style: TextStyle(
+                color: AppColors.textSecondary(isDark),
+                fontSize: 12,
+              ),
             ),
           ),
         );

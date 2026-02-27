@@ -3,18 +3,17 @@ import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 
-class TestChatRoomChangeOwnerPage extends StatefulWidget {
-  const TestChatRoomChangeOwnerPage({super.key, required this.roomId});
+/// 群组成员列表页面
+class GroupMembersPage extends StatefulWidget {
+  const GroupMembersPage({super.key, required this.groupId});
 
-  final String roomId;
+  final String groupId;
 
   @override
-  State<TestChatRoomChangeOwnerPage> createState() =>
-      _TestChatRoomChangeOwnerPageState();
+  State<GroupMembersPage> createState() => _GroupMembersPageState();
 }
 
-class _TestChatRoomChangeOwnerPageState
-    extends State<TestChatRoomChangeOwnerPage> {
+class _GroupMembersPageState extends State<GroupMembersPage> {
   final _settings = AppSettings();
   final _scrollController = ScrollController();
   List<String> _members = [];
@@ -37,6 +36,7 @@ class _TestChatRoomChangeOwnerPageState
     super.dispose();
   }
 
+  /// 滚动监听
   void _onScroll() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
@@ -46,6 +46,83 @@ class _TestChatRoomChangeOwnerPageState
     }
   }
 
+  /// 添加成员
+  Future<void> _addMembers() async {
+    final isDark = _settings.isDarkMode;
+    final controller = TextEditingController();
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: isDark ? const Color(0xFF2C2C2E) : Colors.white,
+        title: Text(
+          '添加成员',
+          style: TextStyle(
+            color: AppColors.textPrimary(isDark),
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: TextStyle(color: AppColors.textPrimary(isDark)),
+          decoration: InputDecoration(
+            hintText: '请输入成员 ID',
+            hintStyle: TextStyle(color: AppColors.textSecondary(isDark)),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: AppColors.glassBorder(isDark)),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: AppColors.primary(isDark)),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              '取消',
+              style: TextStyle(color: AppColors.textSecondary(isDark)),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              final input = controller.text.trim();
+              if (input.isNotEmpty) {
+                Navigator.pop(context, input);
+              }
+            },
+            child: Text(
+              '确认',
+              style: TextStyle(color: AppColors.primary(isDark)),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    // 处理输入结果
+    if (result != null && result.isNotEmpty) {
+      try {
+        await EMClient.getInstance.groupManager.addMembers(widget.groupId, [
+          result,
+        ]);
+        if (mounted) {
+          _showResultDialog('已添加成员 $result', true);
+          // 刷新成员列表
+          _fetchMembers();
+        }
+      } catch (e) {
+        if (mounted) {
+          _showResultDialog('添加成员失败: ${e.toString()}', false);
+        }
+      }
+    }
+  }
+
+  /// 获取群组成员列表
   Future<void> _fetchMembers() async {
     setState(() {
       _isLoading = true;
@@ -55,9 +132,9 @@ class _TestChatRoomChangeOwnerPageState
     });
 
     try {
-      // 获取聊天室成员列表
-      final result = await EMClient.getInstance.chatRoomManager
-          .fetchChatRoomMembers(widget.roomId, cursor: '', pageSize: 50);
+      // 获取群组成员列表
+      final result = await EMClient.getInstance.groupManager
+          .fetchMemberListFromServer(widget.groupId, pageSize: 50, cursor: '');
 
       setState(() {
         _members = result.data;
@@ -73,6 +150,7 @@ class _TestChatRoomChangeOwnerPageState
     }
   }
 
+  /// 加载更多成员
   Future<void> _loadMore() async {
     if (_isLoadingMore || !_hasMore) return;
 
@@ -81,8 +159,12 @@ class _TestChatRoomChangeOwnerPageState
     });
 
     try {
-      final result = await EMClient.getInstance.chatRoomManager
-          .fetchChatRoomMembers(widget.roomId, cursor: _cursor, pageSize: 50);
+      final result = await EMClient.getInstance.groupManager
+          .fetchMemberListFromServer(
+            widget.groupId,
+            pageSize: 50,
+            cursor: _cursor,
+          );
 
       setState(() {
         _members.addAll(result.data);
@@ -103,6 +185,7 @@ class _TestChatRoomChangeOwnerPageState
     }
   }
 
+  /// 显示成员操作菜单
   void _showMemberActions(String memberId, bool isDark) {
     showDialog(
       context: context,
@@ -123,19 +206,51 @@ class _TestChatRoomChangeOwnerPageState
           children: [
             Divider(height: 1, color: AppColors.glassBorder(isDark)),
 
-            // 转移聊天室
+            // 设置管理员
             ListTile(
               leading: Icon(
                 Icons.admin_panel_settings_outlined,
                 color: AppColors.primary(isDark),
               ),
               title: Text(
-                '转移聊天室',
+                '设置管理员',
                 style: TextStyle(color: AppColors.textPrimary(isDark)),
               ),
               onTap: () {
                 Navigator.pop(context);
-                _changeOwner(memberId);
+                _setAdmin(memberId);
+              },
+            ),
+
+            // 禁言
+            ListTile(
+              leading: Icon(
+                Icons.mic_off_outlined,
+                color: AppColors.primary(isDark),
+              ),
+              title: Text(
+                '禁言',
+                style: TextStyle(color: AppColors.textPrimary(isDark)),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _muteMember(memberId);
+              },
+            ),
+
+            // 加入白名单
+            ListTile(
+              leading: Icon(
+                Icons.verified_user_outlined,
+                color: AppColors.primary(isDark),
+              ),
+              title: Text(
+                '加入白名单',
+                style: TextStyle(color: AppColors.textPrimary(isDark)),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _addToWhitelist(memberId);
               },
             ),
           ],
@@ -153,22 +268,56 @@ class _TestChatRoomChangeOwnerPageState
     );
   }
 
-  Future<void> _changeOwner(String memberId) async {
+  /// 设置管理员
+  Future<void> _setAdmin(String memberId) async {
     try {
-      await EMClient.getInstance.chatRoomManager.changeOwner(
-        widget.roomId,
+      await EMClient.getInstance.groupManager.addAdmin(
+        widget.groupId,
         memberId,
       );
       if (mounted) {
-        _showResultDialog('已转移聊天室给 $memberId', true);
+        _showResultDialog('已设置 $memberId 为管理员', true);
       }
     } catch (e) {
       if (mounted) {
-        _showResultDialog('转移聊天室失败: ${e.toString()}', false);
+        _showResultDialog('设置管理员失败: ${e.toString()}', false);
       }
     }
   }
 
+  /// 禁言成员
+  Future<void> _muteMember(String memberId) async {
+    try {
+      await EMClient.getInstance.groupManager.muteMembers(widget.groupId, [
+        memberId,
+      ]);
+      if (mounted) {
+        _showResultDialog('已禁言 $memberId', true);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showResultDialog('禁言失败: ${e.toString()}', false);
+      }
+    }
+  }
+
+  /// 加入白名单
+  Future<void> _addToWhitelist(String memberId) async {
+    try {
+      await EMClient.getInstance.groupManager.addAllowList(widget.groupId, [
+        memberId,
+      ]);
+      if (mounted) {
+        _showResultDialog('已将 $memberId 加入白名单', true);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showResultDialog('加入白名单失败: ${e.toString()}', false);
+      }
+    }
+  }
+
+  /// 显示操作结果对话框
   void _showResultDialog(String message, bool isSuccess) {
     final isDark = _settings.isDarkMode;
     showDialog(
@@ -225,7 +374,7 @@ class _TestChatRoomChangeOwnerPageState
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '聊天室成员 (${_members.length})',
+                '群组成员 (${_members.length})',
                 style: TextStyle(
                   color: AppColors.textPrimary(isDark),
                   fontSize: 18,
@@ -234,6 +383,11 @@ class _TestChatRoomChangeOwnerPageState
               ),
               Row(
                 children: [
+                  IconButton(
+                    icon: Icon(Icons.add, color: AppColors.primary(isDark)),
+                    onPressed: _isLoading ? null : _addMembers,
+                    tooltip: '添加',
+                  ),
                   IconButton(
                     icon: Icon(Icons.refresh, color: AppColors.primary(isDark)),
                     onPressed: _isLoading ? null : _fetchMembers,

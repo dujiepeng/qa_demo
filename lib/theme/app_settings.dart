@@ -45,11 +45,11 @@ class AppSettings extends ChangeNotifier {
     }
   }
 
-  bool _isTestMode = true; // 测试模式
-  bool get isTestMode => _isTestMode;
-  set isTestMode(bool value) {
-    if (_isTestMode != value) {
-      _isTestMode = value;
+  bool _isMode = true; // 测试模式
+  bool get isMode => _isMode;
+  set isMode(bool value) {
+    if (_isMode != value) {
+      _isMode = value;
       notifyListeners();
     }
   }
@@ -73,7 +73,7 @@ class AppSettings extends ChangeNotifier {
   static const String _keyRestServer = 'rest_server';
   static const String _keyIsDarkMode = 'is_dark_mode';
   static const String _keyIsLoggedIn = 'is_logged_in';
-  static const String _keyIsTestMode = 'is_test_mode';
+  static const String _keyIsMode = 'is_mode';
 
   // 从本地加载存储的配置
   Future<void> loadSettings() async {
@@ -87,7 +87,7 @@ class AppSettings extends ChangeNotifier {
         prefs.getString(_keyRestServer) ?? 'https://a1-hsb.easemob.com';
     _isDarkMode = prefs.getBool(_keyIsDarkMode) ?? true;
     isLoggedIn = prefs.getBool(_keyIsLoggedIn) ?? false;
-    _isTestMode = prefs.getBool(_keyIsTestMode) ?? true;
+    _isMode = prefs.getBool(_keyIsMode) ?? true;
 
     // 加载历史记录
     final historyJson = prefs.getStringList(_keyConfigHistory);
@@ -122,7 +122,7 @@ class AppSettings extends ChangeNotifier {
     await prefs.setString(_keyRestServer, restServer);
     await prefs.setBool(_keyIsDarkMode, _isDarkMode);
     await prefs.setBool(_keyIsLoggedIn, isLoggedIn);
-    await prefs.setBool(_keyIsTestMode, _isTestMode);
+    await prefs.setBool(_keyIsMode, _isMode);
 
     // 保存历史记录
     final historyJson = configHistory

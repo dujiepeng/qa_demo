@@ -6,7 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import '../widgets/log_view.dart';
 
 /// 测试页面的基础 Mixin，提供常用的日志处理和文件获取功能
-mixin TestBaseMixin<T extends StatefulWidget> on State<T> {
+mixin BaseMixin<T extends StatefulWidget> on State<T> {
   LogController get logController;
 
   void addLog(String content) => logController.addLog(content);

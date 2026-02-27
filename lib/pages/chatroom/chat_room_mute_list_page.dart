@@ -3,27 +3,31 @@ import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 
-/// 群组管理员列表页面
-class TestGroupAdminsPage extends StatefulWidget {
-  const TestGroupAdminsPage({super.key, required this.groupId});
+class ChatRoomMuteListPage extends StatefulWidget {
+  const ChatRoomMuteListPage({super.key, required this.roomId});
 
-  final String groupId;
+  final String roomId;
 
   @override
-  State<TestGroupAdminsPage> createState() => _TestGroupAdminsPageState();
+  State<ChatRoomMuteListPage> createState() =>
+      _ChatRoomMuteListPageState();
 }
 
-class _TestGroupAdminsPageState extends State<TestGroupAdminsPage> {
+class _ChatRoomMuteListPageState extends State<ChatRoomMuteListPage> {
   final _settings = AppSettings();
   final _scrollController = ScrollController();
   List<String> _members = [];
   bool _isLoading = false;
+  bool _isLoadingMore = false;
   String? _errorMessage;
+  int _pageNum = 1;
+  bool _hasMore = true;
 
   @override
   void initState() {
     super.initState();
     _fetchMembers();
+    _scrollController.addListener(_onScroll);
   }
 
   @override
@@ -32,20 +36,37 @@ class _TestGroupAdminsPageState extends State<TestGroupAdminsPage> {
     super.dispose();
   }
 
-  /// 获取群组管理员列表
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      if (!_isLoadingMore && _hasMore) {
+        _loadMore();
+      }
+    }
+  }
+
   Future<void> _fetchMembers() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _pageNum = 1;
+      _hasMore = true;
     });
 
     try {
-      // 获取群组信息
-      final result = await EMClient.getInstance.groupManager
-          .fetchGroupInfoFromServer(widget.groupId);
+      // 获取聊天室成员列表
+      final result = await EMClient.getInstance.chatRoomManager
+          .fetchChatRoomMuteList(
+            widget.roomId,
+            pageNum: _pageNum,
+            pageSize: 50,
+          );
 
       setState(() {
-        _members = result.adminList ?? [];
+        _members = result;
+        _pageNum += 1;
+        // 如果返回的数据少于请求的数量，说明没有更多数据了
+        _hasMore = result.length >= 50;
         _isLoading = false;
       });
     } catch (e) {
@@ -56,7 +77,39 @@ class _TestGroupAdminsPageState extends State<TestGroupAdminsPage> {
     }
   }
 
-  /// 显示成员操作菜单
+  Future<void> _loadMore() async {
+    if (_isLoadingMore || !_hasMore) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      // 增加页码
+      _pageNum++;
+
+      final result = await EMClient.getInstance.chatRoomManager
+          .fetchChatRoomMuteList(
+            widget.roomId,
+            pageNum: _pageNum,
+            pageSize: 50,
+          );
+
+      setState(() {
+        _members.addAll(result);
+        // 如果返回的数据少于请求的数量，说明没有更多数据了
+        _hasMore = result.length >= 50;
+        _isLoadingMore = false;
+      });
+    } catch (e) {
+      setState(() {
+        // 加载失败时回退页码
+        _pageNum--;
+        _isLoadingMore = false;
+      });
+    }
+  }
+
   void _showMemberActions(String memberId, bool isDark) {
     showDialog(
       context: context,
@@ -75,22 +128,21 @@ class _TestGroupAdminsPageState extends State<TestGroupAdminsPage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(height: 16),
             Divider(height: 1, color: AppColors.glassBorder(isDark)),
 
-            // 移除管理员
+            // 移除禁言
             ListTile(
               leading: Icon(
                 Icons.admin_panel_settings_outlined,
                 color: AppColors.primary(isDark),
               ),
               title: Text(
-                '移除管理员',
+                '移除禁言',
                 style: TextStyle(color: AppColors.textPrimary(isDark)),
               ),
               onTap: () {
                 Navigator.pop(context);
-                _removeAdmin(memberId);
+                _removeMute(memberId);
               },
             ),
           ],
@@ -108,25 +160,23 @@ class _TestGroupAdminsPageState extends State<TestGroupAdminsPage> {
     );
   }
 
-  /// 移除管理员
-  Future<void> _removeAdmin(String memberId) async {
+  Future<void> _removeMute(String memberId) async {
     try {
-      await EMClient.getInstance.groupManager.removeAdmin(
-        widget.groupId,
-        memberId,
+      await EMClient.getInstance.chatRoomManager.unMuteChatRoomMembers(
+        widget.roomId,
+        [memberId],
       );
       if (mounted) {
         _fetchMembers();
-        _showResultDialog('移除 $memberId 管理员成功', true);
+        _showResultDialog('移除 $memberId 禁言列表', true);
       }
     } catch (e) {
       if (mounted) {
-        _showResultDialog('移除 $memberId 管理员失败: ${e.toString()}', false);
+        _showResultDialog('移除 $memberId 禁言列表失败: ${e.toString()}', false);
       }
     }
   }
 
-  /// 显示操作结果对话框
   void _showResultDialog(String message, bool isSuccess) {
     final isDark = _settings.isDarkMode;
     showDialog(
@@ -183,7 +233,7 @@ class _TestGroupAdminsPageState extends State<TestGroupAdminsPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '管理员 (${_members.length})',
+                '禁言列表 (${_members.length})',
                 style: TextStyle(
                   color: AppColors.textPrimary(isDark),
                   fontSize: 18,
@@ -236,7 +286,7 @@ class _TestGroupAdminsPageState extends State<TestGroupAdminsPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              '获取管理员列表失败',
+              '获取成员列表失败',
               style: TextStyle(
                 color: AppColors.textPrimary(isDark),
                 fontSize: 16,
@@ -271,13 +321,13 @@ class _TestGroupAdminsPageState extends State<TestGroupAdminsPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.admin_panel_settings_outlined,
+              Icons.people_outline,
               size: 64,
               color: AppColors.textSecondary(isDark),
             ),
             const SizedBox(height: 16),
             Text(
-              '暂无管理员',
+              '暂无成员',
               style: TextStyle(
                 color: AppColors.textSecondary(isDark),
                 fontSize: 16,
@@ -291,8 +341,25 @@ class _TestGroupAdminsPageState extends State<TestGroupAdminsPage> {
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: _members.length,
+      itemCount: _members.length + (_hasMore ? 1 : 0),
       itemBuilder: (context, index) {
+        // 显示加载更多指示器
+        if (index == _members.length) {
+          return Container(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            alignment: Alignment.center,
+            child: _isLoadingMore
+                ? CircularProgressIndicator(color: AppColors.primary(isDark))
+                : Text(
+                    '加载更多...',
+                    style: TextStyle(
+                      color: AppColors.textSecondary(isDark),
+                      fontSize: 12,
+                    ),
+                  ),
+          );
+        }
+
         final member = _members[index];
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

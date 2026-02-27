@@ -3,31 +3,27 @@ import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 
-class TestChatRoomMuteListPage extends StatefulWidget {
-  const TestChatRoomMuteListPage({super.key, required this.roomId});
+/// 群组白名单页面
+class GroupWhiteListPage extends StatefulWidget {
+  const GroupWhiteListPage({super.key, required this.groupId});
 
-  final String roomId;
+  final String groupId;
 
   @override
-  State<TestChatRoomMuteListPage> createState() =>
-      _TestChatRoomMuteListPageState();
+  State<GroupWhiteListPage> createState() => _GroupWhiteListPageState();
 }
 
-class _TestChatRoomMuteListPageState extends State<TestChatRoomMuteListPage> {
+class _GroupWhiteListPageState extends State<GroupWhiteListPage> {
   final _settings = AppSettings();
   final _scrollController = ScrollController();
   List<String> _members = [];
   bool _isLoading = false;
-  bool _isLoadingMore = false;
   String? _errorMessage;
-  int _pageNum = 1;
-  bool _hasMore = true;
 
   @override
   void initState() {
     super.initState();
     _fetchMembers();
-    _scrollController.addListener(_onScroll);
   }
 
   @override
@@ -36,37 +32,20 @@ class _TestChatRoomMuteListPageState extends State<TestChatRoomMuteListPage> {
     super.dispose();
   }
 
-  void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      if (!_isLoadingMore && _hasMore) {
-        _loadMore();
-      }
-    }
-  }
-
+  /// 获取群组白名单
   Future<void> _fetchMembers() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
-      _pageNum = 1;
-      _hasMore = true;
     });
 
     try {
-      // 获取聊天室成员列表
-      final result = await EMClient.getInstance.chatRoomManager
-          .fetchChatRoomMuteList(
-            widget.roomId,
-            pageNum: _pageNum,
-            pageSize: 50,
-          );
+      // 获取群组白名单
+      final result = await EMClient.getInstance.groupManager
+          .fetchAllowListFromServer(widget.groupId);
 
       setState(() {
         _members = result;
-        _pageNum += 1;
-        // 如果返回的数据少于请求的数量，说明没有更多数据了
-        _hasMore = result.length >= 50;
         _isLoading = false;
       });
     } catch (e) {
@@ -77,39 +56,7 @@ class _TestChatRoomMuteListPageState extends State<TestChatRoomMuteListPage> {
     }
   }
 
-  Future<void> _loadMore() async {
-    if (_isLoadingMore || !_hasMore) return;
-
-    setState(() {
-      _isLoadingMore = true;
-    });
-
-    try {
-      // 增加页码
-      _pageNum++;
-
-      final result = await EMClient.getInstance.chatRoomManager
-          .fetchChatRoomMuteList(
-            widget.roomId,
-            pageNum: _pageNum,
-            pageSize: 50,
-          );
-
-      setState(() {
-        _members.addAll(result);
-        // 如果返回的数据少于请求的数量，说明没有更多数据了
-        _hasMore = result.length >= 50;
-        _isLoadingMore = false;
-      });
-    } catch (e) {
-      setState(() {
-        // 加载失败时回退页码
-        _pageNum--;
-        _isLoadingMore = false;
-      });
-    }
-  }
-
+  /// 显示成员操作菜单
   void _showMemberActions(String memberId, bool isDark) {
     showDialog(
       context: context,
@@ -128,21 +75,22 @@ class _TestChatRoomMuteListPageState extends State<TestChatRoomMuteListPage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            SizedBox(height: 16),
             Divider(height: 1, color: AppColors.glassBorder(isDark)),
 
-            // 移除禁言
+            // 移除白名单
             ListTile(
               leading: Icon(
-                Icons.admin_panel_settings_outlined,
+                Icons.remove_circle_outline,
                 color: AppColors.primary(isDark),
               ),
               title: Text(
-                '移除禁言',
+                '移除白名单',
                 style: TextStyle(color: AppColors.textPrimary(isDark)),
               ),
               onTap: () {
                 Navigator.pop(context);
-                _removeMute(memberId);
+                _removeFromWhitelist(memberId);
               },
             ),
           ],
@@ -160,23 +108,24 @@ class _TestChatRoomMuteListPageState extends State<TestChatRoomMuteListPage> {
     );
   }
 
-  Future<void> _removeMute(String memberId) async {
+  /// 移除白名单
+  Future<void> _removeFromWhitelist(String memberId) async {
     try {
-      await EMClient.getInstance.chatRoomManager.unMuteChatRoomMembers(
-        widget.roomId,
-        [memberId],
-      );
+      await EMClient.getInstance.groupManager.removeAllowList(widget.groupId, [
+        memberId,
+      ]);
       if (mounted) {
         _fetchMembers();
-        _showResultDialog('移除 $memberId 禁言列表', true);
+        _showResultDialog('移除 $memberId 白名单成功', true);
       }
     } catch (e) {
       if (mounted) {
-        _showResultDialog('移除 $memberId 禁言列表失败: ${e.toString()}', false);
+        _showResultDialog('移除失败: ${e.toString()}', false);
       }
     }
   }
 
+  /// 显示操作结果对话框
   void _showResultDialog(String message, bool isSuccess) {
     final isDark = _settings.isDarkMode;
     showDialog(
@@ -233,7 +182,7 @@ class _TestChatRoomMuteListPageState extends State<TestChatRoomMuteListPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '禁言列表 (${_members.length})',
+                '白名单 (${_members.length})',
                 style: TextStyle(
                   color: AppColors.textPrimary(isDark),
                   fontSize: 18,
@@ -286,7 +235,7 @@ class _TestChatRoomMuteListPageState extends State<TestChatRoomMuteListPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              '获取成员列表失败',
+              '获取白名单失败',
               style: TextStyle(
                 color: AppColors.textPrimary(isDark),
                 fontSize: 16,
@@ -321,13 +270,13 @@ class _TestChatRoomMuteListPageState extends State<TestChatRoomMuteListPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.people_outline,
+              Icons.verified_user_outlined,
               size: 64,
               color: AppColors.textSecondary(isDark),
             ),
             const SizedBox(height: 16),
             Text(
-              '暂无成员',
+              '暂无白名单成员',
               style: TextStyle(
                 color: AppColors.textSecondary(isDark),
                 fontSize: 16,
@@ -341,25 +290,8 @@ class _TestChatRoomMuteListPageState extends State<TestChatRoomMuteListPage> {
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: _members.length + (_hasMore ? 1 : 0),
+      itemCount: _members.length,
       itemBuilder: (context, index) {
-        // 显示加载更多指示器
-        if (index == _members.length) {
-          return Container(
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            alignment: Alignment.center,
-            child: _isLoadingMore
-                ? CircularProgressIndicator(color: AppColors.primary(isDark))
-                : Text(
-                    '加载更多...',
-                    style: TextStyle(
-                      color: AppColors.textSecondary(isDark),
-                      fontSize: 12,
-                    ),
-                  ),
-          );
-        }
-
         final member = _members[index];
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

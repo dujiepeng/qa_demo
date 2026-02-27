@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
-import 'package:qa_flutter/pages/single/test_single_chat_page.dart';
+import 'package:qa_flutter/pages/single/single_chat_page.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 import '../../common/widgets/common_gradient_background.dart';
 
 /// 好友列表页面
-class TestSingleChatListPage extends StatefulWidget {
+class SingleChatListPage extends StatefulWidget {
   final Function(String userId)? onItemTap;
-  const TestSingleChatListPage({super.key, this.onItemTap});
+  const SingleChatListPage({super.key, this.onItemTap});
 
   @override
-  State<TestSingleChatListPage> createState() => _TestSingleChatListPageState();
+  State<SingleChatListPage> createState() => _SingleChatListPageState();
 }
 
-class _TestSingleChatListPageState extends State<TestSingleChatListPage> {
+class _SingleChatListPageState extends State<SingleChatListPage> {
   final _settings = AppSettings();
   final ScrollController _scrollController = ScrollController();
   List<EMContact> _contacts = [];
@@ -26,7 +26,7 @@ class _TestSingleChatListPageState extends State<TestSingleChatListPage> {
     super.initState();
     _fetchContacts();
     EMClient.getInstance.contactManager.addEventHandler(
-      'test_single_chat_list_page',
+      'single_chat_list_page',
       EMContactEventHandler(
         onContactAdded: (username) {
           _fetchContacts();
@@ -230,7 +230,7 @@ class _TestSingleChatListPageState extends State<TestSingleChatListPage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const TestSingleChatPage(),
+                          builder: (context) => const SingleChatPage(),
                         ),
                       );
                     }
@@ -354,7 +354,7 @@ class _TestSingleChatListPageState extends State<TestSingleChatListPage> {
                                           context,
                                           MaterialPageRoute(
                                             builder: (context) =>
-                                                TestSingleChatPage(
+                                                SingleChatPage(
                                                   userId: contact.userId,
                                                 ),
                                           ),

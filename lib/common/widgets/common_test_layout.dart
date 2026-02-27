@@ -4,7 +4,7 @@ import 'common_gradient_background.dart';
 
 /// 通用的测试页面布局组件
 /// 封装了背景渐变、AppBar、以及 Pad/Mobile 的响应式布局
-class CommonTestLayout extends StatelessWidget {
+class CommonLayout extends StatelessWidget {
   final bool isDark;
   final Widget controlPanel;
   final Widget logPanel;
@@ -12,7 +12,7 @@ class CommonTestLayout extends StatelessWidget {
   final double mobileLogHeight;
   final bool showAppBar;
 
-  const CommonTestLayout({
+  const CommonLayout({
     super.key,
     required this.isDark,
     required this.controlPanel,

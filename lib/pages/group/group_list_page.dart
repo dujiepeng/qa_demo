@@ -1,34 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
-import 'package:qa_flutter/pages/chatroom/test_chat_room_page.dart';
+import 'package:qa_flutter/pages/group/group_page.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 import '../../common/widgets/common_gradient_background.dart';
 
-class TestChatRoomListPage extends StatefulWidget {
-  final Function(String roomId)? onItemTap;
-  const TestChatRoomListPage({super.key, this.onItemTap});
+/// 群组列表页面
+class GroupListPage extends StatefulWidget {
+  final Function(String groupId)? onItemTap;
+  const GroupListPage({super.key, this.onItemTap});
 
   @override
-  State<TestChatRoomListPage> createState() => _TestChatRoomListPageState();
+  State<GroupListPage> createState() => _GroupListPageState();
 }
 
-class _TestChatRoomListPageState extends State<TestChatRoomListPage> {
+class _GroupListPageState extends State<GroupListPage> {
   final _settings = AppSettings();
   final ScrollController _scrollController = ScrollController();
-  List<EMChatRoom> _chatRooms = [];
+  List<EMGroup> _groups = [];
   bool _isLoading = false;
   bool _isFetchingMore = false;
   bool _hasMore = true;
-  int _pageNum = 1;
-  static const int _pageSize = 50;
+  int _pageNum = 0; // 群组分页从 0 开始
+  static const int _pageSize = 20;
 
   @override
   void initState() {
     super.initState();
-    _fetchChatRooms();
+    _fetchGroups();
     _scrollController.addListener(_scrollListener);
+
+    EMClient.getInstance.groupManager.addEventHandler(
+      'group_list',
+      EMGroupEventHandler(),
+    );
   }
 
   @override
@@ -37,38 +43,37 @@ class _TestChatRoomListPageState extends State<TestChatRoomListPage> {
     super.dispose();
   }
 
+  /// 滚动监听，触发加载更多
   void _scrollListener() {
     if (_scrollController.position.pixels >=
             _scrollController.position.maxScrollExtent - 200 &&
         !_isLoading &&
         !_isFetchingMore &&
         _hasMore) {
-      _fetchMoreChatRooms();
+      _fetchMoreGroups();
     }
   }
 
-  Future<void> _fetchChatRooms() async {
+  /// 获取群组列表（首次加载）
+  Future<void> _fetchGroups() async {
     setState(() {
       _isLoading = true;
-      _pageNum = 1;
+      _pageNum = 0;
       _hasMore = true;
     });
 
     try {
-      final result = await EMClient.getInstance.chatRoomManager
-          .fetchPublicChatRoomsFromServer(
-            pageNum: _pageNum,
-            pageSize: _pageSize,
-          );
+      final result = await EMClient.getInstance.groupManager
+          .fetchJoinedGroupsFromServer(pageNum: _pageNum, pageSize: _pageSize);
       setState(() {
-        _chatRooms = result.data;
-        _hasMore = result.data.length >= _pageSize;
+        _groups = result;
+        _hasMore = result.length >= _pageSize;
       });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('获取聊天室列表失败: $e')));
+        ).showSnackBar(SnackBar(content: Text('获取群组列表失败: $e')));
       }
     } finally {
       if (mounted) {
@@ -79,7 +84,8 @@ class _TestChatRoomListPageState extends State<TestChatRoomListPage> {
     }
   }
 
-  Future<void> _fetchMoreChatRooms() async {
+  /// 加载更多群组
+  Future<void> _fetchMoreGroups() async {
     if (_isFetchingMore || !_hasMore) return;
 
     setState(() {
@@ -88,14 +94,13 @@ class _TestChatRoomListPageState extends State<TestChatRoomListPage> {
 
     try {
       final nextP = _pageNum + 1;
-      final result = await EMClient.getInstance.chatRoomManager
-          .fetchPublicChatRoomsFromServer(pageNum: nextP, pageSize: _pageSize);
+      final result = await EMClient.getInstance.groupManager
+          .fetchJoinedGroupsFromServer(pageNum: nextP, pageSize: _pageSize);
 
       setState(() {
-        final newData = result.data;
-        _chatRooms.addAll(newData);
+        _groups.addAll(result);
         _pageNum = nextP;
-        _hasMore = newData.length >= _pageSize;
+        _hasMore = result.length >= _pageSize;
       });
     } catch (e) {
       if (mounted) {
@@ -112,6 +117,7 @@ class _TestChatRoomListPageState extends State<TestChatRoomListPage> {
     }
   }
 
+  /// 复制到剪贴板
   Future<void> _copyToClipboard(String text) async {
     await Clipboard.setData(ClipboardData(text: text));
     if (mounted) {
@@ -136,9 +142,12 @@ class _TestChatRoomListPageState extends State<TestChatRoomListPage> {
             backgroundColor: Colors.transparent,
             appBar: AppBar(
               title: Text(
-                '聊天室列表',
+                '群组列表',
                 style: TextStyle(color: AppColors.textPrimary(isDark)),
               ),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
               actions: [
                 TextButton(
                   child: Text(
@@ -155,16 +164,13 @@ class _TestChatRoomListPageState extends State<TestChatRoomListPage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const TestChatRoomPage(),
+                          builder: (context) => const GroupPage(),
                         ),
                       );
                     }
                   },
                 ),
               ],
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
             ),
             body: _isLoading
                 ? Center(
@@ -173,22 +179,31 @@ class _TestChatRoomListPageState extends State<TestChatRoomListPage> {
                     ),
                   )
                 : RefreshIndicator(
-                    onRefresh: _fetchChatRooms,
-                    child: _chatRooms.isEmpty
-                        ? Center(
-                            child: Text(
-                              '暂无公开聊天室',
-                              style: TextStyle(
-                                color: AppColors.textSecondary(isDark),
+                    onRefresh: _fetchGroups,
+                    child: _groups.isEmpty
+                        ? ListView(
+                            children: [
+                              SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height - 200,
+                                child: Center(
+                                  child: Text(
+                                    '暂无加入的群组',
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary(isDark),
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           )
                         : ListView.builder(
                             controller: _scrollController,
-                            itemCount: _chatRooms.length + (_hasMore ? 1 : 0),
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            itemCount: _groups.length + (_hasMore ? 1 : 0),
                             itemBuilder: (context, index) {
-                              if (index < _chatRooms.length) {
-                                final room = _chatRooms[index];
+                              if (index < _groups.length) {
+                                final group = _groups[index];
                                 return GestureDetector(
                                   onLongPressStart: (details) async {
                                     final position = details.globalPosition;
@@ -209,7 +224,7 @@ class _TestChatRoomListPageState extends State<TestChatRoomListPage> {
                                     );
 
                                     if (value == 'copy_id') {
-                                      _copyToClipboard(room.roomId);
+                                      _copyToClipboard(group.groupId);
                                     }
                                   },
                                   child: Container(
@@ -235,19 +250,19 @@ class _TestChatRoomListPageState extends State<TestChatRoomListPage> {
                                           shape: BoxShape.circle,
                                         ),
                                         child: Icon(
-                                          Icons.meeting_room_outlined,
+                                          Icons.group_outlined,
                                           color: AppColors.primary(isDark),
                                         ),
                                       ),
                                       title: Text(
-                                        room.name ?? '未命名聊天室',
+                                        group.groupName ?? '未命名群组',
                                         style: TextStyle(
                                           color: AppColors.textPrimary(isDark),
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
                                       subtitle: Text(
-                                        'ID: ${room.roomId}',
+                                        'ID: ${group.groupId}',
                                         style: TextStyle(
                                           color: AppColors.textSecondary(
                                             isDark,
@@ -261,14 +276,14 @@ class _TestChatRoomListPageState extends State<TestChatRoomListPage> {
                                       ),
                                       onTap: () {
                                         if (widget.onItemTap != null) {
-                                          widget.onItemTap!(room.roomId);
+                                          widget.onItemTap!(group.groupId);
                                         } else {
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
                                               builder: (context) =>
-                                                  TestChatRoomPage(
-                                                    roomId: room.roomId,
+                                                  GroupPage(
+                                                    groupId: group.groupId,
                                                   ),
                                             ),
                                           );

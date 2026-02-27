@@ -3,31 +3,27 @@ import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 
-/// 群组成员列表页面
-class TestGroupMembersPage extends StatefulWidget {
-  const TestGroupMembersPage({super.key, required this.groupId});
+/// 群组管理员列表页面
+class GroupAdminsPage extends StatefulWidget {
+  const GroupAdminsPage({super.key, required this.groupId});
 
   final String groupId;
 
   @override
-  State<TestGroupMembersPage> createState() => _TestGroupMembersPageState();
+  State<GroupAdminsPage> createState() => _GroupAdminsPageState();
 }
 
-class _TestGroupMembersPageState extends State<TestGroupMembersPage> {
+class _GroupAdminsPageState extends State<GroupAdminsPage> {
   final _settings = AppSettings();
   final _scrollController = ScrollController();
   List<String> _members = [];
   bool _isLoading = false;
-  bool _isLoadingMore = false;
   String? _errorMessage;
-  String _cursor = '';
-  bool _hasMore = true;
 
   @override
   void initState() {
     super.initState();
     _fetchMembers();
-    _scrollController.addListener(_onScroll);
   }
 
   @override
@@ -36,110 +32,20 @@ class _TestGroupMembersPageState extends State<TestGroupMembersPage> {
     super.dispose();
   }
 
-  /// 滚动监听
-  void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      if (!_isLoadingMore && _hasMore) {
-        _loadMore();
-      }
-    }
-  }
-
-  /// 添加成员
-  Future<void> _addMembers() async {
-    final isDark = _settings.isDarkMode;
-    final controller = TextEditingController();
-
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        backgroundColor: isDark ? const Color(0xFF2C2C2E) : Colors.white,
-        title: Text(
-          '添加成员',
-          style: TextStyle(
-            color: AppColors.textPrimary(isDark),
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          style: TextStyle(color: AppColors.textPrimary(isDark)),
-          decoration: InputDecoration(
-            hintText: '请输入成员 ID',
-            hintStyle: TextStyle(color: AppColors.textSecondary(isDark)),
-            enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: AppColors.glassBorder(isDark)),
-            ),
-            focusedBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: AppColors.primary(isDark)),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              '取消',
-              style: TextStyle(color: AppColors.textSecondary(isDark)),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              final input = controller.text.trim();
-              if (input.isNotEmpty) {
-                Navigator.pop(context, input);
-              }
-            },
-            child: Text(
-              '确认',
-              style: TextStyle(color: AppColors.primary(isDark)),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    // 处理输入结果
-    if (result != null && result.isNotEmpty) {
-      try {
-        await EMClient.getInstance.groupManager.addMembers(widget.groupId, [
-          result,
-        ]);
-        if (mounted) {
-          _showResultDialog('已添加成员 $result', true);
-          // 刷新成员列表
-          _fetchMembers();
-        }
-      } catch (e) {
-        if (mounted) {
-          _showResultDialog('添加成员失败: ${e.toString()}', false);
-        }
-      }
-    }
-  }
-
-  /// 获取群组成员列表
+  /// 获取群组管理员列表
   Future<void> _fetchMembers() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
-      _cursor = '';
-      _hasMore = true;
     });
 
     try {
-      // 获取群组成员列表
+      // 获取群组信息
       final result = await EMClient.getInstance.groupManager
-          .fetchMemberListFromServer(widget.groupId, pageSize: 50, cursor: '');
+          .fetchGroupInfoFromServer(widget.groupId);
 
       setState(() {
-        _members = result.data;
-        _cursor = result.cursor ?? '';
-        _hasMore = _cursor.isNotEmpty;
+        _members = result.adminList ?? [];
         _isLoading = false;
       });
     } catch (e) {
@@ -147,41 +53,6 @@ class _TestGroupMembersPageState extends State<TestGroupMembersPage> {
         _errorMessage = e.toString();
         _isLoading = false;
       });
-    }
-  }
-
-  /// 加载更多成员
-  Future<void> _loadMore() async {
-    if (_isLoadingMore || !_hasMore) return;
-
-    setState(() {
-      _isLoadingMore = true;
-    });
-
-    try {
-      final result = await EMClient.getInstance.groupManager
-          .fetchMemberListFromServer(
-            widget.groupId,
-            pageSize: 50,
-            cursor: _cursor,
-          );
-
-      setState(() {
-        _members.addAll(result.data);
-        _cursor = result.cursor ?? '';
-        _hasMore = _cursor.isNotEmpty;
-        _isLoadingMore = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoadingMore = false;
-      });
-      // 加载更多失败时显示提示
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('加载更多失败: ${e.toString()}')));
-      }
     }
   }
 
@@ -204,53 +75,22 @@ class _TestGroupMembersPageState extends State<TestGroupMembersPage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            SizedBox(height: 16),
             Divider(height: 1, color: AppColors.glassBorder(isDark)),
 
-            // 设置管理员
+            // 移除管理员
             ListTile(
               leading: Icon(
                 Icons.admin_panel_settings_outlined,
                 color: AppColors.primary(isDark),
               ),
               title: Text(
-                '设置管理员',
+                '移除管理员',
                 style: TextStyle(color: AppColors.textPrimary(isDark)),
               ),
               onTap: () {
                 Navigator.pop(context);
-                _setAdmin(memberId);
-              },
-            ),
-
-            // 禁言
-            ListTile(
-              leading: Icon(
-                Icons.mic_off_outlined,
-                color: AppColors.primary(isDark),
-              ),
-              title: Text(
-                '禁言',
-                style: TextStyle(color: AppColors.textPrimary(isDark)),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _muteMember(memberId);
-              },
-            ),
-
-            // 加入白名单
-            ListTile(
-              leading: Icon(
-                Icons.verified_user_outlined,
-                color: AppColors.primary(isDark),
-              ),
-              title: Text(
-                '加入白名单',
-                style: TextStyle(color: AppColors.textPrimary(isDark)),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _addToWhitelist(memberId);
+                _removeAdmin(memberId);
               },
             ),
           ],
@@ -268,51 +108,20 @@ class _TestGroupMembersPageState extends State<TestGroupMembersPage> {
     );
   }
 
-  /// 设置管理员
-  Future<void> _setAdmin(String memberId) async {
+  /// 移除管理员
+  Future<void> _removeAdmin(String memberId) async {
     try {
-      await EMClient.getInstance.groupManager.addAdmin(
+      await EMClient.getInstance.groupManager.removeAdmin(
         widget.groupId,
         memberId,
       );
       if (mounted) {
-        _showResultDialog('已设置 $memberId 为管理员', true);
+        _fetchMembers();
+        _showResultDialog('移除 $memberId 管理员成功', true);
       }
     } catch (e) {
       if (mounted) {
-        _showResultDialog('设置管理员失败: ${e.toString()}', false);
-      }
-    }
-  }
-
-  /// 禁言成员
-  Future<void> _muteMember(String memberId) async {
-    try {
-      await EMClient.getInstance.groupManager.muteMembers(widget.groupId, [
-        memberId,
-      ]);
-      if (mounted) {
-        _showResultDialog('已禁言 $memberId', true);
-      }
-    } catch (e) {
-      if (mounted) {
-        _showResultDialog('禁言失败: ${e.toString()}', false);
-      }
-    }
-  }
-
-  /// 加入白名单
-  Future<void> _addToWhitelist(String memberId) async {
-    try {
-      await EMClient.getInstance.groupManager.addAllowList(widget.groupId, [
-        memberId,
-      ]);
-      if (mounted) {
-        _showResultDialog('已将 $memberId 加入白名单', true);
-      }
-    } catch (e) {
-      if (mounted) {
-        _showResultDialog('加入白名单失败: ${e.toString()}', false);
+        _showResultDialog('移除 $memberId 管理员失败: ${e.toString()}', false);
       }
     }
   }
@@ -374,7 +183,7 @@ class _TestGroupMembersPageState extends State<TestGroupMembersPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '群组成员 (${_members.length})',
+                '管理员 (${_members.length})',
                 style: TextStyle(
                   color: AppColors.textPrimary(isDark),
                   fontSize: 18,
@@ -383,11 +192,6 @@ class _TestGroupMembersPageState extends State<TestGroupMembersPage> {
               ),
               Row(
                 children: [
-                  IconButton(
-                    icon: Icon(Icons.add, color: AppColors.primary(isDark)),
-                    onPressed: _isLoading ? null : _addMembers,
-                    tooltip: '添加',
-                  ),
                   IconButton(
                     icon: Icon(Icons.refresh, color: AppColors.primary(isDark)),
                     onPressed: _isLoading ? null : _fetchMembers,
@@ -432,7 +236,7 @@ class _TestGroupMembersPageState extends State<TestGroupMembersPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              '获取成员列表失败',
+              '获取管理员列表失败',
               style: TextStyle(
                 color: AppColors.textPrimary(isDark),
                 fontSize: 16,
@@ -467,13 +271,13 @@ class _TestGroupMembersPageState extends State<TestGroupMembersPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.people_outline,
+              Icons.admin_panel_settings_outlined,
               size: 64,
               color: AppColors.textSecondary(isDark),
             ),
             const SizedBox(height: 16),
             Text(
-              '暂无成员',
+              '暂无管理员',
               style: TextStyle(
                 color: AppColors.textSecondary(isDark),
                 fontSize: 16,
@@ -487,25 +291,8 @@ class _TestGroupMembersPageState extends State<TestGroupMembersPage> {
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: _members.length + (_hasMore ? 1 : 0),
+      itemCount: _members.length,
       itemBuilder: (context, index) {
-        // 显示加载更多指示器
-        if (index == _members.length) {
-          return Container(
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            alignment: Alignment.center,
-            child: _isLoadingMore
-                ? CircularProgressIndicator(color: AppColors.primary(isDark))
-                : Text(
-                    '加载更多...',
-                    style: TextStyle(
-                      color: AppColors.textSecondary(isDark),
-                      fontSize: 12,
-                    ),
-                  ),
-          );
-        }
-
         final member = _members[index];
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

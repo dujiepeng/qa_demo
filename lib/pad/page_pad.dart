@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import '../pages/single/test_single_chat_list_page.dart';
-import '../pages/single/test_single_chat_page.dart';
-import '../pages/group/test_group_list_page.dart';
-import '../pages/group/test_group_page.dart';
-import '../pages/chatroom/test_chat_room_list_page.dart';
-import '../pages/chatroom/test_chat_room_page.dart';
+import '../pages/single/single_chat_list_page.dart';
+import '../pages/single/single_chat_page.dart';
+import '../pages/group/group_list_page.dart';
+import '../pages/group/group_page.dart';
+import '../pages/chatroom/chat_room_list_page.dart';
+import '../pages/chatroom/chat_room_page.dart';
 
-class TestPagePad extends StatelessWidget {
+class PagePad extends StatelessWidget {
   final TabController tabController;
   final Function(Widget page, String title) onShowDetail;
 
-  const TestPagePad({
+  const PagePad({
     super.key,
     required this.tabController,
     required this.onShowDetail,
@@ -21,21 +21,21 @@ class TestPagePad extends StatelessWidget {
     return TabBarView(
       controller: tabController,
       children: [
-        TestSingleChatListPage(
+        SingleChatListPage(
           onItemTap: (id) => onShowDetail(
-            TestSingleChatPage(userId: id, showAppBar: false),
+            SingleChatPage(userId: id, showAppBar: false),
             id.isEmpty ? '新建单聊' : '单聊: $id',
           ),
         ),
-        TestGroupListPage(
+        GroupListPage(
           onItemTap: (id) => onShowDetail(
-            TestGroupPage(groupId: id, showAppBar: false),
+            GroupPage(groupId: id, showAppBar: false),
             id.isEmpty ? '加入群组' : '群组: $id',
           ),
         ),
-        TestChatRoomListPage(
+        ChatRoomListPage(
           onItemTap: (id) => onShowDetail(
-            TestChatRoomPage(roomId: id, showAppBar: false),
+            ChatRoomPage(roomId: id, showAppBar: false),
             id.isEmpty ? '加入聊天室' : '聊天室: $id',
           ),
         ),

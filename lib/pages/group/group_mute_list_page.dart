@@ -3,27 +3,26 @@ import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 
-/// 群组转移所有者页面
-class TestGroupChangeOwnerPage extends StatefulWidget {
-  const TestGroupChangeOwnerPage({super.key, required this.groupId});
+/// 群组禁言列表页面
+class GroupMuteListPage extends StatefulWidget {
+  const GroupMuteListPage({super.key, required this.groupId});
 
   final String groupId;
 
   @override
-  State<TestGroupChangeOwnerPage> createState() =>
-      _TestGroupChangeOwnerPageState();
+  State<GroupMuteListPage> createState() => _GroupMuteListPageState();
 }
 
-class _TestGroupChangeOwnerPageState extends State<TestGroupChangeOwnerPage> {
+class _GroupMuteListPageState extends State<GroupMuteListPage> {
   final _settings = AppSettings();
   final _scrollController = ScrollController();
   List<String> _members = [];
+  Map<String, int> _muteMap = {}; // 用户ID -> 禁言时长(毫秒)
   bool _isLoading = false;
   bool _isLoadingMore = false;
   String? _errorMessage;
-  String _cursor = '';
+  int _pageNum = 1;
   bool _hasMore = true;
-  static const int _pageSize = 50;
 
   @override
   void initState() {
@@ -48,28 +47,30 @@ class _TestGroupChangeOwnerPageState extends State<TestGroupChangeOwnerPage> {
     }
   }
 
-  /// 获取群组成员列表
+  /// 获取群组禁言列表
   Future<void> _fetchMembers() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
-      _cursor = '';
+      _pageNum = 1;
       _hasMore = true;
     });
 
     try {
-      // 获取群组成员列表
+      // 获取群组禁言列表
       final result = await EMClient.getInstance.groupManager
-          .fetchMemberListFromServer(
+          .fetchMuteListFromServer(
             widget.groupId,
-            pageSize: _pageSize,
-            cursor: _cursor,
+            pageNum: _pageNum,
+            pageSize: 50,
           );
 
       setState(() {
-        _members = result.data;
-        _cursor = result.cursor ?? '';
-        _hasMore = _cursor.isNotEmpty;
+        _muteMap = result;
+        _members = result.keys.toList();
+        _pageNum += 1;
+        // 如果返回的数据少于请求的数量，说明没有更多数据了
+        _hasMore = result.length >= 50;
         _isLoading = false;
       });
     } catch (e) {
@@ -89,29 +90,29 @@ class _TestGroupChangeOwnerPageState extends State<TestGroupChangeOwnerPage> {
     });
 
     try {
+      // 增加页码
+      _pageNum++;
+
       final result = await EMClient.getInstance.groupManager
-          .fetchMemberListFromServer(
+          .fetchMuteListFromServer(
             widget.groupId,
-            pageSize: _pageSize,
-            cursor: _cursor,
+            pageNum: _pageNum,
+            pageSize: 50,
           );
 
       setState(() {
-        _members.addAll(result.data);
-        _cursor = result.cursor ?? '';
-        _hasMore = _cursor.isNotEmpty;
+        _muteMap.addAll(result);
+        _members.addAll(result.keys);
+        // 如果返回的数据少于请求的数量，说明没有更多数据了
+        _hasMore = result.length >= 50;
         _isLoadingMore = false;
       });
     } catch (e) {
       setState(() {
+        // 加载失败时回退页码
+        _pageNum--;
         _isLoadingMore = false;
       });
-      // 加载更多失败时显示提示
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('加载更多失败: ${e.toString()}')));
-      }
     }
   }
 
@@ -136,19 +137,19 @@ class _TestGroupChangeOwnerPageState extends State<TestGroupChangeOwnerPage> {
           children: [
             Divider(height: 1, color: AppColors.glassBorder(isDark)),
 
-            // 转移群组
+            // 移除禁言
             ListTile(
               leading: Icon(
-                Icons.swap_horiz_outlined,
+                Icons.mic_outlined,
                 color: AppColors.primary(isDark),
               ),
               title: Text(
-                '转移群组',
+                '移除禁言',
                 style: TextStyle(color: AppColors.textPrimary(isDark)),
               ),
               onTap: () {
                 Navigator.pop(context);
-                _changeOwner(memberId);
+                _removeMute(memberId);
               },
             ),
           ],
@@ -166,19 +167,19 @@ class _TestGroupChangeOwnerPageState extends State<TestGroupChangeOwnerPage> {
     );
   }
 
-  /// 转移群组所有者
-  Future<void> _changeOwner(String memberId) async {
+  /// 移除禁言
+  Future<void> _removeMute(String memberId) async {
     try {
-      await EMClient.getInstance.groupManager.changeOwner(
-        widget.groupId,
+      await EMClient.getInstance.groupManager.unMuteMembers(widget.groupId, [
         memberId,
-      );
+      ]);
       if (mounted) {
-        _showResultDialog('已转移群组给 $memberId', true);
+        _fetchMembers();
+        _showResultDialog('移除 $memberId 禁言成功', true);
       }
     } catch (e) {
       if (mounted) {
-        _showResultDialog('转移群组失败: ${e.toString()}', false);
+        _showResultDialog('移除 $memberId 禁言失败: ${e.toString()}', false);
       }
     }
   }
@@ -219,6 +220,28 @@ class _TestGroupChangeOwnerPageState extends State<TestGroupChangeOwnerPage> {
     );
   }
 
+  /// 格式化禁言时长
+  String _formatMuteDuration(int milliseconds) {
+    if (milliseconds <= 0) {
+      return '永久禁言';
+    }
+
+    final duration = Duration(milliseconds: milliseconds);
+    final days = duration.inDays;
+    final hours = duration.inHours % 24;
+    final minutes = duration.inMinutes % 60;
+
+    if (days > 0) {
+      return '$days天$hours小时';
+    } else if (hours > 0) {
+      return '$hours小时$minutes分钟';
+    } else if (minutes > 0) {
+      return '$minutes分钟';
+    } else {
+      return '少于1分钟';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = _settings.isDarkMode;
@@ -240,7 +263,7 @@ class _TestGroupChangeOwnerPageState extends State<TestGroupChangeOwnerPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '群组成员 (${_members.length})',
+                '禁言列表 (${_members.length})',
                 style: TextStyle(
                   color: AppColors.textPrimary(isDark),
                   fontSize: 18,
@@ -293,7 +316,7 @@ class _TestGroupChangeOwnerPageState extends State<TestGroupChangeOwnerPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              '获取成员列表失败',
+              '获取禁言列表失败',
               style: TextStyle(
                 color: AppColors.textPrimary(isDark),
                 fontSize: 16,
@@ -328,13 +351,13 @@ class _TestGroupChangeOwnerPageState extends State<TestGroupChangeOwnerPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.people_outline,
+              Icons.mic_off_outlined,
               size: 64,
               color: AppColors.textSecondary(isDark),
             ),
             const SizedBox(height: 16),
             Text(
-              '暂无成员',
+              '暂无禁言成员',
               style: TextStyle(
                 color: AppColors.textSecondary(isDark),
                 fontSize: 16,
@@ -394,12 +417,26 @@ class _TestGroupChangeOwnerPageState extends State<TestGroupChangeOwnerPage> {
                 fontSize: 16,
               ),
             ),
-            subtitle: Text(
-              'ID: $member',
-              style: TextStyle(
-                color: AppColors.textSecondary(isDark),
-                fontSize: 12,
-              ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'ID: $member',
+                  style: TextStyle(
+                    color: AppColors.textSecondary(isDark),
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '禁言时长: ${_formatMuteDuration(_muteMap[member] ?? 0)}',
+                  style: TextStyle(
+                    color: Colors.orange,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ),
         );

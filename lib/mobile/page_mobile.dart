@@ -4,13 +4,13 @@ import '../theme/app_settings.dart';
 import '../common/widgets/common_gradient_background.dart';
 import '../common/widgets/common_dialogs.dart';
 
-class TestGridItem {
+class GridItem {
   final String title;
   final IconData? icon;
   final int badgeCount;
   final VoidCallback onTap;
 
-  TestGridItem({
+  GridItem({
     required this.title,
     this.icon,
     this.badgeCount = 0,
@@ -18,36 +18,36 @@ class TestGridItem {
   });
 }
 
-class TestPageMobile extends StatefulWidget {
+class PageMobile extends StatefulWidget {
   final bool isDark;
-  const TestPageMobile({super.key, this.isDark = true});
+  const PageMobile({super.key, this.isDark = true});
 
   @override
-  State<TestPageMobile> createState() => _TestPageMobileState();
+  State<PageMobile> createState() => _PageMobileState();
 }
 
-class _TestPageMobileState extends State<TestPageMobile> {
+class _PageMobileState extends State<PageMobile> {
   final _settings = AppSettings();
-  late final List<TestGridItem> _testItems;
+  late final List<GridItem> _testItems;
 
   @override
   void initState() {
     super.initState();
     _testItems = [
-      TestGridItem(
+      GridItem(
         title: '单聊',
         icon: Icons.person_outlined,
-        onTap: () => Navigator.pushNamed(context, '/test_single_chat_list'),
+        onTap: () => Navigator.pushNamed(context, '/single_chat_list'),
       ),
-      TestGridItem(
+      GridItem(
         title: '群聊',
         icon: Icons.group_outlined,
-        onTap: () => Navigator.pushNamed(context, '/test_group_list'),
+        onTap: () => Navigator.pushNamed(context, '/group_list'),
       ),
-      TestGridItem(
+      GridItem(
         title: '聊天室',
         icon: Icons.list_alt_outlined,
-        onTap: () => Navigator.pushNamed(context, '/test_chat_room_list'),
+        onTap: () => Navigator.pushNamed(context, '/chat_room_list'),
       ),
     ];
   }
@@ -94,7 +94,7 @@ class _TestPageMobileState extends State<TestPageMobile> {
     );
   }
 
-  Widget _buildGridItem(TestGridItem item, bool isDark) {
+  Widget _buildGridItem(GridItem item, bool isDark) {
     return InkWell(
       onTap: item.onTap,
       borderRadius: BorderRadius.circular(15),

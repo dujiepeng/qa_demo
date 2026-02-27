@@ -9,7 +9,7 @@ import 'dart:io';
 import 'dart:async';
 import '../common/widgets/common_dialogs.dart';
 import 'me_page_pad.dart';
-import 'test_page_pad.dart';
+import 'page_pad.dart';
 
 class HomePagePad extends StatefulWidget {
   const HomePagePad({super.key});
@@ -217,7 +217,7 @@ class _HomePagePadState extends State<HomePagePad>
           // 右侧内容区域
           Expanded(
             child: _navIndex == 0
-                ? _buildTestDashboard(isDark)
+                ? _buildDashboard(isDark)
                 : MePagePad(isDark: isDark),
           ),
         ],
@@ -226,7 +226,7 @@ class _HomePagePadState extends State<HomePagePad>
   }
 
   // 构建测试面板 (主逻辑)
-  Widget _buildTestDashboard(bool isDark) {
+  Widget _buildDashboard(bool isDark) {
     return Column(
       children: [
         // 顶层工具栏 (Master AppBar)
@@ -235,7 +235,7 @@ class _HomePagePadState extends State<HomePagePad>
         Expanded(
           child: _detailPage != null
               ? _detailPage!
-              : TestPagePad(
+              : PagePad(
                   tabController: _tabController,
                   onShowDetail: _showDetail,
                 ),
@@ -243,7 +243,7 @@ class _HomePagePadState extends State<HomePagePad>
 
         // 可拖动的分割线手柄
         GestureDetector(
-          behavior: HitTestBehavior.translucent,
+          behavior: HitBehavior.translucent,
           onVerticalDragUpdate: (details) {
             setState(() {
               // 向上拖动 delta 是负的，日志高度增加

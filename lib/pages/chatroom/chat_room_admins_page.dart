@@ -3,17 +3,16 @@ import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 
-/// 群组白名单页面
-class TestGroupWhiteListPage extends StatefulWidget {
-  const TestGroupWhiteListPage({super.key, required this.groupId});
+class ChatRoomAdminsPage extends StatefulWidget {
+  const ChatRoomAdminsPage({super.key, required this.roomId});
 
-  final String groupId;
+  final String roomId;
 
   @override
-  State<TestGroupWhiteListPage> createState() => _TestGroupWhiteListPageState();
+  State<ChatRoomAdminsPage> createState() => _ChatRoomAdminsPageState();
 }
 
-class _TestGroupWhiteListPageState extends State<TestGroupWhiteListPage> {
+class _ChatRoomAdminsPageState extends State<ChatRoomAdminsPage> {
   final _settings = AppSettings();
   final _scrollController = ScrollController();
   List<String> _members = [];
@@ -32,7 +31,6 @@ class _TestGroupWhiteListPageState extends State<TestGroupWhiteListPage> {
     super.dispose();
   }
 
-  /// 获取群组白名单
   Future<void> _fetchMembers() async {
     setState(() {
       _isLoading = true;
@@ -40,12 +38,12 @@ class _TestGroupWhiteListPageState extends State<TestGroupWhiteListPage> {
     });
 
     try {
-      // 获取群组白名单
-      final result = await EMClient.getInstance.groupManager
-          .fetchAllowListFromServer(widget.groupId);
+      // 获取聊天室成员列表
+      final result = await EMClient.getInstance.chatRoomManager
+          .fetchChatRoomInfoFromServer(widget.roomId);
 
       setState(() {
-        _members = result;
+        _members = result.adminList ?? [];
         _isLoading = false;
       });
     } catch (e) {
@@ -56,7 +54,6 @@ class _TestGroupWhiteListPageState extends State<TestGroupWhiteListPage> {
     }
   }
 
-  /// 显示成员操作菜单
   void _showMemberActions(String memberId, bool isDark) {
     showDialog(
       context: context,
@@ -78,19 +75,19 @@ class _TestGroupWhiteListPageState extends State<TestGroupWhiteListPage> {
             SizedBox(height: 16),
             Divider(height: 1, color: AppColors.glassBorder(isDark)),
 
-            // 移除白名单
+            // 移除管理员
             ListTile(
               leading: Icon(
-                Icons.remove_circle_outline,
+                Icons.admin_panel_settings_outlined,
                 color: AppColors.primary(isDark),
               ),
               title: Text(
-                '移除白名单',
+                '移除管理员',
                 style: TextStyle(color: AppColors.textPrimary(isDark)),
               ),
               onTap: () {
                 Navigator.pop(context);
-                _removeFromWhitelist(memberId);
+                _removeAdmin(memberId);
               },
             ),
           ],
@@ -108,24 +105,23 @@ class _TestGroupWhiteListPageState extends State<TestGroupWhiteListPage> {
     );
   }
 
-  /// 移除白名单
-  Future<void> _removeFromWhitelist(String memberId) async {
+  Future<void> _removeAdmin(String memberId) async {
     try {
-      await EMClient.getInstance.groupManager.removeAllowList(widget.groupId, [
+      await EMClient.getInstance.chatRoomManager.removeChatRoomAdmin(
+        widget.roomId,
         memberId,
-      ]);
+      );
       if (mounted) {
         _fetchMembers();
-        _showResultDialog('移除 $memberId 白名单成功', true);
+        _showResultDialog('移除 $memberId 管理员', true);
       }
     } catch (e) {
       if (mounted) {
-        _showResultDialog('移除失败: ${e.toString()}', false);
+        _showResultDialog('移除 $memberId 管理员失败: ${e.toString()}', false);
       }
     }
   }
 
-  /// 显示操作结果对话框
   void _showResultDialog(String message, bool isSuccess) {
     final isDark = _settings.isDarkMode;
     showDialog(
@@ -182,7 +178,7 @@ class _TestGroupWhiteListPageState extends State<TestGroupWhiteListPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '白名单 (${_members.length})',
+                '管理员 (${_members.length})',
                 style: TextStyle(
                   color: AppColors.textPrimary(isDark),
                   fontSize: 18,
@@ -235,7 +231,7 @@ class _TestGroupWhiteListPageState extends State<TestGroupWhiteListPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              '获取白名单失败',
+              '获取成员列表失败',
               style: TextStyle(
                 color: AppColors.textPrimary(isDark),
                 fontSize: 16,
@@ -270,13 +266,13 @@ class _TestGroupWhiteListPageState extends State<TestGroupWhiteListPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.verified_user_outlined,
+              Icons.people_outline,
               size: 64,
               color: AppColors.textSecondary(isDark),
             ),
             const SizedBox(height: 16),
             Text(
-              '暂无白名单成员',
+              '暂无成员',
               style: TextStyle(
                 color: AppColors.textSecondary(isDark),
                 fontSize: 16,

@@ -4,54 +4,73 @@ import 'package:qa_flutter/common/widgets/switch_alert.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 import '../../common/widgets/input_dialog.dart';
+import 'chat_room_members_page.dart';
+import 'chat_room_admins_page.dart';
+import 'chat_room_white_list_page.dart';
+import 'chat_room_mute_list_page.dart';
+import 'chat_room_change_owner_page.dart';
 import '../../common/widgets/log_view.dart';
 import '../../common/widgets/grid_action_menu.dart';
 import '../../common/log_content_page.dart';
 import '../../common/widgets/common_input_row.dart';
 import '../../common/widgets/common_section_title.dart';
-import '../../common/widgets/common_test_layout.dart';
-import '../../common/mixins/test_base_mixin.dart';
-import 'test_group_admins_page.dart';
-import 'test_group_change_owner_page.dart';
-import 'test_group_members_page.dart';
-import 'test_group_mute_list_page.dart';
-import 'test_group_white_list_page.dart';
+import '../../common/widgets/common_layout.dart';
+import '../../common/mixins/base_mixin.dart';
 
-/// 群组信息编辑类型
-enum GroupInfoEditType { name, description, announcement }
+/// 聊天室信息编辑类型
+enum RoomInfoEditType { name, description, announcement }
 
-class TestGroupPage extends StatefulWidget {
-  const TestGroupPage({super.key, this.groupId, this.showAppBar = true});
-  final String? groupId;
+class ChatRoomPage extends StatefulWidget {
+  const ChatRoomPage({super.key, this.roomId, this.showAppBar = true});
+  final String? roomId;
   final bool showAppBar;
   @override
-  State<TestGroupPage> createState() => _TestGroupPageState();
+  State<ChatRoomPage> createState() => _ChatRoomPageState();
 }
 
-class _TestGroupPageState extends State<TestGroupPage> with TestBaseMixin {
-  final _eventKey = 'group_test';
+class _ChatRoomPageState extends State<ChatRoomPage>
+    with BaseMixin {
+  final _eventKey = 'room_test';
   final _settings = AppSettings();
-  final _groupIdController = TextEditingController();
+  final _roomIdController = TextEditingController();
   final _messageController = TextEditingController();
   final _logController = LogController();
   final _repeatCountController = TextEditingController(text: '1');
-  String _groupId = '';
+  String _roomId = '';
+  bool _isJoined = false;
 
   @override
   LogController get logController => _logController;
 
   @override
   void initState() {
-    _groupId = widget.groupId ?? '';
-    _groupIdController.text = _groupId;
+    _roomId = widget.roomId ?? '';
+    _roomIdController.text = _roomId;
     super.initState();
     _addListener();
-    _groupIdController.addListener(() => setState(() {}));
+    _roomIdController.addListener(() => setState(() {}));
+    _checkChatRoomStatus();
+  }
+
+  void _checkChatRoomStatus() async {
+    if (_roomId.isEmpty) return;
+    try {
+      addLog('正在检查聊天室状态: $_roomId...');
+      final room = await EMClient.getInstance.chatRoomManager
+          .fetchChatRoomInfoFromServer(_roomId);
+      addLog('已获取聊天室详情: ${room.name} (Owner: ${room.owner})');
+      _isJoined = true;
+    } catch (e) {
+      addLog('获取聊天室信息失败，请尝试重新 Join: $e');
+      _isJoined = false;
+    } finally {
+      if (mounted) setState(() {});
+    }
   }
 
   @override
   void dispose() {
-    _groupIdController.dispose();
+    _roomIdController.dispose();
     _messageController.dispose();
     _repeatCountController.dispose();
     super.dispose();
@@ -72,7 +91,7 @@ class _TestGroupPageState extends State<TestGroupPage> with TestBaseMixin {
       EMChatEventHandler(
         onMessagesReceived: (messages) {
           for (var msg in messages) {
-            if (msg.conversationId == _groupId) {
+            if (msg.conversationId == _roomId) {
               addReceiveLog(
                 '${msg.from}: ${msg.toJson().toString()}',
                 message: msg,
@@ -83,60 +102,57 @@ class _TestGroupPageState extends State<TestGroupPage> with TestBaseMixin {
       ),
     );
 
-    EMClient.getInstance.groupManager.addEventHandler(
+    EMClient.getInstance.chatRoomManager.addEventHandler(
       _eventKey,
-      EMGroupEventHandler(
-        onAdminAddedFromGroup: (groupId, admin) =>
-            _handleGroupEvent(groupId, 'onAdminAddedFromGroup: admin: $admin'),
-        onAdminRemovedFromGroup: (groupId, admin) => _handleGroupEvent(
-          groupId,
-          'onAdminRemovedFromGroup: admin: $admin',
+      EMChatRoomEventHandler(
+        onAdminAddedFromChatRoom: (roomId, admin) =>
+            _handleRoomEvent(roomId, 'onAdminAdded: $admin'),
+        onAdminRemovedFromChatRoom: (roomId, admin) =>
+            _handleRoomEvent(roomId, 'onAdminRemoved: $admin'),
+        onAllChatRoomMemberMuteStateChanged: (roomId, isAllMuted) =>
+            _handleRoomEvent(roomId, 'onAllMutedChanged: $isAllMuted'),
+        onAllowListAddedFromChatRoom: (roomId, members) =>
+            _handleRoomEvent(roomId, 'onAllowListAdded: $members'),
+        onAllowListRemovedFromChatRoom: (roomId, members) =>
+            _handleRoomEvent(roomId, 'onAllowListRemoved: $members'),
+        onAnnouncementChangedFromChatRoom: (roomId, announcement) =>
+            _handleRoomEvent(roomId, 'onAnnouncementChanged: $announcement'),
+        onAttributesRemoved: (roomId, removedKeys, from) => _handleRoomEvent(
+          roomId,
+          'onAttributesRemoved: keys: $removedKeys, from: $from',
         ),
-        onAllGroupMemberMuteStateChanged: (groupId, isAllMuted) =>
-            _handleGroupEvent(
-              groupId,
-              'onAllGroupMemberMuteStateChanged: isAllMuted: $isAllMuted',
-            ),
-        onAllowListAddedFromGroup: (groupId, members) => _handleGroupEvent(
-          groupId,
-          'onAllowListAddedFromGroup: members: $members',
+        onAttributesUpdated: (roomId, attributes, from) => _handleRoomEvent(
+          roomId,
+          'onAttributesUpdated: attrs: $attributes, from: $from',
         ),
-        onAllowListRemovedFromGroup: (groupId, members) => _handleGroupEvent(
-          groupId,
-          'onAllowListRemovedFromGroup: members: $members',
-        ),
-        onAnnouncementChangedFromGroup: (groupId, announcement) =>
-            _handleGroupEvent(
-              groupId,
-              'onAnnouncementChangedFromGroup: announcement: $announcement',
-            ),
-        onAttributesChangedOfGroupMember:
-            (groupId, userId, attributes, operatorId) => _handleGroupEvent(
-              groupId,
-              'onAttributesChanged: userId: $userId, attributes: $attributes',
-            ),
-        onGroupDestroyed: (groupId, groupName) {
-          if (groupId == _groupId) {
-            setState(() => _groupId = '');
-            addReceiveLog('onGroupDestroyed: $groupName');
+        onChatRoomDestroyed: (roomId, roomName) {
+          if (roomId == _roomId) {
+            setState(() {
+              _roomId = '';
+              _isJoined = false;
+            });
+            addReceiveLog('onChatRoomDestroyed: $roomName');
           }
         },
-        onUserRemovedFromGroup: (groupId, groupName) {
-          if (groupId == _groupId) {
-            setState(() => _groupId = '');
-            addReceiveLog('onUserRemovedFromGroup: $groupName');
+        onRemovedFromChatRoom: (roomId, roomName, participant, reason) {
+          if (roomId == _roomId) {
+            setState(() {
+              _roomId = '';
+              _isJoined = false;
+            });
+            addReceiveLog('onRemoved: reason: $reason');
           }
         },
-        onSpecificationDidUpdate: (group) => _handleGroupEvent(
-          group.groupId,
-          'onSpecificationDidUpdate: name: ${group.groupName}',
+        onSpecificationChanged: (room) => _handleRoomEvent(
+          room.roomId,
+          'onSpecificationChanged: name: ${room.name}',
         ),
       ),
     );
   }
 
-  void _handleGroupEvent(String groupId, String log) {
-    if (groupId == _groupId) addReceiveLog(log);
+  void _handleRoomEvent(String roomId, String log) {
+    if (roomId == _roomId) addReceiveLog(log);
   }
 
   PreferredSizeWidget _buildAppBar(bool isDark) {
@@ -145,7 +161,7 @@ class _TestGroupPageState extends State<TestGroupPage> with TestBaseMixin {
       elevation: 0,
       iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
       title: Text(
-        _groupId.isNotEmpty ? '$_groupId(群)' : '群组测试',
+        _roomId.isNotEmpty ? '$_roomId(室)' : '聊天室测试',
         style: TextStyle(color: AppColors.textPrimary(isDark)),
       ),
       centerTitle: true,
@@ -162,10 +178,10 @@ class _TestGroupPageState extends State<TestGroupPage> with TestBaseMixin {
     return Column(
       children: [
         CommonInputRow(
-          controller: _groupIdController,
-          hintText: '输入群组 ID',
-          buttonText: _groupId.isNotEmpty ? 'Leave' : 'Join',
-          onPressed: _handleJoinLeaveGroup,
+          controller: _roomIdController,
+          hintText: '输入聊天室 ID',
+          buttonText: _isJoined ? 'Leave' : 'Join',
+          onPressed: _handleJoinLeaveRoom,
           isDark: isDark,
         ),
         const SizedBox(height: 20),
@@ -184,7 +200,7 @@ class _TestGroupPageState extends State<TestGroupPage> with TestBaseMixin {
         const SizedBox(height: 10),
         CommonSectionTitle(title: '控制', isDark: isDark),
         const SizedBox(height: 10),
-        _buildGroupManagementButtons(isDark),
+        _buildChatRoomManagementButtons(isDark),
         const SizedBox(height: 10),
         CommonSectionTitle(title: '工具', isDark: isDark),
         const SizedBox(height: 10),
@@ -197,53 +213,60 @@ class _TestGroupPageState extends State<TestGroupPage> with TestBaseMixin {
     return LogView(controller: _logController, isDark: isDark);
   }
 
-  Future<void> _handleJoinLeaveGroup() async {
-    final inputId = _groupIdController.text.trim();
+  Future<void> _handleJoinLeaveRoom() async {
+    final inputId = _roomIdController.text.trim();
     if (inputId.isEmpty) return;
 
-    if (_groupId.isNotEmpty && _groupId == inputId) {
-      addLog('开始离开 $_groupId');
+    if (_isJoined && _roomId == inputId) {
+      addLog('开始离开 $_roomId');
       try {
-        await EMClient.getInstance.groupManager.leaveGroup(_groupId);
-        addLog('退出 $_groupId 成功');
-        setState(() => _groupId = '');
+        await EMClient.getInstance.chatRoomManager.leaveChatRoom(_roomId);
+        addLog('退出 $_roomId 成功');
+        setState(() {
+          _roomId = '';
+          _isJoined = false;
+        });
       } catch (e) {
-        addLog('退出 $_groupId 失败: ${e.toString()}');
+        addLog('退出失败: $e');
       }
     } else {
       addLog('开始加入 $inputId');
       try {
-        await EMClient.getInstance.groupManager.joinPublicGroup(inputId);
-        setState(() => _groupId = inputId);
-        addLog('加入成功， GroupId: $inputId');
+        await EMClient.getInstance.chatRoomManager.joinChatRoom(inputId);
+        setState(() {
+          _roomId = inputId;
+          _isJoined = true;
+        });
+        addLog('加入成功: $inputId');
       } catch (e) {
-        addLog('加入 $inputId 失败：${e.toString()}');
+        _isJoined = false;
+        addLog('加入失败: $e');
       }
     }
   }
 
   Future<void> _sendTextMessage(String text) async {
     final trimmedText = text.trim();
-    if (trimmedText.isEmpty || _groupId.isEmpty) return;
+    if (trimmedText.isEmpty || _roomId.isEmpty) return;
     int count = int.tryParse(_repeatCountController.text) ?? 1;
     try {
       for (int i = 0; i < count; i++) {
         final msg = EMMessage.createTxtSendMessage(
-          targetId: _groupId,
+          targetId: _roomId,
           content: count > 1 ? '$trimmedText ($i)' : trimmedText,
-          chatType: ChatType.GroupChat,
+          chatType: ChatType.ChatRoom,
         );
         await sendMessage(msg);
       }
       _messageController.clear();
     } catch (e) {
-      addAppErrLog('发送文字失败: ${e.toString()}');
+      addAppErrLog('发送失败: $e');
     }
   }
 
   Future<void> sendMessage(EMMessage msg) async {
-    if (_groupId.isEmpty) {
-      addSendLog('请先加入群组');
+    if (_roomId.isEmpty) {
+      addSendLog('请先加入聊天室');
       return;
     }
     try {
@@ -258,37 +281,34 @@ class _TestGroupPageState extends State<TestGroupPage> with TestBaseMixin {
     }
   }
 
-  Future<void> _showGroupInfoDialog(GroupInfoEditType type) async {
-    if (_groupId.isEmpty) {
-      addSendLog('请先加入群组');
-      return;
-    }
+  Future<void> _showRoomInfoDialog(RoomInfoEditType type) async {
+    if (_roomId.isEmpty) return;
     try {
-      final group = await EMClient.getInstance.groupManager
-          .fetchGroupInfoFromServer(_groupId);
+      final room = await EMClient.getInstance.chatRoomManager
+          .fetchChatRoomInfoFromServer(_roomId);
       if (!mounted) return;
       String title = '', fieldTitle = '', placeholder = '', currentValue = '';
       bool multiline = false;
 
       switch (type) {
-        case GroupInfoEditType.name:
-          title = '编辑群组名称';
-          fieldTitle = '群组名称';
-          placeholder = '请输入群组名称';
-          currentValue = group.groupName ?? '';
+        case RoomInfoEditType.name:
+          title = '编辑名称';
+          fieldTitle = '名称';
+          placeholder = '输入名称';
+          currentValue = room.name ?? '';
           break;
-        case GroupInfoEditType.description:
-          title = '编辑群组描述';
-          fieldTitle = '群组描述';
-          placeholder = '请输入群组描述';
-          currentValue = group.desc ?? '';
+        case RoomInfoEditType.description:
+          title = '编辑描述';
+          fieldTitle = '描述';
+          placeholder = '输入描述';
+          currentValue = room.description ?? '';
           multiline = true;
           break;
-        case GroupInfoEditType.announcement:
-          title = '编辑群组公告';
-          fieldTitle = '群组公告';
-          placeholder = '请输入群组公告';
-          currentValue = group.announcement ?? '';
+        case RoomInfoEditType.announcement:
+          title = '编辑公告';
+          fieldTitle = '公告';
+          placeholder = '输入公告';
+          currentValue = room.announcement ?? '';
           multiline = true;
           break;
       }
@@ -309,57 +329,40 @@ class _TestGroupPageState extends State<TestGroupPage> with TestBaseMixin {
         final newValue = result[0].text;
         if (currentValue == newValue) return;
         switch (type) {
-          case GroupInfoEditType.name:
-            await EMClient.getInstance.groupManager.updateGroupName(
-              _groupId,
+          case RoomInfoEditType.name:
+            await EMClient.getInstance.chatRoomManager.changeChatRoomName(
+              _roomId,
               newValue,
             );
             break;
-          case GroupInfoEditType.description:
-            await EMClient.getInstance.groupManager.updateGroupDesc(
-              _groupId,
-              newValue,
-            );
+          case RoomInfoEditType.description:
+            await EMClient.getInstance.chatRoomManager
+                .changeChatRoomDescription(_roomId, newValue);
             break;
-          case GroupInfoEditType.announcement:
-            await EMClient.getInstance.groupManager.updateGroupAnnouncement(
-              _groupId,
-              newValue,
-            );
+          case RoomInfoEditType.announcement:
+            await EMClient.getInstance.chatRoomManager
+                .updateChatRoomAnnouncement(_roomId, newValue);
             break;
         }
         addSendLog('修改成功');
       }
     } catch (e) {
-      addSendLog('操作失败: ${e.toString()}');
+      addSendLog('报错: $e');
     }
   }
 
-  Future<void> _showGroupDetails() async {
-    if (_groupId.isEmpty) {
-      addSendLog('请先加入群组');
-      return;
-    }
+  Future<void> _showChatRoomDetails() async {
+    if (_roomId.isEmpty) return;
     try {
-      final group = await EMClient.getInstance.groupManager
-          .fetchGroupInfoFromServer(_groupId);
+      final room = await EMClient.getInstance.chatRoomManager
+          .fetchChatRoomInfoFromServer(_roomId);
       if (!mounted) return;
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text(group.groupName ?? '群组详情'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('ID: ${group.groupId}'),
-                const SizedBox(height: 8),
-                Text('Owner: ${group.owner}'),
-                const SizedBox(height: 8),
-                Text('Member Count: ${group.memberCount}'),
-              ],
-            ),
+          title: Text(room.name ?? '详情'),
+          content: Text(
+            'ID: ${room.roomId}\nOwner: ${room.owner}\nMembers: ${room.memberCount}',
           ),
           actions: [
             TextButton(
@@ -370,15 +373,12 @@ class _TestGroupPageState extends State<TestGroupPage> with TestBaseMixin {
         ),
       );
     } catch (e) {
-      addSendLog('获取详情失败: $e');
+      addLog('失败: $e');
     }
   }
 
   void _showBottomSheet(Widget page) {
-    if (_groupId.isEmpty) {
-      addSendLog('请先加入群组');
-      return;
-    }
+    if (_roomId.isEmpty) return;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -401,36 +401,111 @@ class _TestGroupPageState extends State<TestGroupPage> with TestBaseMixin {
   }
 
   void _showMuteAllMuteAlert() async {
-    if (_groupId.isEmpty) return;
-    final group = await EMClient.getInstance.groupManager
-        .fetchGroupInfoFromServer(_groupId);
+    if (_roomId.isEmpty) return;
+    final room = await EMClient.getInstance.chatRoomManager
+        .fetchChatRoomInfoFromServer(_roomId);
     if (!mounted) return;
     showSwitchAlert(
       context: context,
       title: '全部禁言',
-      description: '确定要操作吗？',
-      initialValue: group.isAllMemberMuted ?? false,
+      description: '操作全部禁言？',
+      initialValue: room.isAllMemberMuted ?? false,
       onChanged: (value) async {
         try {
           if (value) {
-            await EMClient.getInstance.groupManager.muteAllMembers(_groupId);
+            await EMClient.getInstance.chatRoomManager.muteAllChatRoomMembers(
+              _roomId,
+            );
           } else {
-            await EMClient.getInstance.groupManager.unMuteAllMembers(_groupId);
+            await EMClient.getInstance.chatRoomManager.unMuteAllChatRoomMembers(
+              _roomId,
+            );
           }
-          addLog('操作成功');
           return true;
         } catch (e) {
-          addAppErrLog('报错: $e');
           return false;
         }
       },
     );
   }
 
+  Future<void> _createChatRoom() async {
+    final result = await showInputDialog(
+      context: context,
+      title: '创建聊天室',
+      fields: [
+        InputFieldData(title: '名称', placeholder: '输入聊天室名称', text: ''),
+        InputFieldData(
+          title: '描述',
+          placeholder: '输入聊天室描述',
+          text: '',
+          multiline: true,
+        ),
+      ],
+    );
+
+    if (result != null) {
+      final name = result[0].text.trim();
+      final desc = result[1].text.trim();
+      if (name.isEmpty) return;
+      try {
+        addLog('开始创建聊天室: $name');
+        final room = await EMClient.getInstance.chatRoomManager.createChatRoom(
+          name,
+          desc: desc,
+        );
+        addLog('创建成功 ID: ${room.roomId}');
+        setState(() {
+          _roomId = room.roomId;
+          _roomIdController.text = _roomId;
+          _isJoined = true;
+        });
+      } catch (e) {
+        addLog('创建失败: $e');
+      }
+    }
+  }
+
+  Future<void> _destroyChatRoom() async {
+    if (_roomId.isEmpty) return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('解散聊天室'),
+        content: Text('确定要解散聊天室 $_roomId 吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        addLog('开始解散聊天室: $_roomId');
+        await EMClient.getInstance.chatRoomManager.destroyChatRoom(_roomId);
+        addLog('解散成功');
+        setState(() {
+          _roomId = '';
+          _roomIdController.text = '';
+          _isJoined = false;
+        });
+      } catch (e) {
+        addLog('解散失败: $e');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = _settings.isDarkMode;
-    return CommonTestLayout(
+    return CommonLayout(
       isDark: isDark,
       showAppBar: widget.showAppBar,
       appBar: widget.showAppBar ? _buildAppBar(isDark) : null,
@@ -446,7 +521,7 @@ class _TestGroupPageState extends State<TestGroupPage> with TestBaseMixin {
   // --- 辅助组件 ---
 
   Widget _buildMessageTypeButtons(bool isDark) {
-    GridActionItem buildItem(
+    GridActionItem bi(
       IconData icon,
       String label,
       Future<EMMessage> Function() creator,
@@ -458,79 +533,79 @@ class _TestGroupPageState extends State<TestGroupPage> with TestBaseMixin {
           try {
             await sendMessage(await creator());
           } catch (e) {
-            addAppErrLog('发送$label失败: $e');
+            addAppErrLog('失败: $e');
           }
         },
       );
     }
 
     final items = [
-      buildItem(
+      bi(
         Icons.image_outlined,
         '图片',
         () async => EMMessage.createImageSendMessage(
-          targetId: _groupId,
+          targetId: _roomId,
           filePath: await getAssetFilePath('assets/image.jpg'),
           width: 1920,
           height: 1080,
           fileSize: 111916,
-          chatType: ChatType.GroupChat,
+          chatType: ChatType.ChatRoom,
         ),
       ),
-      buildItem(
+      bi(
         Icons.videocam_outlined,
         '视频',
         () async => EMMessage.createVideoSendMessage(
-          targetId: _groupId,
+          targetId: _roomId,
           filePath: await getAssetFilePath('assets/video.mp4'),
           thumbnailLocalPath: await getAssetFilePath('assets/image.jpg'),
           width: 1920,
           height: 1080,
           duration: 10,
           fileSize: 4006696,
-          chatType: ChatType.GroupChat,
+          chatType: ChatType.ChatRoom,
         ),
       ),
-      buildItem(
+      bi(
         Icons.mic_outlined,
         '语音',
         () async => EMMessage.createVoiceSendMessage(
-          targetId: _groupId,
+          targetId: _roomId,
           filePath: await getAssetFilePath('assets/voice.mp3'),
           duration: 10,
           fileSize: 111916,
-          chatType: ChatType.GroupChat,
+          chatType: ChatType.ChatRoom,
         ),
       ),
-      buildItem(
+      bi(
         Icons.description_outlined,
         '文件',
         () async => EMMessage.createFileSendMessage(
-          targetId: _groupId,
+          targetId: _roomId,
           filePath: await getAssetFilePath('assets/voice.mp3'),
           fileSize: 111916,
-          chatType: ChatType.GroupChat,
+          chatType: ChatType.ChatRoom,
         ),
       ),
-      buildItem(
+      bi(
         Icons.location_on_outlined,
         '位置',
         () async => EMMessage.createLocationSendMessage(
-          targetId: _groupId,
+          targetId: _roomId,
           latitude: 39.9042,
           longitude: 116.4074,
           address: '北京市海淀区中关村',
-          chatType: ChatType.GroupChat,
+          chatType: ChatType.ChatRoom,
         ),
       ),
-      buildItem(
+      bi(
         Icons.extension_outlined,
         '自定义',
         () async => EMMessage.createCustomSendMessage(
-          targetId: _groupId,
-          event: 'eventValue',
-          params: {'paramsKey': 'paramsValue'},
-          chatType: ChatType.GroupChat,
+          targetId: _roomId,
+          event: 'ev',
+          params: {'p': 'v'},
+          chatType: ChatType.ChatRoom,
         ),
       ),
     ];
@@ -540,48 +615,49 @@ class _TestGroupPageState extends State<TestGroupPage> with TestBaseMixin {
     );
   }
 
-  Widget _buildGroupManagementButtons(bool isDark) {
+  Widget _buildChatRoomManagementButtons(bool isDark) {
     final items = [
       GridActionItem(
         icon: Icons.assignment_outlined,
         label: '详情',
-        onTap: _showGroupDetails,
+        onTap: _showChatRoomDetails,
       ),
       GridActionItem(
         icon: Icons.drive_file_rename_outline,
         label: '名称',
-        onTap: () => _showGroupInfoDialog(GroupInfoEditType.name),
+        onTap: () => _showRoomInfoDialog(RoomInfoEditType.name),
       ),
       GridActionItem(
         icon: Icons.subject,
         label: '描述',
-        onTap: () => _showGroupInfoDialog(GroupInfoEditType.description),
+        onTap: () => _showRoomInfoDialog(RoomInfoEditType.description),
       ),
       GridActionItem(
         icon: Icons.campaign_outlined,
         label: '公告',
-        onTap: () => _showGroupInfoDialog(GroupInfoEditType.announcement),
+        onTap: () => _showRoomInfoDialog(RoomInfoEditType.announcement),
       ),
       GridActionItem(
         icon: Icons.group_outlined,
         label: '成员',
-        onTap: () => _showBottomSheet(TestGroupMembersPage(groupId: _groupId)),
+        onTap: () => _showBottomSheet(ChatRoomMembersPage(roomId: _roomId)),
       ),
       GridActionItem(
         icon: Icons.admin_panel_settings_outlined,
         label: '管理员',
-        onTap: () => _showBottomSheet(TestGroupAdminsPage(groupId: _groupId)),
+        onTap: () => _showBottomSheet(ChatRoomAdminsPage(roomId: _roomId)),
       ),
       GridActionItem(
         icon: Icons.verified_user_outlined,
         label: '白名单',
         onTap: () =>
-            _showBottomSheet(TestGroupWhiteListPage(groupId: _groupId)),
+            _showBottomSheet(ChatRoomWhiteListPage(roomId: _roomId)),
       ),
       GridActionItem(
         icon: Icons.mic_off_outlined,
         label: '禁言列表',
-        onTap: () => _showBottomSheet(TestGroupMuteListPage(groupId: _groupId)),
+        onTap: () =>
+            _showBottomSheet(ChatRoomMuteListPage(roomId: _roomId)),
       ),
       GridActionItem(
         icon: Icons.voice_over_off_outlined,
@@ -592,15 +668,16 @@ class _TestGroupPageState extends State<TestGroupPage> with TestBaseMixin {
         icon: Icons.tune,
         label: '自定义',
         onTap: () async {
-          if (_groupId.isEmpty) return;
+          if (_roomId.isEmpty) return;
           try {
-            await EMClient.getInstance.groupManager.setMemberAttributes(
-              groupId: _groupId,
+            await EMClient.getInstance.chatRoomManager.addAttributes(
+              _roomId,
               attributes: {'attKey': 'att_${DateTime.now()}'},
+              overwrite: true,
             );
-            addLog('设置成功');
+            addLog('成功');
           } catch (e) {
-            addAppErrLog('失败: $e');
+            addLog('失败: $e');
           }
         },
       ),
@@ -608,7 +685,17 @@ class _TestGroupPageState extends State<TestGroupPage> with TestBaseMixin {
         icon: Icons.swap_horiz_outlined,
         label: '转移',
         onTap: () =>
-            _showBottomSheet(TestGroupChangeOwnerPage(groupId: _groupId)),
+            _showBottomSheet(ChatRoomChangeOwnerPage(roomId: _roomId)),
+      ),
+      GridActionItem(
+        icon: Icons.add_circle_outline,
+        label: '创建',
+        onTap: _createChatRoom,
+      ),
+      GridActionItem(
+        icon: Icons.dangerous_outlined,
+        label: '解散',
+        onTap: _destroyChatRoom,
       ),
     ];
     return SizedBox(
