@@ -64,6 +64,18 @@ class CommonInputRow extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.textPrimary(isDark)),
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              // 禁用粘贴功能
+              contextMenuBuilder: (context, editableTextState) {
+                final List<ContextMenuButtonItem> buttonItems =
+                    editableTextState.contextMenuButtonItems;
+                buttonItems.removeWhere(
+                  (item) => item.type == ContextMenuButtonType.paste,
+                );
+                return AdaptiveTextSelectionToolbar.buttonItems(
+                  anchors: editableTextState.contextMenuAnchors,
+                  buttonItems: buttonItems,
+                );
+              },
               decoration: InputDecoration(
                 hintText: '次数',
                 hintStyle: TextStyle(
