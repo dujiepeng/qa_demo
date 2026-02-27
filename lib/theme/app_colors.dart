@@ -1,6 +1,5 @@
+import 'package:chat_uikit_theme/chat_uikit_theme.dart';
 import 'package:flutter/material.dart';
-
-import 'package:qa_flutter/uikit/lib/chat_uikit.dart';
 
 class AppColors {
   // 深色模式配色

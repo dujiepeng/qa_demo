@@ -1,5 +1,5 @@
+import 'package:chat_uikit_theme/chat_uikit_theme.dart';
 import 'package:provider/provider.dart';
-import 'package:qa_flutter/uikit/lib/chat_uikit.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../common/utils/version_manager.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../../theme/app_colors.dart';
-import 'package:qa_flutter/uikit/lib/chat_uikit.dart';
 
 /// 日志条目模型，包含内容、时间戳和可选背景色
 class LogEntry {
@@ -57,7 +57,8 @@ class LogView extends StatelessWidget {
   final LogController controller;
   final bool isDark;
   final bool enableMessageManager;
-  final void Function(Message? message, LogMenuAction action)? longPassCallback;
+  final void Function(EMMessage? message, LogMenuAction action)?
+  longPassCallback;
   const LogView({
     super.key,
     required this.controller,

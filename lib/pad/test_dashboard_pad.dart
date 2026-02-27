@@ -1,7 +1,8 @@
+import 'package:chat_uikit_theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import 'package:provider/provider.dart';
-import 'package:qa_flutter/uikit/lib/chat_uikit.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
 import '../test_pages/single/test_single_chat_list_page.dart';

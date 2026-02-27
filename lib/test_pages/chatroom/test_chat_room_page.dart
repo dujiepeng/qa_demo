@@ -400,14 +400,15 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
       initialValue: room.isAllMemberMuted ?? false,
       onChanged: (value) async {
         try {
-          if (value)
+          if (value) {
             await EMClient.getInstance.chatRoomManager.muteAllChatRoomMembers(
               _roomId,
             );
-          else
+          } else {
             await EMClient.getInstance.chatRoomManager.unMuteAllChatRoomMembers(
               _roomId,
             );
+          }
           return true;
         } catch (e) {
           return false;
@@ -773,7 +774,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
         label: '日志',
         onTap: () async {
           final logZipPath = await EMClient.getInstance.compressLogs();
-          if (mounted)
+          if (mounted) {
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => LogContentPage(
@@ -781,6 +782,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
                 ),
               ),
             );
+          }
         },
       ),
       GridActionItem(

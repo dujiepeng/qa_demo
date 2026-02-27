@@ -807,7 +807,7 @@ class _TestGroupPageState extends State<TestGroupPage> {
         label: '日志',
         onTap: () async {
           final logZipPath = await EMClient.getInstance.compressLogs();
-          if (mounted)
+          if (mounted) {
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => LogContentPage(
@@ -815,6 +815,7 @@ class _TestGroupPageState extends State<TestGroupPage> {
                 ),
               ),
             );
+          }
         },
       ),
       GridActionItem(

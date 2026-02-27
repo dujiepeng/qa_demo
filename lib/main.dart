@@ -1,9 +1,9 @@
+import 'package:chat_uikit_theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:qa_flutter/test_pages/chatroom/test_chat_room_list_page.dart';
 import 'package:qa_flutter/theme/app_colors.dart';
 import 'package:qa_flutter/theme/app_settings.dart';
-import 'package:qa_flutter/uikit/lib/chat_uikit.dart';
 import 'config/app_config.dart';
 import 'mobile/home_page.dart';
 import 'mobile/login_page.dart';
@@ -46,12 +46,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  final ChatUIKitLocalizations _localization = ChatUIKitLocalizations();
-
   @override
   void initState() {
-    _localization.translate('zh');
-    _localization.resetLocales();
     ChatUIKitTheme.instance.setColor(
       AppSettings().isDarkMode ? AppColors.darkColor : AppColors.lightColor,
     );
@@ -71,18 +67,14 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       title: 'QA Flutter',
       debugShowCheckedModeBanner: false,
-      supportedLocales: _localization.supportedLocales,
-      localizationsDelegates: _localization.localizationsDelegates,
-      localeResolutionCallback: _localization.localeResolutionCallback,
+
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
       // 根据登录状态动态决定起始页面
       initialRoute: settings.isLoggedIn ? '/home' : '/login',
-      onGenerateRoute: (settings) {
-        return ChatUIKitRoute().generateRoute(settings);
-      },
+
       routes: {
         '/login': (context) => const LoginPage(),
         '/home': (context) => const HomePage(),
