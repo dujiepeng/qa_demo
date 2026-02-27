@@ -87,25 +87,18 @@ class _TestSingleChatPageState extends State<TestSingleChatPage>
 
   PreferredSizeWidget _buildAppBar(bool isDark) {
     return AppBar(
-      toolbarHeight: kToolbarHeight + 20,
       backgroundColor: Colors.transparent,
       elevation: 0,
       iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
-      title: Padding(
-        padding: const EdgeInsets.only(top: 20),
-        child: Text(
-          '单聊测试',
-          style: TextStyle(color: AppColors.textPrimary(isDark)),
-        ),
+      title: Text(
+        '单聊测试',
+        style: TextStyle(color: AppColors.textPrimary(isDark)),
       ),
       centerTitle: true,
       actions: [
-        Padding(
-          padding: const EdgeInsets.only(top: 20),
-          child: IconButton(
-            icon: const Icon(Icons.info),
-            onPressed: () => Navigator.of(context).pushNamed('/settings'),
-          ),
+        IconButton(
+          icon: const Icon(Icons.info),
+          onPressed: () => Navigator.of(context).pushNamed('/settings'),
         ),
       ],
     );
