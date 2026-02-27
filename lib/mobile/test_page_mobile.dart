@@ -56,27 +56,27 @@ class _TestPageMobileState extends State<TestPageMobile> {
   Widget build(BuildContext context) {
     final isDark = _settings.isDarkMode;
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
+    return CommonGradientBackground(
+      isDark: isDark,
+      child: Scaffold(
         backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(
-          '测试',
-          style: TextStyle(color: AppColors.textPrimary(isDark)),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.info_outline),
-            onPressed: () => CommonDialogs.showUserInfoDialog(context, isDark),
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: Text(
+            '测试',
+            style: TextStyle(color: AppColors.textPrimary(isDark)),
           ),
-        ],
-      ),
-      body: CommonGradientBackground(
-        isDark: isDark,
-        child: Padding(
+          centerTitle: true,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.info_outline),
+              onPressed: () =>
+                  CommonDialogs.showUserInfoDialog(context, isDark),
+            ),
+          ],
+        ),
+        body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
           child: GridView.builder(
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(

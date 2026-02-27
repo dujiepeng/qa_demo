@@ -4,6 +4,7 @@ import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import 'package:qa_flutter/test_pages/single/test_single_chat_page.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
+import '../../common/widgets/common_gradient_background.dart';
 
 /// 好友列表页面
 class TestSingleChatListPage extends StatefulWidget {
@@ -202,52 +203,45 @@ class _TestSingleChatListPageState extends State<TestSingleChatListPage> {
       listenable: _settings,
       builder: (context, _) {
         final isDark = _settings.isDarkMode;
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(
-              '好友列表',
-              style: TextStyle(color: AppColors.textPrimary(isDark)),
-            ),
-            centerTitle: true,
-            actions: [
-              IconButton(onPressed: _addFriend, icon: const Icon(Icons.add)),
-              TextButton(
-                child: Text(
-                  '单聊',
-                  style: TextStyle(
-                    color: AppColors.textPrimary(isDark),
-                    fontSize: 14,
+        return CommonGradientBackground(
+          isDark: isDark,
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            appBar: AppBar(
+              title: Text(
+                '好友列表',
+                style: TextStyle(color: AppColors.textPrimary(isDark)),
+              ),
+              centerTitle: true,
+              actions: [
+                IconButton(onPressed: _addFriend, icon: const Icon(Icons.add)),
+                TextButton(
+                  child: Text(
+                    '单聊',
+                    style: TextStyle(
+                      color: AppColors.textPrimary(isDark),
+                      fontSize: 14,
+                    ),
                   ),
+                  onPressed: () {
+                    if (widget.onItemTap != null) {
+                      widget.onItemTap!('');
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const TestSingleChatPage(),
+                        ),
+                      );
+                    }
+                  },
                 ),
-                onPressed: () {
-                  if (widget.onItemTap != null) {
-                    widget.onItemTap!('');
-                  } else {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const TestSingleChatPage(),
-                      ),
-                    );
-                  }
-                },
-              ),
-            ],
-            backgroundColor: AppColors.backgroundStart(isDark),
-            iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
-          ),
-          body: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.backgroundStart(isDark),
-                  AppColors.backgroundEnd(isDark),
-                ],
-              ),
+              ],
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
             ),
-            child: _isLoading
+            body: _isLoading
                 ? Center(
                     child: CircularProgressIndicator(
                       color: AppColors.primary(isDark),

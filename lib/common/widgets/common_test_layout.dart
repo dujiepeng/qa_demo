@@ -24,62 +24,70 @@ class CommonTestLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final padding = EdgeInsets.only(
-      top: showAppBar ? (kToolbarHeight + 60) : 20,
+    // 使用统一的内边距，因为我们将不再使用 extendBodyBehindAppBar
+    // 系统会根据是否显示 AppBar 自动处理 Body 的起始位置
+    const contentPadding = EdgeInsets.only(
+      top: 20,
       left: 15,
       right: 15,
       bottom: 30,
     );
 
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      extendBodyBehindAppBar: true,
-      backgroundColor: Colors.transparent,
-      appBar: appBar,
-      body: CommonGradientBackground(
-        isDark: isDark,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isWide = constraints.maxWidth > 800;
-            if (isWide) {
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: SingleChildScrollView(
-                      padding: padding,
-                      child: controlPanel,
+    return CommonGradientBackground(
+      isDark: isDark,
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        backgroundColor: Colors.transparent,
+        appBar: appBar,
+        body: SafeArea(
+          // 如果没有 AppBar，则需要顶部安全区域保护
+          top: appBar == null,
+          bottom: false,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 800;
+              if (isWide) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: SingleChildScrollView(
+                        padding: contentPadding,
+                        child: controlPanel,
+                      ),
+                    ),
+                    VerticalDivider(
+                      width: 1,
+                      thickness: 1,
+                      color: AppColors.glassBorder(
+                        isDark,
+                      ).withValues(alpha: 0.2),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Padding(padding: contentPadding, child: logPanel),
+                    ),
+                  ],
+                );
+              }
+              return SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Padding(
+                    padding: contentPadding,
+                    child: Column(
+                      children: [
+                        controlPanel,
+                        const SizedBox(height: 20),
+                        SizedBox(height: mobileLogHeight, child: logPanel),
+                      ],
                     ),
                   ),
-                  VerticalDivider(
-                    width: 1,
-                    thickness: 1,
-                    color: AppColors.glassBorder(isDark).withValues(alpha: 0.2),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Padding(padding: padding, child: logPanel),
-                  ),
-                ],
-              );
-            }
-            return SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Padding(
-                  padding: padding,
-                  child: Column(
-                    children: [
-                      controlPanel,
-                      const SizedBox(height: 20),
-                      SizedBox(height: mobileLogHeight, child: logPanel),
-                    ],
-                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );

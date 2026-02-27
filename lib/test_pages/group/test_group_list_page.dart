@@ -4,6 +4,7 @@ import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import 'package:qa_flutter/test_pages/group/test_group_page.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
+import '../../common/widgets/common_gradient_background.dart';
 
 /// 群组列表页面
 class TestGroupListPage extends StatefulWidget {
@@ -135,48 +136,43 @@ class _TestGroupListPageState extends State<TestGroupListPage> {
       listenable: _settings,
       builder: (context, _) {
         final isDark = _settings.isDarkMode;
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(
-              '群组列表',
-              style: TextStyle(color: AppColors.textPrimary(isDark)),
-            ),
-            backgroundColor: AppColors.backgroundStart(isDark),
-            iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
-            actions: [
-              TextButton(
-                child: Text(
-                  'Join',
-                  style: TextStyle(
-                    color: AppColors.textPrimary(isDark),
-                    fontSize: 14,
+        return CommonGradientBackground(
+          isDark: isDark,
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            appBar: AppBar(
+              title: Text(
+                '群组列表',
+                style: TextStyle(color: AppColors.textPrimary(isDark)),
+              ),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
+              actions: [
+                TextButton(
+                  child: Text(
+                    'Join',
+                    style: TextStyle(
+                      color: AppColors.textPrimary(isDark),
+                      fontSize: 14,
+                    ),
                   ),
+                  onPressed: () {
+                    if (widget.onItemTap != null) {
+                      widget.onItemTap!('');
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const TestGroupPage(),
+                        ),
+                      );
+                    }
+                  },
                 ),
-                onPressed: () {
-                  if (widget.onItemTap != null) {
-                    widget.onItemTap!('');
-                  } else {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => TestGroupPage()),
-                    );
-                  }
-                },
-              ),
-            ],
-          ),
-          body: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.backgroundStart(isDark),
-                  AppColors.backgroundEnd(isDark),
-                ],
-              ),
+              ],
             ),
-            child: _isLoading
+            body: _isLoading
                 ? Center(
                     child: CircularProgressIndicator(
                       color: AppColors.primary(isDark),

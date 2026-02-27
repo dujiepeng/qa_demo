@@ -4,6 +4,7 @@ import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import 'package:qa_flutter/test_pages/chatroom/test_chat_room_page.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
+import '../../common/widgets/common_gradient_background.dart';
 
 class TestChatRoomListPage extends StatefulWidget {
   final Function(String roomId)? onItemTap;
@@ -129,50 +130,43 @@ class _TestChatRoomListPageState extends State<TestChatRoomListPage> {
       listenable: _settings,
       builder: (context, _) {
         final isDark = _settings.isDarkMode;
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(
-              '聊天室列表',
-              style: TextStyle(color: AppColors.textPrimary(isDark)),
-            ),
-            actions: [
-              TextButton(
-                child: Text(
-                  'Join',
-                  style: TextStyle(
-                    color: AppColors.textPrimary(isDark),
-                    fontSize: 14,
+        return CommonGradientBackground(
+          isDark: isDark,
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            appBar: AppBar(
+              title: Text(
+                '聊天室列表',
+                style: TextStyle(color: AppColors.textPrimary(isDark)),
+              ),
+              actions: [
+                TextButton(
+                  child: Text(
+                    'Join',
+                    style: TextStyle(
+                      color: AppColors.textPrimary(isDark),
+                      fontSize: 14,
+                    ),
                   ),
+                  onPressed: () {
+                    if (widget.onItemTap != null) {
+                      widget.onItemTap!('');
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const TestChatRoomPage(),
+                        ),
+                      );
+                    }
+                  },
                 ),
-                onPressed: () {
-                  if (widget.onItemTap != null) {
-                    widget.onItemTap!('');
-                  } else {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => TestChatRoomPage(),
-                      ),
-                    );
-                  }
-                },
-              ),
-            ],
-            backgroundColor: AppColors.backgroundStart(isDark),
-            iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
-          ),
-          body: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.backgroundStart(isDark),
-                  AppColors.backgroundEnd(isDark),
-                ],
-              ),
+              ],
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
             ),
-            child: _isLoading
+            body: _isLoading
                 ? Center(
                     child: CircularProgressIndicator(
                       color: AppColors.primary(isDark),

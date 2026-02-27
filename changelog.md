@@ -1,6 +1,12 @@
 # Changelog
 
-## [1.50.0+139] - 2026-02-27
+## [1.51.0+140] - 2025-02-14
+### Refactor
+- 重构了 `CommonTestLayout` 的页面架构，修复了手机模式下出现的双 AppBar 视觉问题以及头部间距异常。
+- 统一了所有测试列表页（单聊、群聊、聊天室）和详情页的背景管理逻辑，使用 `CommonGradientBackground` 包装 `Scaffold`，并移除 `extendBodyBehindAppBar` 以获得更标准的 UI 渲染。
+- 修复了 `TestChatRoomListPage` 等页面的代码结构损坏问题。
+
+## [1.50.0+139] - 2025-02-14
 
 ### 修改内容
 - **[重构]** 项目目录架构全方位对称化与响应式重组:
