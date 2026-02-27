@@ -175,15 +175,23 @@ class _RoomListPageState extends State<RoomListPage> {
                 : RefreshIndicator(
                     onRefresh: () => _fetchChatRooms(silent: true),
                     child: _chatRooms.isEmpty
-                        ? Center(
-                            child: Text(
-                              '暂无公开聊天室',
-                              style: TextStyle(
-                                color: AppColors.textSecondary(isDark),
+                        ? CustomScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            slivers: [
+                              SliverFillRemaining(
+                                child: Center(
+                                  child: Text(
+                                    '暂无公开聊天室',
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary(isDark),
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           )
                         : ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
                             controller: _scrollController,
                             itemCount: _chatRooms.length + (_hasMore ? 1 : 0),
                             itemBuilder: (context, index) {
