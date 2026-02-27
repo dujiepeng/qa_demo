@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:im_flutter_sdk/im_flutter_sdk.dart';
+
 import '../../theme/app_colors.dart';
 
 /// 日志条目模型，包含内容、时间戳和可选背景色
@@ -8,13 +8,15 @@ class LogEntry {
   final String content;
   final String timestamp;
   final Color? color;
-  final EMMessage? message;
+  final Object? attachment;
+  final String? tag;
 
   LogEntry({
     required this.content,
     required this.timestamp,
     this.color,
-    this.message,
+    this.attachment,
+    this.tag,
   });
 }
 
@@ -32,7 +34,7 @@ class LogController extends ChangeNotifier {
   List<LogEntry> get logs => List.unmodifiable(_logs);
 
   /// 添加一条日志
-  void addLog(String str, {Color? color, EMMessage? message}) {
+  void addLog(String str, {Color? color, Object? attachment, String? tag}) {
     final now = DateTime.now();
 
     final timeStr =
@@ -44,7 +46,8 @@ class LogController extends ChangeNotifier {
         content: str,
         timestamp: timeStr,
         color: color,
-        message: message,
+        attachment: attachment,
+        tag: tag,
       ),
     );
     notifyListeners();

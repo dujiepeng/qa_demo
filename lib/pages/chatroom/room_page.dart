@@ -79,8 +79,11 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
     EMClient.getInstance.chatManager.addMessageEvent(
       _eventKey,
       ChatMessageEvent(
-        onSuccess: (msgId, msg) =>
-            addSendLog('${msg.from}: ${msg.toJson().toString()}', message: msg),
+        onSuccess: (msgId, msg) => addSendLog(
+          '${msg.from}: ${msg.toJson().toString()}',
+          attachment: msg,
+          tag: 'message',
+        ),
         onError: (msgId, msg, error) => addSendLog('发送失败: ${error.toString()}'),
       ),
     );
@@ -93,7 +96,8 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
             if (msg.conversationId == _roomId) {
               addReceiveLog(
                 '${msg.from}: ${msg.toJson().toString()}',
-                message: msg,
+                attachment: msg,
+                tag: 'message',
               );
             }
           }

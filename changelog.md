@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.68.0+157] - 2025-02-14
+### Refactor
+- 通用化了 `LogView` 的附件机制：
+  - `LogEntry` 中的 `message` 字段改为通用的 `attachment` (Object?)。
+  - 新增 `tag` (String?) 字段，用于标识附件类型，方便外部根据标签进行类型转换和逻辑判断。
+  - 同步更新了 `BaseMixin` 和所有相关测试页面（SingleChat, Group, Room），在记录消息日志时统一添加 `'message'` 标签。
+  - 移除了 `LogView` 和 `BaseMixin` 中不再需要的 `im_flutter_sdk` 依赖，降低了组件耦合度。
+
 ## [1.67.0+156] - 2025-02-14
 ### Refactor
 - 重构了 `LogView` 组件以支持完全动态的菜单构建：

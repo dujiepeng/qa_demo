@@ -60,7 +60,11 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
       _eventKey,
       ChatMessageEvent(
         onSuccess: (msgId, msg) {
-          addSendLog('${msg.from}: ${msg.toJson().toString()}', message: msg);
+          addSendLog(
+            '${msg.from}: ${msg.toJson().toString()}',
+            attachment: msg,
+            tag: 'message',
+          );
         },
         onError: (msgId, msg, error) {
           addSendLog('发送失败: ${error.toString()}');
@@ -76,7 +80,8 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
             if (msg.chatType == ChatType.Chat) {
               addReceiveLog(
                 '${msg.from}: ${msg.toJson().toString()}',
-                message: msg,
+                attachment: msg,
+                tag: 'message',
               );
             }
           }
@@ -84,7 +89,8 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
         onMessageContentChanged: (msg, operator, operationTime) {
           addReceiveLog(
             '${msg.from}: ${msg.toJson().toString()}',
-            message: msg,
+            attachment: msg,
+            tag: 'message',
           );
         },
       ),
@@ -165,8 +171,10 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
         );
 
         // 如果包含消息，增加功能按钮
-        final message = entry.message;
-        if (message != null) {
+        final tag = entry.tag;
+        final attachment = entry.attachment;
+        if (tag == 'message' && attachment is EMMessage) {
+          final message = attachment;
           items.add(
             LogMenuItem(
               title: '发送已读ACK',
@@ -214,7 +222,8 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
                       );
                   addSendLog(
                     '${msg.from}: ${msg.toJson().toString()}',
-                    message: msg,
+                    attachment: msg,
+                    tag: 'message',
                   );
                 } catch (e) {
                   addAppErrLog('修改失败: $e');

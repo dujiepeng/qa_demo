@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:im_flutter_sdk/im_flutter_sdk.dart';
+
 import 'package:path_provider/path_provider.dart';
 import '../widgets/log_view.dart';
 
@@ -12,10 +12,20 @@ mixin BaseMixin<T extends StatefulWidget> on State<T> {
   void addLog(String content) => logController.addLog(content);
   void addAppErrLog(String content) =>
       logController.addLog(content, color: Colors.red);
-  void addSendLog(String content, {EMMessage? message}) =>
-      logController.addLog(content, color: Colors.green, message: message);
-  void addReceiveLog(String content, {EMMessage? message}) =>
-      logController.addLog(content, color: Colors.blue, message: message);
+  void addSendLog(String content, {Object? attachment, String? tag}) =>
+      logController.addLog(
+        content,
+        color: Colors.green,
+        attachment: attachment,
+        tag: tag,
+      );
+  void addReceiveLog(String content, {Object? attachment, String? tag}) =>
+      logController.addLog(
+        content,
+        color: Colors.blue,
+        attachment: attachment,
+        tag: tag,
+      );
 
   /// 获取 asset 文件路径，用于发送媒体消息
   Future<String> getAssetFilePath(String assetPath) async {

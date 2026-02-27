@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import 'package:qa_flutter/common/widgets/switch_alert.dart';
 import '../../theme/app_colors.dart';
@@ -61,8 +62,11 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
     EMClient.getInstance.chatManager.addMessageEvent(
       _eventKey,
       ChatMessageEvent(
-        onSuccess: (msgId, msg) =>
-            addSendLog('${msg.from}: ${msg.toJson().toString()}', message: msg),
+        onSuccess: (msgId, msg) => addSendLog(
+          '${msg.from}: ${msg.toJson().toString()}',
+          attachment: msg,
+          tag: 'message',
+        ),
         onError: (msgId, msg, error) => addSendLog('发送失败: ${error.toString()}'),
       ),
     );
@@ -75,7 +79,8 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
             if (msg.conversationId == _groupId) {
               addReceiveLog(
                 '${msg.from}: ${msg.toJson().toString()}',
-                message: msg,
+                attachment: msg,
+                tag: 'message',
               );
             }
           }
@@ -194,7 +199,30 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
   }
 
   Widget _buildLogPanel(bool isDark) {
-    return LogView(controller: _logController, isDark: isDark);
+    return LogView(
+      controller: _logController,
+      isDark: isDark,
+      menuBuilder: (entry) {
+        return [
+          LogMenuItem(
+            title: '复制',
+            onTap: () async {
+              final text = '${entry.timestamp}: ${entry.content}';
+              final ClipboardData data = ClipboardData(text: text);
+              await Clipboard.setData(data);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('已复制到剪贴板'),
+                    duration: Duration(milliseconds: 500),
+                  ),
+                );
+              }
+            },
+          ),
+        ];
+      },
+    );
   }
 
   Future<void> _handleJoinLeaveGroup() async {
@@ -575,8 +603,7 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
       GridActionItem(
         icon: Icons.verified_user_outlined,
         label: '白名单',
-        onTap: () =>
-            _showBottomSheet(GroupWhiteListPage(groupId: _groupId)),
+        onTap: () => _showBottomSheet(GroupWhiteListPage(groupId: _groupId)),
       ),
       GridActionItem(
         icon: Icons.mic_off_outlined,
@@ -607,8 +634,7 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
       GridActionItem(
         icon: Icons.swap_horiz_outlined,
         label: '转移',
-        onTap: () =>
-            _showBottomSheet(GroupChangeOwnerPage(groupId: _groupId)),
+        onTap: () => _showBottomSheet(GroupChangeOwnerPage(groupId: _groupId)),
       ),
     ];
     return SizedBox(
