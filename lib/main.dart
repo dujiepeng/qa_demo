@@ -11,6 +11,7 @@ import 'common/settings_page.dart';
 import 'pages/group/group_list_page.dart';
 import 'pages/single/single_chat_list_page.dart';
 import 'pages/single/single_chat_page.dart';
+import 'pages/conversation/conversation_list_page.dart';
 import 'common/utils/log_service.dart';
 import 'common/utils/version_manager.dart';
 
@@ -83,6 +84,7 @@ class _MyAppState extends State<MyApp> {
         '/group_list': (context) => const GroupListPage(),
         '/single_chat': (context) => const SingleChatPage(),
         '/single_chat_list': (context) => const SingleChatListPage(),
+        '/conversation_list': (context) => const ConversationListPage(),
       },
     );
   }

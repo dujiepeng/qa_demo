@@ -35,6 +35,11 @@ class _PageMobileState extends State<PageMobile> {
     super.initState();
     _testItems = [
       GridItem(
+        title: '会话',
+        icon: Icons.chat_outlined,
+        onTap: () => Navigator.pushNamed(context, '/conversation_list'),
+      ),
+      GridItem(
         title: '单聊',
         icon: Icons.person_outlined,
         onTap: () => Navigator.pushNamed(context, '/single_chat_list'),

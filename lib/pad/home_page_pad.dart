@@ -43,7 +43,7 @@ class _HomePagePadState extends State<HomePagePad>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _initAndStartLogSync();
   }
 
@@ -233,12 +233,9 @@ class _HomePagePadState extends State<HomePagePad>
         _buildMasterAppBar(isDark),
         // 上半部分内容 (列表或详情)
         Expanded(
-          child: _detailPage != null
-              ? _detailPage!
-              : PagePad(
-                  tabController: _tabController,
-                  onShowDetail: _showDetail,
-                ),
+          child:
+              _detailPage ??
+              PagePad(tabController: _tabController, onShowDetail: _showDetail),
         ),
 
         // 可拖动的分割线手柄
@@ -322,6 +319,13 @@ class _HomePagePadState extends State<HomePagePad>
       indicatorWeight: 3,
       dividerColor: Colors.transparent,
       tabs: const [
+        Tab(
+          height: 50,
+          child: Text(
+            '会话',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+        ),
         Tab(
           height: 50,
           child: Text(
