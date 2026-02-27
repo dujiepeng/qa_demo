@@ -500,6 +500,7 @@ class _HomePagePadState extends State<HomePagePad>
                           await file.writeAsString('');
                           setState(() {
                             _sdkLogContent = '';
+                            _autoScroll = true; // 清空后自动恢复播放状态
                           });
                         }
                       }
