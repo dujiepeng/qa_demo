@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.69.0+158] - 2025-02-14
+### Refactor
+- 重构了 `BaseMixin` 中的日志记录方法：
+  - 提供了全参数的 `addLog` 基准方法，支持 `content`, `color`, `attachment`, `tag`。
+  - 将日志默认颜色设为灰色 (`Colors.grey`)。
+  - 将 `addAppErrLog`, `addSendLog`, `addReceiveLog` 统一修改为调用基准的 `addLog` 方法，简化了维护逻辑。
+
 ## [1.68.0+157] - 2025-02-14
 ### Refactor
 - 通用化了 `LogView` 的附件机制：

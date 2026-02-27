@@ -9,23 +9,31 @@ import '../widgets/log_view.dart';
 mixin BaseMixin<T extends StatefulWidget> on State<T> {
   LogController get logController;
 
-  void addLog(String content) => logController.addLog(content);
-  void addAppErrLog(String content) =>
-      logController.addLog(content, color: Colors.red);
+  /// 基础日志记录方法
+  void addLog(
+    String content, {
+    Color color = Colors.grey,
+    Object? attachment,
+    String? tag,
+  }) {
+    logController.addLog(
+      content,
+      color: color,
+      attachment: attachment,
+      tag: tag,
+    );
+  }
+
+  /// 记录错误日志
+  void addAppErrLog(String content) => addLog(content, color: Colors.red);
+
+  /// 记录发送类日志
   void addSendLog(String content, {Object? attachment, String? tag}) =>
-      logController.addLog(
-        content,
-        color: Colors.green,
-        attachment: attachment,
-        tag: tag,
-      );
+      addLog(content, color: Colors.green, attachment: attachment, tag: tag);
+
+  /// 记录接收类日志
   void addReceiveLog(String content, {Object? attachment, String? tag}) =>
-      logController.addLog(
-        content,
-        color: Colors.blue,
-        attachment: attachment,
-        tag: tag,
-      );
+      addLog(content, color: Colors.blue, attachment: attachment, tag: tag);
 
   /// 获取 asset 文件路径，用于发送媒体消息
   Future<String> getAssetFilePath(String assetPath) async {
