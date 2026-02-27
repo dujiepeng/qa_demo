@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.70.0+159] - 2025-02-14
+### Refactor
+- 优化了 `LogView` 的菜单项回调机制，支持在菜单操作完成后修改日志外观逻辑：
+  - `LogMenuItem.onTap` 现在返回 `Future<LogStyle?>`。
+  - 引入 `LogStyle` 枚举，目前支持 `none` 和 `lineThrough`（划掉样式）。
+  - 实现逻辑：当子页面的操作返回非空 `LogStyle` 时，`LogView` 会自动应用该样式而无须外部手动刷新列表。
+  - 应用实例：在 `SingleChatPage` 中，成功“撤回”消息后，该条日志将自动显示划掉样式。
+
 ## [1.69.0+158] - 2025-02-14
 ### Refactor
 - 重构了 `BaseMixin` 中的日志记录方法：

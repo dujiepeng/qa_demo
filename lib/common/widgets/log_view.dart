@@ -2,13 +2,20 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
 
-/// 日志条目模型，包含内容、时间戳和可选背景色
+/// 日志显示样式
+enum LogStyle {
+  none,
+  lineThrough, // 划掉样式
+}
+
+/// 日志条目模型
 class LogEntry {
   final String content;
   final String timestamp;
   final Color? color;
   final Object? attachment;
   final String? tag;
+  LogStyle style; // 样式状态
 
   LogEntry({
     required this.content,
@@ -16,13 +23,14 @@ class LogEntry {
     this.color,
     this.attachment,
     this.tag,
+    this.style = LogStyle.none,
   });
 }
 
 /// 日志菜单项模型
 class LogMenuItem {
   final String title;
-  final VoidCallback onTap;
+  final Future<LogStyle?> Function() onTap; // 修改为返回 Futrue<LogStyle?>
   LogMenuItem({required this.title, required this.onTap});
 }
 
@@ -162,7 +170,13 @@ class LogView extends StatelessWidget {
                                         .toList(),
                                   );
 
-                              selectedItem?.onTap();
+                              final LogStyle? newStyle = await selectedItem
+                                  ?.onTap();
+                              if (newStyle != null &&
+                                  newStyle != LogStyle.none) {
+                                (context as Element).markNeedsBuild();
+                                entry.style = newStyle;
+                              }
                             },
                             child: Container(
                               margin: const EdgeInsets.symmetric(vertical: 2),
@@ -180,6 +194,10 @@ class LogView extends StatelessWidget {
                                   color: AppColors.textPrimary(isDark),
                                   fontSize: 12,
                                   fontFamily: 'monospace',
+                                  decoration:
+                                      entry.style == LogStyle.lineThrough
+                                      ? TextDecoration.lineThrough
+                                      : TextDecoration.none,
                                 ),
                               ),
                             ),

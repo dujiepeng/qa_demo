@@ -166,6 +166,7 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
                   ),
                 );
               }
+              return null;
             },
           ),
         );
@@ -187,6 +188,7 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
                 } catch (e) {
                   addAppErrLog('发送已读确认失败: $e');
                 }
+                return null;
               },
             ),
           );
@@ -206,6 +208,7 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
                 } catch (e) {
                   addAppErrLog('删除失败: $e');
                 }
+                return null;
               },
             ),
           );
@@ -228,6 +231,7 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
                 } catch (e) {
                   addAppErrLog('修改失败: $e');
                 }
+                return null;
               },
             ),
           );
@@ -241,8 +245,10 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
                     message.msgId,
                   );
                   addReceiveLog('撤回消息成功');
+                  return LogStyle.lineThrough; // 返回划掉样式
                 } catch (e) {
                   addAppErrLog('撤回失败: $e');
+                  return null;
                 }
               },
             ),

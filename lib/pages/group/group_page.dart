@@ -218,6 +218,7 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
                   ),
                 );
               }
+              return null;
             },
           ),
         ];

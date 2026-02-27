@@ -231,6 +231,7 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
                   ),
                 );
               }
+              return null;
             },
           ),
         ];
