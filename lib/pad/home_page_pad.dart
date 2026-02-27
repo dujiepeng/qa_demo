@@ -19,7 +19,9 @@ class HomePagePad extends StatefulWidget {
 }
 
 class _HomePagePadState extends State<HomePagePad>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
+  late AnimationController _blinkController;
+  late Animation<double> _blinkAnimation;
   late TabController _tabController;
   final ScrollController _logScrollController = ScrollController();
 
@@ -45,6 +47,15 @@ class _HomePagePadState extends State<HomePagePad>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+
+    _blinkController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _blinkAnimation = Tween<double>(begin: 1.0, end: 0.2).animate(
+      CurvedAnimation(parent: _blinkController, curve: Curves.easeInOut),
+    );
+
     _initAndStartLogSync();
   }
 
@@ -103,6 +114,7 @@ class _HomePagePadState extends State<HomePagePad>
   @override
   void dispose() {
     _tabController.dispose();
+    _blinkController.dispose();
     _logScrollController.dispose();
     _logTimer?.cancel();
     super.dispose();
@@ -418,19 +430,36 @@ class _HomePagePadState extends State<HomePagePad>
               ),
               Row(
                 children: [
-                  IconButton(
-                    icon: Icon(
-                      _autoScroll
-                          ? Icons.pause_circle_outline
-                          : Icons.play_circle_outline,
-                      size: 18,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _autoScroll = !_autoScroll;
-                      });
+                  Builder(
+                    builder: (context) {
+                      if (!_autoScroll) {
+                        _blinkController.repeat(reverse: true);
+                      } else {
+                        _blinkController.stop();
+                        _blinkController.value = 0;
+                      }
+
+                      return FadeTransition(
+                        opacity: _autoScroll
+                            ? const AlwaysStoppedAnimation(1.0)
+                            : _blinkAnimation,
+                        child: IconButton(
+                          icon: Icon(
+                            _autoScroll
+                                ? Icons.pause_circle_outline
+                                : Icons.play_circle_outline,
+                            size: 18,
+                            color: _autoScroll ? null : Colors.orange,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _autoScroll = !_autoScroll;
+                            });
+                          },
+                          tooltip: _autoScroll ? '暂停滚动' : '继续滚动',
+                        ),
+                      );
                     },
-                    tooltip: _autoScroll ? '暂停滚动' : '继续滚动',
                   ),
                   IconButton(
                     icon: const Icon(Icons.copy_all, size: 18),
