@@ -454,6 +454,20 @@ class _HomePagePadState extends State<HomePagePad>
                           onPressed: () {
                             setState(() {
                               _autoScroll = !_autoScroll;
+                              if (_autoScroll) {
+                                // 立即触发一次滚动到底部
+                                WidgetsBinding.instance.addPostFrameCallback((
+                                  _,
+                                ) {
+                                  if (_logScrollController.hasClients) {
+                                    _logScrollController.jumpTo(
+                                      _logScrollController
+                                          .position
+                                          .maxScrollExtent,
+                                    );
+                                  }
+                                });
+                              }
                             });
                           },
                           tooltip: _autoScroll ? '暂停滚动' : '继续滚动',
