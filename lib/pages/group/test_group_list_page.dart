@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
-import 'package:qa_flutter/test_pages/group/test_group_page.dart';
+import 'package:qa_flutter/pages/group/test_group_page.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 import '../../common/widgets/common_gradient_background.dart';

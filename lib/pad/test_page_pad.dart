@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../test_pages/single/test_single_chat_list_page.dart';
-import '../test_pages/single/test_single_chat_page.dart';
-import '../test_pages/group/test_group_list_page.dart';
-import '../test_pages/group/test_group_page.dart';
-import '../test_pages/chatroom/test_chat_room_list_page.dart';
-import '../test_pages/chatroom/test_chat_room_page.dart';
+import '../pages/single/test_single_chat_list_page.dart';
+import '../pages/single/test_single_chat_page.dart';
+import '../pages/group/test_group_list_page.dart';
+import '../pages/group/test_group_page.dart';
+import '../pages/chatroom/test_chat_room_list_page.dart';
+import '../pages/chatroom/test_chat_room_page.dart';
 
 class TestPagePad extends StatelessWidget {
   final TabController tabController;
