@@ -3,32 +3,26 @@ import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 
-class ChatRoomChangeOwnerPage extends StatefulWidget {
-  const ChatRoomChangeOwnerPage({super.key, required this.roomId});
+class RoomAdminsPage extends StatefulWidget {
+  const RoomAdminsPage({super.key, required this.roomId});
 
   final String roomId;
 
   @override
-  State<ChatRoomChangeOwnerPage> createState() =>
-      _ChatRoomChangeOwnerPageState();
+  State<RoomAdminsPage> createState() => _RoomAdminsPageState();
 }
 
-class _ChatRoomChangeOwnerPageState
-    extends State<ChatRoomChangeOwnerPage> {
+class _RoomAdminsPageState extends State<RoomAdminsPage> {
   final _settings = AppSettings();
   final _scrollController = ScrollController();
   List<String> _members = [];
   bool _isLoading = false;
-  bool _isLoadingMore = false;
   String? _errorMessage;
-  String _cursor = '';
-  bool _hasMore = true;
 
   @override
   void initState() {
     super.initState();
     _fetchMembers();
-    _scrollController.addListener(_onScroll);
   }
 
   @override
@@ -37,32 +31,19 @@ class _ChatRoomChangeOwnerPageState
     super.dispose();
   }
 
-  void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      if (!_isLoadingMore && _hasMore) {
-        _loadMore();
-      }
-    }
-  }
-
   Future<void> _fetchMembers() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
-      _cursor = '';
-      _hasMore = true;
     });
 
     try {
       // 获取聊天室成员列表
       final result = await EMClient.getInstance.chatRoomManager
-          .fetchChatRoomMembers(widget.roomId, cursor: '', pageSize: 50);
+          .fetchChatRoomInfoFromServer(widget.roomId);
 
       setState(() {
-        _members = result.data;
-        _cursor = result.cursor ?? '';
-        _hasMore = _cursor.isNotEmpty;
+        _members = result.adminList ?? [];
         _isLoading = false;
       });
     } catch (e) {
@@ -70,36 +51,6 @@ class _ChatRoomChangeOwnerPageState
         _errorMessage = e.toString();
         _isLoading = false;
       });
-    }
-  }
-
-  Future<void> _loadMore() async {
-    if (_isLoadingMore || !_hasMore) return;
-
-    setState(() {
-      _isLoadingMore = true;
-    });
-
-    try {
-      final result = await EMClient.getInstance.chatRoomManager
-          .fetchChatRoomMembers(widget.roomId, cursor: _cursor, pageSize: 50);
-
-      setState(() {
-        _members.addAll(result.data);
-        _cursor = result.cursor ?? '';
-        _hasMore = _cursor.isNotEmpty;
-        _isLoadingMore = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoadingMore = false;
-      });
-      // 加载更多失败时显示提示
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('加载更多失败: ${e.toString()}')));
-      }
     }
   }
 
@@ -121,21 +72,22 @@ class _ChatRoomChangeOwnerPageState
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            SizedBox(height: 16),
             Divider(height: 1, color: AppColors.glassBorder(isDark)),
 
-            // 转移聊天室
+            // 移除管理员
             ListTile(
               leading: Icon(
                 Icons.admin_panel_settings_outlined,
                 color: AppColors.primary(isDark),
               ),
               title: Text(
-                '转移聊天室',
+                '移除管理员',
                 style: TextStyle(color: AppColors.textPrimary(isDark)),
               ),
               onTap: () {
                 Navigator.pop(context);
-                _changeOwner(memberId);
+                _removeAdmin(memberId);
               },
             ),
           ],
@@ -153,18 +105,19 @@ class _ChatRoomChangeOwnerPageState
     );
   }
 
-  Future<void> _changeOwner(String memberId) async {
+  Future<void> _removeAdmin(String memberId) async {
     try {
-      await EMClient.getInstance.chatRoomManager.changeOwner(
+      await EMClient.getInstance.chatRoomManager.removeChatRoomAdmin(
         widget.roomId,
         memberId,
       );
       if (mounted) {
-        _showResultDialog('已转移聊天室给 $memberId', true);
+        _fetchMembers();
+        _showResultDialog('移除 $memberId 管理员', true);
       }
     } catch (e) {
       if (mounted) {
-        _showResultDialog('转移聊天室失败: ${e.toString()}', false);
+        _showResultDialog('移除 $memberId 管理员失败: ${e.toString()}', false);
       }
     }
   }
@@ -225,7 +178,7 @@ class _ChatRoomChangeOwnerPageState
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '聊天室成员 (${_members.length})',
+                '管理员 (${_members.length})',
                 style: TextStyle(
                   color: AppColors.textPrimary(isDark),
                   fontSize: 18,
@@ -333,25 +286,8 @@ class _ChatRoomChangeOwnerPageState
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: _members.length + (_hasMore ? 1 : 0),
+      itemCount: _members.length,
       itemBuilder: (context, index) {
-        // 显示加载更多指示器
-        if (index == _members.length) {
-          return Container(
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            alignment: Alignment.center,
-            child: _isLoadingMore
-                ? CircularProgressIndicator(color: AppColors.primary(isDark))
-                : Text(
-                    '加载更多...',
-                    style: TextStyle(
-                      color: AppColors.textSecondary(isDark),
-                      fontSize: 12,
-                    ),
-                  ),
-          );
-        }
-
         final member = _members[index];
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

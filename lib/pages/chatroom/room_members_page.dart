@@ -3,17 +3,17 @@ import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 
-class ChatRoomMembersPage extends StatefulWidget {
-  const ChatRoomMembersPage({super.key, required this.roomId});
+class RoomMembersPage extends StatefulWidget {
+  const RoomMembersPage({super.key, required this.roomId});
 
   final String roomId;
 
   @override
-  State<ChatRoomMembersPage> createState() =>
-      _ChatRoomMembersPageState();
+  State<RoomMembersPage> createState() =>
+      _RoomMembersPageState();
 }
 
-class _ChatRoomMembersPageState extends State<ChatRoomMembersPage> {
+class _RoomMembersPageState extends State<RoomMembersPage> {
   final _settings = AppSettings();
   final _scrollController = ScrollController();
   List<String> _members = [];

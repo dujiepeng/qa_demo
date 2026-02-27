@@ -3,8 +3,8 @@ import '../pages/single/single_chat_list_page.dart';
 import '../pages/single/single_chat_page.dart';
 import '../pages/group/group_list_page.dart';
 import '../pages/group/group_page.dart';
-import '../pages/chatroom/chat_room_list_page.dart';
-import '../pages/chatroom/chat_room_page.dart';
+import '../pages/chatroom/room_list_page.dart';
+import '../pages/chatroom/room_page.dart';
 
 class PagePad extends StatelessWidget {
   final TabController tabController;
@@ -33,9 +33,9 @@ class PagePad extends StatelessWidget {
             id.isEmpty ? '加入群组' : '群组: $id',
           ),
         ),
-        ChatRoomListPage(
+        RoomListPage(
           onItemTap: (id) => onShowDetail(
-            ChatRoomPage(roomId: id, showAppBar: false),
+            RoomPage(roomId: id, showAppBar: false),
             id.isEmpty ? '加入聊天室' : '聊天室: $id',
           ),
         ),

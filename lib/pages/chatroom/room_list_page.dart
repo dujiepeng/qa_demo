@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
-import 'package:qa_flutter/pages/chatroom/chat_room_page.dart';
+import 'package:qa_flutter/pages/chatroom/room_page.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 import '../../common/widgets/common_gradient_background.dart';
 
-class ChatRoomListPage extends StatefulWidget {
+class RoomListPage extends StatefulWidget {
   final Function(String roomId)? onItemTap;
-  const ChatRoomListPage({super.key, this.onItemTap});
+  const RoomListPage({super.key, this.onItemTap});
 
   @override
-  State<ChatRoomListPage> createState() => _ChatRoomListPageState();
+  State<RoomListPage> createState() => _RoomListPageState();
 }
 
-class _ChatRoomListPageState extends State<ChatRoomListPage> {
+class _RoomListPageState extends State<RoomListPage> {
   final _settings = AppSettings();
   final ScrollController _scrollController = ScrollController();
   List<EMChatRoom> _chatRooms = [];
@@ -155,7 +155,7 @@ class _ChatRoomListPageState extends State<ChatRoomListPage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const ChatRoomPage(),
+                          builder: (context) => const RoomPage(),
                         ),
                       );
                     }
@@ -267,7 +267,7 @@ class _ChatRoomListPageState extends State<ChatRoomListPage> {
                                             context,
                                             MaterialPageRoute(
                                               builder: (context) =>
-                                                  ChatRoomPage(
+                                                  RoomPage(
                                                     roomId: room.roomId,
                                                   ),
                                             ),

@@ -3,17 +3,17 @@ import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 
-class ChatRoomMuteListPage extends StatefulWidget {
-  const ChatRoomMuteListPage({super.key, required this.roomId});
+class RoomMuteListPage extends StatefulWidget {
+  const RoomMuteListPage({super.key, required this.roomId});
 
   final String roomId;
 
   @override
-  State<ChatRoomMuteListPage> createState() =>
-      _ChatRoomMuteListPageState();
+  State<RoomMuteListPage> createState() =>
+      _RoomMuteListPageState();
 }
 
-class _ChatRoomMuteListPageState extends State<ChatRoomMuteListPage> {
+class _RoomMuteListPageState extends State<RoomMuteListPage> {
   final _settings = AppSettings();
   final _scrollController = ScrollController();
   List<String> _members = [];

@@ -1,7 +1,7 @@
 import 'package:chat_uikit_theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:qa_flutter/pages/chatroom/chat_room_list_page.dart';
+import 'package:qa_flutter/pages/chatroom/room_list_page.dart';
 import 'package:qa_flutter/theme/app_colors.dart';
 import 'package:qa_flutter/theme/app_settings.dart';
 import 'config/app_config.dart';
@@ -79,7 +79,7 @@ class _MyAppState extends State<MyApp> {
         '/login': (context) => const LoginPage(),
         '/home': (context) => const HomePage(),
         '/settings': (context) => const SettingsPage(),
-        '/chat_room_list': (context) => const ChatRoomListPage(),
+        '/room_list': (context) => const RoomListPage(),
         '/group_list': (context) => const GroupListPage(),
         '/single_chat': (context) => const SingleChatPage(),
         '/single_chat_list': (context) => const SingleChatListPage(),

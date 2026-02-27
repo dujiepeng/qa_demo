@@ -4,11 +4,11 @@ import '../../common/widgets/switch_alert.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 import '../../common/widgets/input_dialog.dart';
-import 'chat_room_members_page.dart';
-import 'chat_room_admins_page.dart';
-import 'chat_room_white_list_page.dart';
-import 'chat_room_mute_list_page.dart';
-import 'chat_room_change_owner_page.dart';
+import 'room_members_page.dart';
+import 'room_admins_page.dart';
+import 'room_white_list_page.dart';
+import 'room_mute_list_page.dart';
+import 'room_change_owner_page.dart';
 import '../../common/widgets/log_view.dart';
 import '../../common/widgets/grid_action_menu.dart';
 import '../../common/log_content_page.dart';
@@ -20,15 +20,15 @@ import '../../common/mixins/base_mixin.dart';
 /// 聊天室信息编辑类型
 enum RoomInfoEditType { name, description, announcement }
 
-class ChatRoomPage extends StatefulWidget {
-  const ChatRoomPage({super.key, this.roomId, this.showAppBar = true});
+class RoomPage extends StatefulWidget {
+  const RoomPage({super.key, this.roomId, this.showAppBar = true});
   final String? roomId;
   final bool showAppBar;
   @override
-  State<ChatRoomPage> createState() => _ChatRoomPageState();
+  State<RoomPage> createState() => _RoomPageState();
 }
 
-class _ChatRoomPageState extends State<ChatRoomPage> with BaseMixin {
+class _RoomPageState extends State<RoomPage> with BaseMixin {
   final _eventKey = 'room_test';
   final _settings = AppSettings();
   final _roomIdController = TextEditingController();
@@ -639,22 +639,22 @@ class _ChatRoomPageState extends State<ChatRoomPage> with BaseMixin {
       GridActionItem(
         icon: Icons.group_outlined,
         label: '成员',
-        onTap: () => _showBottomSheet(ChatRoomMembersPage(roomId: _roomId)),
+        onTap: () => _showBottomSheet(RoomMembersPage(roomId: _roomId)),
       ),
       GridActionItem(
         icon: Icons.admin_panel_settings_outlined,
         label: '管理员',
-        onTap: () => _showBottomSheet(ChatRoomAdminsPage(roomId: _roomId)),
+        onTap: () => _showBottomSheet(RoomAdminsPage(roomId: _roomId)),
       ),
       GridActionItem(
         icon: Icons.verified_user_outlined,
         label: '白名单',
-        onTap: () => _showBottomSheet(ChatRoomWhiteListPage(roomId: _roomId)),
+        onTap: () => _showBottomSheet(RoomWhiteListPage(roomId: _roomId)),
       ),
       GridActionItem(
         icon: Icons.mic_off_outlined,
         label: '禁言列表',
-        onTap: () => _showBottomSheet(ChatRoomMuteListPage(roomId: _roomId)),
+        onTap: () => _showBottomSheet(RoomMuteListPage(roomId: _roomId)),
       ),
       GridActionItem(
         icon: Icons.voice_over_off_outlined,
@@ -681,7 +681,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> with BaseMixin {
       GridActionItem(
         icon: Icons.swap_horiz_outlined,
         label: '转移',
-        onTap: () => _showBottomSheet(ChatRoomChangeOwnerPage(roomId: _roomId)),
+        onTap: () => _showBottomSheet(RoomChangeOwnerPage(roomId: _roomId)),
       ),
       GridActionItem(
         icon: Icons.add_circle_outline,

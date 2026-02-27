@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.58.0+147] - 2025-02-14
+### Refactor
+- 将 `lib/pages/chatroom/` 目录下的所有文件从 `chat_room_xxx.dart` 重命名为 `room_xxx.dart`。
+- 同步更新了相关的类名（例如 `ChatRoomPage` -> `RoomPage`）以及项目中的所有引用。
+
 ## [1.57.0+146] - 2025-02-14
 ### Fix
 - 修复了由于过度替换 `Test` 字符串导致的 Flutter 核心类名错误（`HitTestBehavior` 被错误修改为 `HitBehavior`）。

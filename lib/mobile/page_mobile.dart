@@ -47,7 +47,7 @@ class _PageMobileState extends State<PageMobile> {
       GridItem(
         title: '聊天室',
         icon: Icons.list_alt_outlined,
-        onTap: () => Navigator.pushNamed(context, '/chat_room_list'),
+        onTap: () => Navigator.pushNamed(context, '/room_list'),
       ),
     ];
   }

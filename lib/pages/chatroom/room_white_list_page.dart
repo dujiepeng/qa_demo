@@ -3,17 +3,17 @@ import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 
-class ChatRoomWhiteListPage extends StatefulWidget {
-  const ChatRoomWhiteListPage({super.key, required this.roomId});
+class RoomWhiteListPage extends StatefulWidget {
+  const RoomWhiteListPage({super.key, required this.roomId});
 
   final String roomId;
 
   @override
-  State<ChatRoomWhiteListPage> createState() =>
-      _ChatRoomWhiteListPageState();
+  State<RoomWhiteListPage> createState() =>
+      _RoomWhiteListPageState();
 }
 
-class _ChatRoomWhiteListPageState extends State<ChatRoomWhiteListPage> {
+class _RoomWhiteListPageState extends State<RoomWhiteListPage> {
   final _settings = AppSettings();
   final _scrollController = ScrollController();
   List<String> _members = [];
