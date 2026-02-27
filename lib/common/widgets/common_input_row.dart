@@ -56,8 +56,6 @@ class CommonInputRow extends StatelessWidget {
         ),
         if (countController != null) ...[
           const SizedBox(width: 8),
-          Text('X', style: TextStyle(color: AppColors.textPrimary(isDark))),
-          const SizedBox(width: 8),
           SizedBox(
             width: 60,
             child: TextField(
@@ -82,8 +80,6 @@ class CommonInputRow extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 8),
-          Text('X', style: TextStyle(color: AppColors.textPrimary(isDark))),
         ],
         if (buttonText != null && onPressed != null) ...[
           const SizedBox(width: 12),
