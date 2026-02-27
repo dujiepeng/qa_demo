@@ -187,9 +187,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
         _buildInputRow(
           controller: _roomIdController,
           hintText: '输入聊天室 ID',
-          buttonText: _roomId.isNotEmpty && _roomIdController.text == _roomId
-              ? 'Leave'
-              : 'Join',
+          buttonText: _isJoined ? 'Leave' : 'Join',
           onPressed: _handleJoinLeaveRoom,
           isDark: isDark,
         ),
@@ -233,6 +231,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
       try {
         await EMClient.getInstance.chatRoomManager.leaveChatRoom(_roomId);
         _addLog('退出 $_roomId 成功');
+        _isJoined = false;
         setState(() => _roomId = '');
       } catch (e) {
         _addLog('退出失败: $e');
@@ -241,6 +240,7 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
       _addLog('开始加入 $inputId');
       try {
         await EMClient.getInstance.chatRoomManager.joinChatRoom(inputId);
+        _isJoined = true;
         setState(() => _roomId = inputId);
         _addLog('加入成功: $inputId');
       } catch (e) {
@@ -778,6 +778,12 @@ class _TestChatRoomPageState extends State<TestChatRoomPage> {
         onTap: () =>
             _showBottomSheet(TestChatRoomChangeOwnerPage(roomId: _roomId)),
       ),
+      GridActionItem(
+        icon: Icons.add_circle_outline,
+        label: '创建',
+        onTap: _createChatRoom,
+      ),
+      GridActionItem(icon: Icons.dangerous_outlined, label: '解散', onTap: a),
     ];
     return SizedBox(
       width: MediaQuery.of(context).size.width,
