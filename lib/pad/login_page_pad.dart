@@ -55,7 +55,17 @@ class _LoginPagePadState extends State<LoginPagePad> with LoginLogicMixin {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 8),
+                Text(
+                  '环境: ${settings.activeEnvName} \nAppKey: ${settings.appKey}',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary(isDark),
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 32),
                 _buildTextField(
                   uidController,
                   'UID',

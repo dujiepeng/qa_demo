@@ -64,7 +64,19 @@ class _LoginPageMobileState extends State<LoginPageMobile>
                           ),
                         ),
                       ),
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 8),
+                      Center(
+                        child: Text(
+                          '环境: ${settings.activeEnvName}\nAppKey: ${settings.appKey}',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textSecondary(isDark),
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
 
                       // UID Input
                       _buildTextField(
