@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
+import '../config/server_config.dart';
 
 class ServerConfigPage extends StatefulWidget {
   const ServerConfigPage({super.key});
@@ -10,201 +11,112 @@ class ServerConfigPage extends StatefulWidget {
   State<ServerConfigPage> createState() => _ServerConfigPageState();
 }
 
-class _ServerConfigPageState extends State<ServerConfigPage> {
+class _ServerConfigPageState extends State<ServerConfigPage>
+    with SingleTickerProviderStateMixin {
   final _settings = AppSettings();
-  late TextEditingController _appKeyController;
-  late TextEditingController _imServerController;
-  late TextEditingController _imPortController;
-  late TextEditingController _restServerController;
+  late TabController _tabController;
 
-  late bool _useCustomAppKey;
-  late bool _useCustomServer;
+  // 用于维护三个环境的控制器
+  final Map<String, _EnvControllers> _controllers = {};
+
+  final List<ServerEnvironment> _envs = ServerEnvironment.environments;
 
   @override
   void initState() {
     super.initState();
-    _appKeyController = TextEditingController(text: _settings.appKey);
-    _imServerController = TextEditingController(text: _settings.imServer);
-    _imPortController = TextEditingController(
-      text: _settings.imPort.toString(),
-    );
-    _restServerController = TextEditingController(text: _settings.restServer);
-    _useCustomAppKey = _settings.useCustomAppKey;
-    _useCustomServer = _settings.useCustomServer;
+    _tabController = TabController(length: _envs.length, vsync: this);
+
+    // 为每个环境初始化一个控制器组
+    for (int i = 0; i < _envs.length; i++) {
+      final env = _envs[i];
+      // 如果 _settings 里有保存的该环境的值，就用保存的值，否则用默认值
+      final savedEnvStr = _settings.getCustomEnv(env.name);
+      final appKey = savedEnvStr?['appKey'] ?? env.appKey;
+      final restServer = savedEnvStr?['restServer'] ?? env.restServer;
+      final msyncServer = savedEnvStr?['msyncServer'] ?? env.msyncServer;
+      final msyncPort =
+          savedEnvStr?['msyncPort']?.toString() ?? env.msyncPort.toString();
+      final wsServer = savedEnvStr?['wsServer'] ?? env.wsServer;
+      final wsPort =
+          savedEnvStr?['wsPort']?.toString() ?? env.wsPort.toString();
+
+      _controllers[env.name] = _EnvControllers(
+        appKeyController: TextEditingController(text: appKey),
+        restServerController: TextEditingController(text: restServer),
+        msyncServerController: TextEditingController(text: msyncServer),
+        msyncPortController: TextEditingController(text: msyncPort),
+        wsServerController: TextEditingController(text: wsServer),
+        wsPortController: TextEditingController(text: wsPort),
+      );
+
+      // 如果当前激活的是这个环境，默认选中该 Tab
+      if (_settings.activeEnvName == env.name) {
+        _tabController.index = i;
+      }
+    }
   }
 
   @override
   void dispose() {
-    _appKeyController.dispose();
-    _imServerController.dispose();
-    _imPortController.dispose();
-    _restServerController.dispose();
+    _tabController.dispose();
+    for (var c in _controllers.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
   Future<void> _handleSave() async {
-    final imPort = int.tryParse(_imPortController.text) ?? 6717;
+    // 获取当前选中的 Tab 的环境
+    final activeEnv = _envs[_tabController.index];
+    final ctrl = _controllers[activeEnv.name]!;
 
-    // 先更新 Settings 对象中的值，以便保存到历史
-    _settings.useCustomAppKey = _useCustomAppKey;
-    _settings.appKey = _appKeyController.text.trim();
-    _settings.useCustomServer = _useCustomServer;
-    _settings.imServer = _imServerController.text.trim();
-    _settings.imPort = imPort;
-    _settings.restServer = _restServerController.text.trim();
+    // 存储当前选中的环境名称与值
+    final customData = {
+      'appKey': ctrl.appKeyController.text.trim(),
+      'restServer': ctrl.restServerController.text.trim(),
+      'msyncServer': ctrl.msyncServerController.text.trim(),
+      'msyncPort': int.tryParse(ctrl.msyncPortController.text.trim()) ?? 6717,
+      'wsServer': ctrl.wsServerController.text.trim(),
+      'wsPort': int.tryParse(ctrl.wsPortController.text.trim()) ?? 443,
+    };
 
-    // 总是添加到历史记录 (只要点击保存)
-    _settings.addCurrentConfigToHistory();
+    // 保存到 AppSettings (需要新增此功能)
+    _settings.saveCustomEnv(activeEnv.name, customData);
+    _settings.activeEnvName = activeEnv.name; // 记录当前选择的集群
 
-    bool hasChanged = _settings.hasChanged(
-      currentUseCustomAppKey: _useCustomAppKey,
-      currentAppKey: _appKeyController.text.trim(),
-      currentUseCustomServer: _useCustomServer,
-      currentImServer: _imServerController.text.trim(),
-      currentImPort: imPort,
-      currentRestServer: _restServerController.text.trim(),
-    );
+    // 依然修改 AppSettings 老字段，以便于兼容之前的逻辑
+    _settings.appKey = customData['appKey'] as String;
+    _settings.restServer = customData['restServer'] as String;
+    // 将 msync 对应给 imServer 等，这里先向后兼容老代码
+    _settings.imServer = customData['msyncServer'] as String;
+    _settings.imPort = customData['msyncPort'] as int;
 
-    if (hasChanged || _settings.isDirty) {
-      if (mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            title: const Text('配置已更新'),
-            content: const Text('更新服务器配置需要重启app后才生效。'),
-            actions: [
-              TextButton(
-                onPressed: () async {
-                  _settings.isDirty = true;
-                  // 清理登录状态
-                  _settings.isLoggedIn = false;
-                  await _settings.saveSettings();
-                  exit(0);
-                },
-                child: const Text('确认重启'),
-              ),
-            ],
-          ),
-        );
-      }
-    } else {
-      // 即使没变，也要保存历史记录变更 (如果有的话)
-      await _settings.saveSettings();
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('配置已保存')));
-      }
-    }
-  }
+    // 因为这里强指定了环境，所以以前的 useCustom 状态就一直 true
+    _settings.useCustomAppKey = true;
+    _settings.useCustomServer = true;
 
-  void _applyConfig(ServerConfig config) {
-    setState(() {
-      _useCustomAppKey = config.useCustomAppKey;
-      _appKeyController.text = config.appKey;
-      _useCustomServer = config.useCustomServer;
-      _imServerController.text = config.imServer;
-      _imPortController.text = config.imPort.toString();
-      _restServerController.text = config.restServer;
-    });
-    // 同时更新 setting 对象，以便 apply 后直接生效(如果不保存重启的话，起码当前内存变了)
-    _settings.applyConfig(config);
-
+    // 每次点击保存总是视作环境改变，并要求重启
     if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('配置已加载，请点击保存以生效')));
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Text('配置已更新'),
+          content: Text('已保存【${activeEnv.name}】集群配置。\n更改配置需要重启app后才生效。'),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                _settings.isDirty = true;
+                _settings.isLoggedIn = false;
+                await _settings.saveSettings();
+                exit(0);
+              },
+              child: const Text('确认重启'),
+            ),
+          ],
+        ),
+      );
     }
-  }
-
-  void _showHistoryDialog() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        final isDark = _settings.isDarkMode;
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.7,
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  '配置历史',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary(isDark),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: _settings.configHistory.isEmpty
-                    ? Center(
-                        child: Text(
-                          '暂无历史记录',
-                          style: TextStyle(
-                            color: AppColors.textSecondary(isDark),
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        itemCount: _settings.configHistory.length,
-                        itemBuilder: (context, index) {
-                          final config = _settings.configHistory[index];
-                          final subTitle = config.useCustomServer
-                              ? '私有: ${config.imServer}'
-                              : '公有云默认配置';
-                          return ListTile(
-                            title: Text(
-                              config.appKey,
-                              style: TextStyle(
-                                color: AppColors.textPrimary(isDark),
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: Text(
-                              subTitle,
-                              style: TextStyle(
-                                color: AppColors.textSecondary(isDark),
-                                fontSize: 12,
-                              ),
-                            ),
-                            onTap: () {
-                              Navigator.pop(context);
-                              _applyConfig(config);
-                            },
-                            trailing: IconButton(
-                              icon: Icon(
-                                Icons.delete_outline,
-                                color: Colors.red.withValues(alpha: 0.7),
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _settings.removeConfigFromHistory(
-                                    config.appKey,
-                                  );
-                                });
-                                // 刷新一下 BottomSheet (需要重新构建)
-                                Navigator.pop(context);
-                                _showHistoryDialog();
-                              },
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   @override
@@ -214,21 +126,20 @@ class _ServerConfigPageState extends State<ServerConfigPage> {
     return Scaffold(
       backgroundColor: AppColors.backgroundStart(isDark),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
         title: Text(
           '服务器设置',
           style: TextStyle(color: AppColors.textPrimary(isDark)),
         ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.history),
-            tooltip: '历史配置',
-            onPressed: _showHistoryDialog,
-          ),
-          const SizedBox(width: 10),
-        ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: AppColors.primary(isDark),
+          labelColor: AppColors.primary(isDark),
+          unselectedLabelColor: AppColors.textSecondary(isDark),
+          tabs: _envs.map((e) => Tab(text: e.name)).toList(),
+        ),
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -244,70 +155,11 @@ class _ServerConfigPageState extends State<ServerConfigPage> {
         child: Column(
           children: [
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 20,
-                ),
-                children: [
-                  _buildSectionTitle('AppKey 配置', isDark),
-                  _buildSwitchItem(
-                    title: '使用自定义 AppKey',
-                    icon: Icons.key_outlined,
-                    value: _useCustomAppKey,
-                    onChanged: (val) {
-                      setState(() {
-                        _useCustomAppKey = val;
-                        // 切换时根据模式更新显示的值
-                        if (val) {
-                          _appKeyController.text = _settings.useCustomAppKey
-                              ? _settings.appKey
-                              : AppSettings.defaultCustomAppKey;
-                        } else {
-                          _appKeyController.text = AppSettings.defaultAppKey;
-                        }
-                      });
-                    },
-                    isDark: isDark,
-                  ),
-                  const SizedBox(height: 10),
-                  _buildInputItem(
-                    controller: _appKeyController,
-                    hintText: '输入 AppKey',
-                    isDark: isDark,
-                    enabled: _useCustomAppKey,
-                  ),
-                  const SizedBox(height: 30),
-                  _buildSectionTitle('服务器配置', isDark),
-                  _buildSwitchItem(
-                    title: '使用自定义服务器',
-                    icon: Icons.dns_outlined,
-                    value: _useCustomServer,
-                    onChanged: (val) => setState(() => _useCustomServer = val),
-                    isDark: isDark,
-                  ),
-                  if (_useCustomServer) ...[
-                    const SizedBox(height: 10),
-                    _buildInputItem(
-                      controller: _imServerController,
-                      hintText: 'IM 服务器地址',
-                      isDark: isDark,
-                    ),
-                    const SizedBox(height: 10),
-                    _buildInputItem(
-                      controller: _imPortController,
-                      hintText: 'IM 端口',
-                      keyboardType: TextInputType.number,
-                      isDark: isDark,
-                    ),
-                    const SizedBox(height: 10),
-                    _buildInputItem(
-                      controller: _restServerController,
-                      hintText: 'REST 服务器地址',
-                      isDark: isDark,
-                    ),
-                  ],
-                ],
+              child: TabBarView(
+                controller: _tabController,
+                children: _envs
+                    .map((env) => _buildEnvTab(env, isDark))
+                    .toList(),
               ),
             ),
             Container(
@@ -325,7 +177,7 @@ class _ServerConfigPageState extends State<ServerConfigPage> {
                     ),
                   ),
                   child: const Text(
-                    '保存配置',
+                    '保存并使用该配置',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -338,6 +190,56 @@ class _ServerConfigPageState extends State<ServerConfigPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildEnvTab(ServerEnvironment env, bool isDark) {
+    final ctrl = _controllers[env.name]!;
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      children: [
+        _buildSectionTitle('${env.name} Cluster - AppKey', isDark),
+        _buildInputItem(
+          controller: ctrl.appKeyController,
+          hintText: 'AppKey',
+          isDark: isDark,
+        ),
+        const SizedBox(height: 20),
+        _buildSectionTitle('REST 配置', isDark),
+        _buildInputItem(
+          controller: ctrl.restServerController,
+          hintText: 'REST 服务器地址',
+          isDark: isDark,
+        ),
+        const SizedBox(height: 20),
+        _buildSectionTitle('MSYNC 配置', isDark),
+        _buildInputItem(
+          controller: ctrl.msyncServerController,
+          hintText: 'MSYNC 服务器地址',
+          isDark: isDark,
+        ),
+        const SizedBox(height: 10),
+        _buildInputItem(
+          controller: ctrl.msyncPortController,
+          hintText: 'MSYNC 端口',
+          keyboardType: TextInputType.number,
+          isDark: isDark,
+        ),
+        const SizedBox(height: 20),
+        _buildSectionTitle('WebSocket 配置', isDark),
+        _buildInputItem(
+          controller: ctrl.wsServerController,
+          hintText: 'WebSocket 服务器地址',
+          isDark: isDark,
+        ),
+        const SizedBox(height: 10),
+        _buildInputItem(
+          controller: ctrl.wsPortController,
+          hintText: 'WebSocket 端口',
+          keyboardType: TextInputType.number,
+          isDark: isDark,
+        ),
+      ],
     );
   }
 
@@ -355,47 +257,11 @@ class _ServerConfigPageState extends State<ServerConfigPage> {
     );
   }
 
-  Widget _buildSwitchItem({
-    required String title,
-    required IconData icon,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-    required bool isDark,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.inputBackground(isDark),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: AppColors.glassBorder(isDark)),
-      ),
-      child: SwitchListTile(
-        title: Row(
-          children: [
-            Icon(icon, color: AppColors.textSecondary(isDark), size: 20),
-            const SizedBox(width: 10),
-            Text(
-              title,
-              style: TextStyle(
-                color: AppColors.textPrimary(isDark),
-                fontSize: 16,
-              ),
-            ),
-          ],
-        ),
-        value: value,
-        onChanged: onChanged,
-        activeTrackColor: AppColors.primary(isDark),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 15),
-      ),
-    );
-  }
-
   Widget _buildInputItem({
     required TextEditingController controller,
     required String hintText,
     TextInputType? keyboardType,
     required bool isDark,
-    bool enabled = true,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -406,7 +272,6 @@ class _ServerConfigPageState extends State<ServerConfigPage> {
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
-        enabled: enabled,
         style: TextStyle(color: AppColors.textPrimary(isDark)),
         decoration: InputDecoration(
           hintText: hintText,
@@ -419,5 +284,32 @@ class _ServerConfigPageState extends State<ServerConfigPage> {
         ),
       ),
     );
+  }
+}
+
+class _EnvControllers {
+  final TextEditingController appKeyController;
+  final TextEditingController restServerController;
+  final TextEditingController msyncServerController;
+  final TextEditingController msyncPortController;
+  final TextEditingController wsServerController;
+  final TextEditingController wsPortController;
+
+  _EnvControllers({
+    required this.appKeyController,
+    required this.restServerController,
+    required this.msyncServerController,
+    required this.msyncPortController,
+    required this.wsServerController,
+    required this.wsPortController,
+  });
+
+  void dispose() {
+    appKeyController.dispose();
+    restServerController.dispose();
+    msyncServerController.dispose();
+    msyncPortController.dispose();
+    wsServerController.dispose();
+    wsPortController.dispose();
   }
 }

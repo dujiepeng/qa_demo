@@ -56,6 +56,20 @@ class AppSettings extends ChangeNotifier {
 
   bool isDirty = false;
 
+  // 当前选中的集群名称，例如 TKE / NGI / 开发沙箱
+  String activeEnvName = 'TKE';
+
+  // 用于存储各个集群自定义后的字典缓存
+  Map<String, Map<String, dynamic>> _customEnvDict = {};
+
+  Map<String, dynamic>? getCustomEnv(String envName) {
+    return _customEnvDict[envName];
+  }
+
+  void saveCustomEnv(String envName, Map<String, dynamic> data) {
+    _customEnvDict[envName] = data;
+  }
+
   // 配置快照，用于对比
   late bool _origUseCustomAppKey;
   late String _origAppKey;
@@ -71,9 +85,8 @@ class AppSettings extends ChangeNotifier {
   static const String _keyImServer = 'im_server';
   static const String _keyImPort = 'im_port';
   static const String _keyRestServer = 'rest_server';
-  static const String _keyIsDarkMode = 'is_dark_mode';
-  static const String _keyIsLoggedIn = 'is_logged_in';
-  static const String _keyIsMode = 'is_mode';
+  static const String _keyActiveEnvName = 'active_env_name';
+  static const String _keyCustomEnvs = 'custom_envs';
 
   // 从本地加载存储的配置
   Future<void> loadSettings() async {
@@ -85,17 +98,32 @@ class AppSettings extends ChangeNotifier {
     imPort = prefs.getInt(_keyImPort) ?? 4300;
     restServer =
         prefs.getString(_keyRestServer) ?? 'https://a1-hsb.easemob.com';
-    _isDarkMode = prefs.getBool(_keyIsDarkMode) ?? true;
-    isLoggedIn = prefs.getBool(_keyIsLoggedIn) ?? false;
-    _isMode = prefs.getBool(_keyIsMode) ?? true;
-
-    // 加载历史记录
+    // 加载历史记录 (为保持老版本兼容暂时留下，新版本UI不展示了)
     final historyJson = prefs.getStringList(_keyConfigHistory);
     if (historyJson != null) {
       configHistory = historyJson
           .map((e) => ServerConfig.fromJson(jsonDecode(e)))
           .toList();
     }
+
+    // 加载多集群配置
+    activeEnvName = prefs.getString(_keyActiveEnvName) ?? 'TKE';
+    final customEnvsRaw = prefs.getString(_keyCustomEnvs);
+    if (customEnvsRaw != null) {
+      try {
+        final decoded = jsonDecode(customEnvsRaw) as Map<String, dynamic>;
+        _customEnvDict = decoded.map(
+          (k, v) => MapEntry(k, Map<String, dynamic>.from(v as Map)),
+        );
+      } catch (e) {
+        _customEnvDict = {};
+      }
+    }
+
+    // 同时也装载那些基础的黑白模式/选中状态
+    _isDarkMode = prefs.getBool('is_dark_mode') ?? true;
+    isLoggedIn = prefs.getBool('is_logged_in') ?? false;
+    _isMode = prefs.getBool('is_mode') ?? true;
 
     _updateSnapshot();
     isDirty = true;
@@ -120,15 +148,19 @@ class AppSettings extends ChangeNotifier {
     await prefs.setString(_keyImServer, imServer);
     await prefs.setInt(_keyImPort, imPort);
     await prefs.setString(_keyRestServer, restServer);
-    await prefs.setBool(_keyIsDarkMode, _isDarkMode);
-    await prefs.setBool(_keyIsLoggedIn, isLoggedIn);
-    await prefs.setBool(_keyIsMode, _isMode);
-
     // 保存历史记录
     final historyJson = configHistory
         .map((e) => jsonEncode(e.toJson()))
         .toList();
     await prefs.setStringList(_keyConfigHistory, historyJson);
+
+    // 保存多环境配置
+    await prefs.setString(_keyActiveEnvName, activeEnvName);
+    await prefs.setString(_keyCustomEnvs, jsonEncode(_customEnvDict));
+
+    await prefs.setBool('is_dark_mode', _isDarkMode);
+    await prefs.setBool('is_logged_in', isLoggedIn);
+    await prefs.setBool('is_mode', _isMode);
 
     _updateSnapshot();
     isDirty = true;
