@@ -6,6 +6,7 @@ class ServerEnvironment {
   final int msyncPort;
   final String wsServer;
   final int wsPort;
+  final bool isMsync;
 
   const ServerEnvironment({
     required this.name,
@@ -15,6 +16,7 @@ class ServerEnvironment {
     required this.msyncPort,
     required this.wsServer,
     required this.wsPort,
+    this.isMsync = true,
   });
 
   // TKE 集群默认配置

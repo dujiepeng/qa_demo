@@ -39,6 +39,7 @@ class _ServerConfigPageState extends State<ServerConfigPage>
       final wsServer = savedEnvStr?['wsServer'] ?? env.wsServer;
       final wsPort =
           savedEnvStr?['wsPort']?.toString() ?? env.wsPort.toString();
+      final isMsync = savedEnvStr?['isMsync'] ?? env.isMsync;
 
       _controllers[env.name] = _EnvControllers(
         appKeyController: TextEditingController(text: appKey),
@@ -47,6 +48,7 @@ class _ServerConfigPageState extends State<ServerConfigPage>
         msyncPortController: TextEditingController(text: msyncPort),
         wsServerController: TextEditingController(text: wsServer),
         wsPortController: TextEditingController(text: wsPort),
+        isMsync: isMsync,
       );
 
       // 如果当前激活的是这个环境，默认选中该 Tab
@@ -78,6 +80,7 @@ class _ServerConfigPageState extends State<ServerConfigPage>
       'msyncPort': int.tryParse(ctrl.msyncPortController.text.trim()) ?? 6717,
       'wsServer': ctrl.wsServerController.text.trim(),
       'wsPort': int.tryParse(ctrl.wsPortController.text.trim()) ?? 443,
+      'isMsync': ctrl.isMsync,
     };
 
     // 保存到 AppSettings (需要新增此功能)
@@ -211,12 +214,24 @@ class _ServerConfigPageState extends State<ServerConfigPage>
           hintText: 'REST 服务器地址',
           isDark: isDark,
         ),
-        const SizedBox(height: 20),
         _buildSectionTitle('MSYNC 配置', isDark),
+        _buildSwitchItem(
+          title: '使用 MSYNC 连接',
+          icon: Icons.link,
+          value: ctrl.isMsync,
+          onChanged: (val) {
+            setState(() {
+              ctrl.isMsync = val;
+            });
+          },
+          isDark: isDark,
+        ),
+        const SizedBox(height: 10),
         _buildInputItem(
           controller: ctrl.msyncServerController,
           hintText: 'MSYNC 服务器地址',
           isDark: isDark,
+          enabled: ctrl.isMsync,
         ),
         const SizedBox(height: 10),
         _buildInputItem(
@@ -224,13 +239,27 @@ class _ServerConfigPageState extends State<ServerConfigPage>
           hintText: 'MSYNC 端口',
           keyboardType: TextInputType.number,
           isDark: isDark,
+          enabled: ctrl.isMsync,
         ),
         const SizedBox(height: 20),
         _buildSectionTitle('WebSocket 配置', isDark),
+        _buildSwitchItem(
+          title: '使用 WebSocket 连接',
+          icon: Icons.language,
+          value: !ctrl.isMsync,
+          onChanged: (val) {
+            setState(() {
+              ctrl.isMsync = !val;
+            });
+          },
+          isDark: isDark,
+        ),
+        const SizedBox(height: 10),
         _buildInputItem(
           controller: ctrl.wsServerController,
           hintText: 'WebSocket 服务器地址',
           isDark: isDark,
+          enabled: !ctrl.isMsync,
         ),
         const SizedBox(height: 10),
         _buildInputItem(
@@ -238,6 +267,7 @@ class _ServerConfigPageState extends State<ServerConfigPage>
           hintText: 'WebSocket 端口',
           keyboardType: TextInputType.number,
           isDark: isDark,
+          enabled: !ctrl.isMsync,
         ),
       ],
     );
@@ -257,11 +287,47 @@ class _ServerConfigPageState extends State<ServerConfigPage>
     );
   }
 
+  Widget _buildSwitchItem({
+    required String title,
+    required IconData icon,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+    required bool isDark,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.inputBackground(isDark),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: AppColors.glassBorder(isDark)),
+      ),
+      child: SwitchListTile(
+        title: Row(
+          children: [
+            Icon(icon, color: AppColors.textSecondary(isDark), size: 20),
+            const SizedBox(width: 10),
+            Text(
+              title,
+              style: TextStyle(
+                color: AppColors.textPrimary(isDark),
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+        value: value,
+        onChanged: onChanged,
+        activeTrackColor: AppColors.primary(isDark),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 15),
+      ),
+    );
+  }
+
   Widget _buildInputItem({
     required TextEditingController controller,
     required String hintText,
     TextInputType? keyboardType,
     required bool isDark,
+    bool enabled = true,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -272,7 +338,12 @@ class _ServerConfigPageState extends State<ServerConfigPage>
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
-        style: TextStyle(color: AppColors.textPrimary(isDark)),
+        enabled: enabled,
+        style: TextStyle(
+          color: enabled
+              ? AppColors.textPrimary(isDark)
+              : AppColors.textSecondary(isDark),
+        ),
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
@@ -294,6 +365,7 @@ class _EnvControllers {
   final TextEditingController msyncPortController;
   final TextEditingController wsServerController;
   final TextEditingController wsPortController;
+  bool isMsync;
 
   _EnvControllers({
     required this.appKeyController,
@@ -302,6 +374,7 @@ class _EnvControllers {
     required this.msyncPortController,
     required this.wsServerController,
     required this.wsPortController,
+    required this.isMsync,
   });
 
   void dispose() {
