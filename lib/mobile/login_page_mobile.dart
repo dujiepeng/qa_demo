@@ -28,7 +28,7 @@ class _LoginPageMobileState extends State<LoginPageMobile>
               Icons.settings_outlined,
               color: AppColors.textPrimary(isDark).withValues(alpha: 0.8),
             ),
-            onPressed: () => Navigator.pushNamed(context, '/settings'),
+            onPressed: () => Navigator.pushNamed(context, '/server_config'),
           ),
           const SizedBox(width: 10),
         ],

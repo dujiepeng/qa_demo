@@ -110,7 +110,7 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
       actions: [
         IconButton(
           icon: const Icon(Icons.info),
-          onPressed: () => Navigator.of(context).pushNamed('/settings'),
+          onPressed: () => Navigator.of(context).pushNamed('/server_config'),
         ),
       ],
     );
@@ -184,7 +184,6 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
                   await EMClient.getInstance.chatManager.sendMessageReadAck(
                     message,
                   );
-                  addLog('已发送已读确认');
                 } catch (e) {
                   addAppErrLog('发送已读确认失败: $e');
                 }
@@ -197,14 +196,13 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
               title: '从服务器删除',
               onTap: () async {
                 try {
-                  addSendLog('开始删除消息');
                   await EMClient.getInstance.chatManager
                       .deleteRemoteMessagesWithIds(
                         conversationId: message.conversationId!,
                         type: EMConversationType.values[message.chatType.index],
                         msgIds: [message.msgId],
                       );
-                  addReceiveLog('删除消息成功');
+                  return LogStyle.lineThrough; // 返回划掉样式
                 } catch (e) {
                   addAppErrLog('删除失败: $e');
                 }
@@ -217,7 +215,6 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
               title: '修改',
               onTap: () async {
                 try {
-                  addSendLog('开始修改消息');
                   final msg = await EMClient.getInstance.chatManager
                       .modifyMessage(
                         messageId: message.msgId,
@@ -240,11 +237,9 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
               title: '撤回',
               onTap: () async {
                 try {
-                  addSendLog('开始撤回消息');
                   await EMClient.getInstance.chatManager.recallMessage(
                     message.msgId,
                   );
-                  addReceiveLog('撤回消息成功');
                   return LogStyle.lineThrough; // 返回划掉样式
                 } catch (e) {
                   addAppErrLog('撤回失败: $e');

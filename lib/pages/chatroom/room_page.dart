@@ -171,7 +171,7 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
       actions: [
         IconButton(
           icon: const Icon(Icons.info),
-          onPressed: () => Navigator.of(context).pushNamed('/settings'),
+          onPressed: () => Navigator.of(context).pushNamed('/server_config'),
         ),
       ],
     );

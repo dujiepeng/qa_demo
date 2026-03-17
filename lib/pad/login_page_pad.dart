@@ -97,7 +97,8 @@ class _LoginPagePadState extends State<LoginPagePad> with LoginLogicMixin {
                       ),
                 const SizedBox(height: 20),
                 TextButton(
-                  onPressed: () => Navigator.pushNamed(context, '/settings'),
+                  onPressed: () =>
+                      Navigator.pushNamed(context, '/server_config'),
                   child: Text(
                     '服务器配置',
                     style: TextStyle(color: AppColors.textSecondary(isDark)),

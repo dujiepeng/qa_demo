@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
 
-class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key});
+class ServerConfigPage extends StatefulWidget {
+  const ServerConfigPage({super.key});
 
   @override
-  State<SettingsPage> createState() => _SettingsPageState();
+  State<ServerConfigPage> createState() => _ServerConfigPageState();
 }
 
-class _SettingsPageState extends State<SettingsPage> {
+class _ServerConfigPageState extends State<ServerConfigPage> {
   final _settings = AppSettings();
   late TextEditingController _appKeyController;
   late TextEditingController _imServerController;

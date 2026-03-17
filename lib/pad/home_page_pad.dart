@@ -391,7 +391,7 @@ class _HomePagePadState extends State<HomePagePad>
         // 统一提取功能按钮
         IconButton(
           icon: const Icon(Icons.info_outline, size: 22),
-          onPressed: () => Navigator.of(context).pushNamed('/settings'),
+          onPressed: () => Navigator.of(context).pushNamed('/server_config'),
           color: AppColors.textSecondary(isDark),
           tooltip: 'SDK配置',
         ),

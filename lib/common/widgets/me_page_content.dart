@@ -57,7 +57,7 @@ class MePageContent extends StatelessWidget {
               Icons.chevron_right,
               color: AppColors.textSecondary(isDark),
             ),
-            onTap: () => Navigator.pushNamed(context, '/settings'),
+            onTap: () => Navigator.pushNamed(context, '/server_config'),
           ),
         ),
         Container(

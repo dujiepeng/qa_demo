@@ -7,7 +7,7 @@ import 'package:qa_flutter/theme/app_settings.dart';
 import 'config/app_config.dart';
 import 'pages/home_page.dart';
 import 'pages/login_page.dart';
-import 'common/settings_page.dart';
+import 'common/server_config_page.dart';
 import 'pages/group/group_list_page.dart';
 import 'pages/single/single_chat_list_page.dart';
 import 'pages/single/single_chat_page.dart';
@@ -79,7 +79,7 @@ class _MyAppState extends State<MyApp> {
       routes: {
         '/login': (context) => const LoginPage(),
         '/home': (context) => const HomePage(),
-        '/settings': (context) => const SettingsPage(),
+        '/server_config': (context) => const ServerConfigPage(),
         '/room_list': (context) => const RoomListPage(),
         '/group_list': (context) => const GroupListPage(),
         '/single_chat': (context) => const SingleChatPage(),
