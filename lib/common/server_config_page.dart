@@ -329,6 +329,21 @@ class _ServerConfigPageState extends State<ServerConfigPage>
                                                   AppColors.primary(isDark),
                                             ),
                                             onPressed: () {
+                                              if (_settings.activeConfig ==
+                                                  config) {
+                                                Navigator.pop(contextDialog);
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      '当前已经是该配置，无需切换',
+                                                    ),
+                                                  ),
+                                                );
+                                                return;
+                                              }
+
                                               Navigator.pop(
                                                 contextDialog,
                                               ); // Close AlertDialog

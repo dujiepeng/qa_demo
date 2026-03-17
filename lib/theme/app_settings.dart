@@ -201,11 +201,10 @@ class AppSettings extends ChangeNotifier {
   List<ServerConfig> configHistory = [];
   static const String _keyConfigHistory = 'config_history';
 
-  void addCurrentConfigToHistory() {
+  ServerConfig? get activeConfig {
     final currentDict = _customEnvDict[activeEnvName];
-    if (currentDict == null) return;
-
-    final newConfig = ServerConfig(
+    if (currentDict == null) return null;
+    return ServerConfig(
       envName: activeEnvName,
       appKey: appKey,
       restServer: currentDict['restServer'] as String? ?? restServer,
@@ -215,7 +214,11 @@ class AppSettings extends ChangeNotifier {
       wsPort: currentDict['wsPort'] as int? ?? 443,
       isMsync: currentDict['isMsync'] as bool? ?? true,
     );
+  }
 
+  void addCurrentConfigToHistory() {
+    final newConfig = activeConfig;
+    if (newConfig == null) return;
     // 如果已存在相同集群、AppKey 和连接方式的记录，先移除旧的
     configHistory.removeWhere(
       (config) =>
@@ -310,5 +313,31 @@ class ServerConfig {
       wsPort: json['wsPort'] as int? ?? 443,
       isMsync: json['isMsync'] as bool? ?? true,
     );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is ServerConfig &&
+        other.envName == envName &&
+        other.appKey == appKey &&
+        other.restServer == restServer &&
+        other.msyncServer == msyncServer &&
+        other.msyncPort == msyncPort &&
+        other.wsServer == wsServer &&
+        other.wsPort == wsPort &&
+        other.isMsync == isMsync;
+  }
+
+  @override
+  int get hashCode {
+    return envName.hashCode ^
+        appKey.hashCode ^
+        restServer.hashCode ^
+        msyncServer.hashCode ^
+        msyncPort.hashCode ^
+        wsServer.hashCode ^
+        wsPort.hashCode ^
+        isMsync.hashCode;
   }
 }
