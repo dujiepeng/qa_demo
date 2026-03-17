@@ -225,8 +225,131 @@ class _ServerConfigPageState extends State<ServerConfigPage>
                                   ),
                                 ),
                                 onTap: () {
-                                  Navigator.pop(context);
-                                  _applyConfig(config);
+                                  showDialog(
+                                    context: context,
+                                    builder: (contextDialog) {
+                                      return AlertDialog(
+                                        backgroundColor: isDark
+                                            ? const Color(0xFF1C1C1E)
+                                            : Colors.white,
+                                        title: Text(
+                                          '配置详情',
+                                          style: TextStyle(
+                                            color: AppColors.textPrimary(
+                                              isDark,
+                                            ),
+                                          ),
+                                        ),
+                                        content: SingleChildScrollView(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                '集群: ${config.envName}',
+                                                style: TextStyle(
+                                                  color: AppColors.textPrimary(
+                                                    isDark,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                'AppKey: ${config.appKey}',
+                                                style: TextStyle(
+                                                  color: AppColors.textPrimary(
+                                                    isDark,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                '连接方式: ${config.isMsync ? 'TCP' : 'WebSocket'}',
+                                                style: TextStyle(
+                                                  color: AppColors.textPrimary(
+                                                    isDark,
+                                                  ),
+                                                ),
+                                              ),
+                                              if (config.envName != '线上') ...[
+                                                const SizedBox(height: 8),
+                                                Text(
+                                                  'REST: ${config.restServer}',
+                                                  style: TextStyle(
+                                                    color:
+                                                        AppColors.textPrimary(
+                                                          isDark,
+                                                        ),
+                                                  ),
+                                                ),
+                                                if (config.isMsync) ...[
+                                                  const SizedBox(height: 8),
+                                                  Text(
+                                                    'MSYNC: ${config.msyncServer}:${config.msyncPort}',
+                                                    style: TextStyle(
+                                                      color:
+                                                          AppColors.textPrimary(
+                                                            isDark,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                ] else ...[
+                                                  const SizedBox(height: 8),
+                                                  Text(
+                                                    'WebSocket: ${config.wsServer}:${config.wsPort}',
+                                                    style: TextStyle(
+                                                      color:
+                                                          AppColors.textPrimary(
+                                                            isDark,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(contextDialog),
+                                            child: Text(
+                                              '取消',
+                                              style: TextStyle(
+                                                color: AppColors.textSecondary(
+                                                  isDark,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  AppColors.primary(isDark),
+                                            ),
+                                            onPressed: () {
+                                              Navigator.pop(
+                                                contextDialog,
+                                              ); // Close AlertDialog
+                                              Navigator.pop(
+                                                context,
+                                              ); // Close BottomSheet
+                                              _applyConfig(config);
+                                              // 直接执行切换重载流程
+                                              _handleSave();
+                                            },
+                                            child: const Text(
+                                              '切换',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
                                 },
                                 trailing: IconButton(
                                   icon: Icon(
