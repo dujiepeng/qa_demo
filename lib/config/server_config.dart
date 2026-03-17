@@ -52,5 +52,21 @@ class ServerEnvironment {
     wsPort: 443,
   );
 
-  static const List<ServerEnvironment> environments = [tke, ngi, sandbox];
+  // 线上 集群配置（只有 AppKey 可配置）
+  static const ServerEnvironment online = ServerEnvironment(
+    name: '线上',
+    appKey: 'easemob#dutest',
+    restServer: '',
+    msyncServer: '',
+    msyncPort: 0,
+    wsServer: '',
+    wsPort: 0,
+  );
+
+  static const List<ServerEnvironment> environments = [
+    tke,
+    ngi,
+    sandbox,
+    online,
+  ];
 }

@@ -207,68 +207,71 @@ class _ServerConfigPageState extends State<ServerConfigPage>
           hintText: 'AppKey',
           isDark: isDark,
         ),
-        const SizedBox(height: 20),
-        _buildSectionTitle('REST 配置', isDark),
-        _buildInputItem(
-          controller: ctrl.restServerController,
-          hintText: 'REST 服务器地址',
-          isDark: isDark,
-        ),
-        _buildSectionTitle('MSYNC 配置', isDark),
-        _buildSwitchItem(
-          title: '使用 MSYNC 连接',
-          icon: Icons.link,
-          value: ctrl.isMsync,
-          onChanged: (val) {
-            setState(() {
-              ctrl.isMsync = val;
-            });
-          },
-          isDark: isDark,
-        ),
-        const SizedBox(height: 10),
-        _buildInputItem(
-          controller: ctrl.msyncServerController,
-          hintText: 'MSYNC 服务器地址',
-          isDark: isDark,
-          enabled: ctrl.isMsync,
-        ),
-        const SizedBox(height: 10),
-        _buildInputItem(
-          controller: ctrl.msyncPortController,
-          hintText: 'MSYNC 端口',
-          keyboardType: TextInputType.number,
-          isDark: isDark,
-          enabled: ctrl.isMsync,
-        ),
-        const SizedBox(height: 20),
-        _buildSectionTitle('WebSocket 配置', isDark),
-        _buildSwitchItem(
-          title: '使用 WebSocket 连接',
-          icon: Icons.language,
-          value: !ctrl.isMsync,
-          onChanged: (val) {
-            setState(() {
-              ctrl.isMsync = !val;
-            });
-          },
-          isDark: isDark,
-        ),
-        const SizedBox(height: 10),
-        _buildInputItem(
-          controller: ctrl.wsServerController,
-          hintText: 'WebSocket 服务器地址',
-          isDark: isDark,
-          enabled: !ctrl.isMsync,
-        ),
-        const SizedBox(height: 10),
-        _buildInputItem(
-          controller: ctrl.wsPortController,
-          hintText: 'WebSocket 端口',
-          keyboardType: TextInputType.number,
-          isDark: isDark,
-          enabled: !ctrl.isMsync,
-        ),
+
+        if (env.name != '线上') ...[
+          const SizedBox(height: 20),
+          _buildSectionTitle('REST 配置', isDark),
+          _buildInputItem(
+            controller: ctrl.restServerController,
+            hintText: 'REST 服务器地址',
+            isDark: isDark,
+          ),
+          _buildSectionTitle('MSYNC 配置', isDark),
+          _buildSwitchItem(
+            title: '使用 MSYNC 连接',
+            icon: Icons.link,
+            value: ctrl.isMsync,
+            onChanged: (val) {
+              setState(() {
+                ctrl.isMsync = val;
+              });
+            },
+            isDark: isDark,
+          ),
+          const SizedBox(height: 10),
+          _buildInputItem(
+            controller: ctrl.msyncServerController,
+            hintText: 'MSYNC 服务器地址',
+            isDark: isDark,
+            enabled: ctrl.isMsync,
+          ),
+          const SizedBox(height: 10),
+          _buildInputItem(
+            controller: ctrl.msyncPortController,
+            hintText: 'MSYNC 端口',
+            keyboardType: TextInputType.number,
+            isDark: isDark,
+            enabled: ctrl.isMsync,
+          ),
+          const SizedBox(height: 20),
+          _buildSectionTitle('WebSocket 配置', isDark),
+          _buildSwitchItem(
+            title: '使用 WebSocket 连接',
+            icon: Icons.language,
+            value: !ctrl.isMsync,
+            onChanged: (val) {
+              setState(() {
+                ctrl.isMsync = !val;
+              });
+            },
+            isDark: isDark,
+          ),
+          const SizedBox(height: 10),
+          _buildInputItem(
+            controller: ctrl.wsServerController,
+            hintText: 'WebSocket 服务器地址',
+            isDark: isDark,
+            enabled: !ctrl.isMsync,
+          ),
+          const SizedBox(height: 10),
+          _buildInputItem(
+            controller: ctrl.wsPortController,
+            hintText: 'WebSocket 端口',
+            keyboardType: TextInputType.number,
+            isDark: isDark,
+            enabled: !ctrl.isMsync,
+          ),
+        ],
       ],
     );
   }
