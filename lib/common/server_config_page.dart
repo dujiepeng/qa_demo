@@ -24,7 +24,18 @@ class _ServerConfigPageState extends State<ServerConfigPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _envs.length, vsync: this);
+    int initialIndex = 0;
+    for (int i = 0; i < _envs.length; i++) {
+      if (_settings.activeEnvName == _envs[i].name) {
+        initialIndex = i;
+        break;
+      }
+    }
+    _tabController = TabController(
+      length: _envs.length,
+      initialIndex: initialIndex,
+      vsync: this,
+    );
 
     // 为每个环境初始化一个控制器组
     for (int i = 0; i < _envs.length; i++) {
@@ -50,11 +61,6 @@ class _ServerConfigPageState extends State<ServerConfigPage>
         wsPortController: TextEditingController(text: wsPort),
         isMsync: isMsync,
       );
-
-      // 如果当前激活的是这个环境，默认选中该 Tab
-      if (_settings.activeEnvName == env.name) {
-        _tabController.index = i;
-      }
     }
   }
 
