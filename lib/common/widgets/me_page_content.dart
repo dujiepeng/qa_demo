@@ -19,24 +19,15 @@ class MePageContent extends StatelessWidget {
 
     Widget body = ListView(
       padding: EdgeInsets.only(
-        top: showAppBar ? 20 : 40,
+        top:
+            MediaQuery.of(context).padding.top +
+            (showAppBar ? kToolbarHeight + 20 : 40),
         left: 20,
         right: 20,
         bottom: 20,
       ),
       children: [
-        _buildSettingSectionTitle('偏好设置', isDark),
-        _buildSwitchItem(
-          title: '深色模式',
-          icon: Icons.dark_mode_outlined,
-          value: isDark,
-          onChanged: (val) {
-            settings.isDarkMode = val;
-            settings.saveSettings();
-          },
-          isDark: isDark,
-        ),
-        const SizedBox(height: 20),
+
         _buildSettingSectionTitle('高级设置', isDark),
         Container(
           decoration: BoxDecoration(
@@ -180,35 +171,6 @@ class MePageContent extends StatelessWidget {
           fontSize: 14,
           fontWeight: FontWeight.bold,
         ),
-      ),
-    );
-  }
-
-  Widget _buildSwitchItem({
-    required String title,
-    required IconData icon,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-    required bool isDark,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.inputBackground(isDark),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: AppColors.glassBorder(isDark)),
-      ),
-      child: SwitchListTile(
-        title: Row(
-          children: [
-            Icon(icon, color: AppColors.textSecondary(isDark), size: 20),
-            const SizedBox(width: 10),
-            Text(title, style: TextStyle(color: AppColors.textPrimary(isDark))),
-          ],
-        ),
-        value: value,
-        onChanged: onChanged,
-        activeTrackColor: AppColors.primary(isDark),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 15),
       ),
     );
   }

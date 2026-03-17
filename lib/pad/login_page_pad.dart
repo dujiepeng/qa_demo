@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-
+import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../theme/app_colors.dart';
 import '../common/widgets/common_gradient_background.dart';
 import '../common/mixins/login_logic_mixin.dart';
+import '../common/log_content_page.dart';
 
 class LoginPagePad extends StatefulWidget {
   const LoginPagePad({super.key});
@@ -112,15 +113,50 @@ class _LoginPagePadState extends State<LoginPagePad> with LoginLogicMixin {
                             ),
                           ),
                     const SizedBox(height: 20),
-                    TextButton(
-                      onPressed: () =>
-                          Navigator.pushNamed(context, '/server_config'),
-                      child: Text(
-                        '服务器配置',
-                        style: TextStyle(
-                          color: AppColors.textSecondary(isDark),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        TextButton.icon(
+                          onPressed: () async {
+                            final logZipPath = await EMClient.getInstance.compressLogs();
+                            final logPath = logZipPath.replaceFirst('log.gz', 'easemob.log');
+                            if (mounted) {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => LogContentPage(logPath: logPath),
+                                ),
+                              );
+                            }
+                          },
+                          icon: Icon(
+                            Icons.article_outlined,
+                            color: AppColors.textSecondary(isDark),
+                            size: 20,
+                          ),
+                          label: Text(
+                            '查看日志',
+                            style: TextStyle(
+                              color: AppColors.textSecondary(isDark),
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 20),
+                        TextButton.icon(
+                          onPressed: () =>
+                              Navigator.pushNamed(context, '/server_config'),
+                          icon: Icon(
+                            Icons.settings_outlined,
+                            color: AppColors.textSecondary(isDark),
+                            size: 20,
+                          ),
+                          label: Text(
+                            '服务器配置',
+                            style: TextStyle(
+                              color: AppColors.textSecondary(isDark),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

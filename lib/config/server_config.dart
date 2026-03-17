@@ -22,22 +22,11 @@ class ServerEnvironment {
   // TKE 集群默认配置
   static const ServerEnvironment tke = ServerEnvironment(
     name: 'TKE',
-    appKey: 'easemob#dutest', // 替换为真实的 TKE AppKey
-    restServer: 'https://a1-tke.easemob.com', // 替换为真实的 TKE REST
-    msyncServer: '10.10.10.1', // 替换为真实的 TKE msync
+    appKey: 'easemob-demo#tke-sdb', // 替换为真实的 TKE AppKey
+    restServer: 'http://tke-sdb-a1.easemob.com:80', // 替换为真实的 TKE REST
+    msyncServer: 'tke-sdb-msync-im1.easemob.com', // 替换为真实的 TKE msync
     msyncPort: 6717,
-    wsServer: 'wss://websocket-tke.easemob.com', // 替换为真实的 TKE websocket
-    wsPort: 443,
-  );
-
-  // NGI 集群默认配置
-  static const ServerEnvironment ngi = ServerEnvironment(
-    name: 'NGI',
-    appKey: 'easemob#dutest', // 替换为真实的 NGI AppKey
-    restServer: 'https://a1-ngi.easemob.com', // 替换为真实的 NGI REST
-    msyncServer: '10.10.10.2', // 替换为真实的 NGI msync
-    msyncPort: 6717,
-    wsServer: 'wss://websocket-ngi.easemob.com', // 替换为真实的 NGI websocket
+    wsServer: 'tke-sdb-im-api-wechat.easemob.com', // 替换为真实的 TKE websocket
     wsPort: 443,
   );
 
@@ -52,10 +41,10 @@ class ServerEnvironment {
     wsPort: 443,
   );
 
-  // 线上 集群配置（只有 AppKey 可配置）
+  // ebs 集群配置（只有 AppKey 可配置）
   static const ServerEnvironment online = ServerEnvironment(
-    name: '线上',
-    appKey: 'easemob#dutest',
+    name: 'ebs',
+    appKey: 'easemob#easeim',
     restServer: '',
     msyncServer: '',
     msyncPort: 0,
@@ -63,10 +52,5 @@ class ServerEnvironment {
     wsPort: 0,
   );
 
-  static const List<ServerEnvironment> environments = [
-    tke,
-    ngi,
-    sandbox,
-    online,
-  ];
+  static const List<ServerEnvironment> environments = [tke, sandbox, online];
 }

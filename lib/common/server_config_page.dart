@@ -272,7 +272,7 @@ class _ServerConfigPageState extends State<ServerConfigPage>
                                                   ),
                                                 ),
                                               ),
-                                              if (config.envName != '线上') ...[
+                                              if (config.envName != 'ebs') ...[
                                                 const SizedBox(height: 8),
                                                 Text(
                                                   'REST: ${config.restServer}',
@@ -484,7 +484,7 @@ class _ServerConfigPageState extends State<ServerConfigPage>
           isDark: isDark,
         ),
 
-        if (env.name != '线上') ...[
+        if (env.name != 'ebs') ...[
           const SizedBox(height: 20),
           _buildSectionTitle('REST 配置', isDark),
           _buildInputItem(

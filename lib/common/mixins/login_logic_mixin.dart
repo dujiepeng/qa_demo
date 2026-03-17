@@ -43,29 +43,56 @@ mixin LoginLogicMixin<T extends StatefulWidget> on State<T> {
       // 使用设置中的服务器配置进行初始化
       if (settings.isDirty) {
         EMOptions options;
-        if (settings.useCustomServer) {
-          // 如果开启了自定义服务器配置，在构造时直接传入详细信息
-          options = EMOptions.withAppKey(
-            settings.appKey,
-            autoLogin: false,
-            debugMode: true,
-            imServer: settings.imServer,
-            imPort: settings.imPort,
-            restServer: settings.restServer,
-            enableDNSConfig: false,
-          );
+        if (settings.activeEnvName != 'ebs') {
+          // 非ebs的开发/私有集群，在构造时直接传入详细信息
+
+          final isWs = !settings.isMsync;
+          final activeConf = settings.activeConfig;
+
+          final serverHost = isWs
+              ? (activeConf?.wsServer ?? settings.imServer)
+              : (activeConf?.msyncServer ?? settings.imServer);
+          final serverPort = isWs
+              ? (activeConf?.wsPort ?? settings.imPort)
+              : (activeConf?.msyncPort ?? settings.imPort);
+
+          if (isWs) {
+            options = EMOptions.withAppKey(
+              settings.appKey,
+              autoLogin: false,
+              debugMode: true,
+              restServer: settings.restServer,
+              enableDNSConfig: false,
+              usingHttpsOnly: false,
+              webSocketPort: serverPort,
+              webSocketServer: serverHost,
+              enableTLS: true,
+            );
+          } else {
+            options = EMOptions.withAppKey(
+              settings.appKey,
+              autoLogin: false,
+              debugMode: true,
+              imServer: serverHost,
+              imPort: serverPort,
+              restServer: settings.restServer,
+              enableDNSConfig: false,
+              usingHttpsOnly: false,
+              enableTLS: false,
+            );
+          }
 
           debugPrint(
-            'LoginLogicMixin: Initializing with CUSTOM server: ${settings.imServer}:${settings.imPort}',
+            'LoginLogicMixin: Initializing with CUSTOM server (${settings.activeEnvName}): $serverHost:$serverPort, Mode: ${isWs ? 'WebSocket' : 'TCP'}',
           );
         } else {
-          // 默认配置
+          // ebs环境配置
           options = EMOptions.withAppKey(
             settings.appKey,
             autoLogin: false,
             debugMode: true,
           );
-          debugPrint('LoginLogicMixin: Initializing with DEFAULT server');
+          debugPrint('LoginLogicMixin: Initializing with ONLINE environment');
         }
 
         await EMClient.getInstance.init(options);

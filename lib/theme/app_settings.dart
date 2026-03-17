@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import '../config/server_config.dart';
 
 class AppSettings extends ChangeNotifier {
   static final AppSettings _instance = AppSettings._internal();
@@ -8,7 +9,7 @@ class AppSettings extends ChangeNotifier {
   AppSettings._internal();
 
   // AppKey 相关
-  static const String defaultAppKey = 'easemob#dutest'; // 默认 AppKey（不可修改）
+  static final String defaultAppKey = ServerEnvironment.tke.appKey; // 默认 AppKey
   static const String defaultCustomAppKey = 'easemob-demo#sdk111'; // 自定义模式默认值
 
   bool useCustomAppKey = false;
@@ -23,18 +24,12 @@ class AppSettings extends ChangeNotifier {
   }
 
   bool useCustomServer = false;
-  String imServer = '81.70.142.13';
-  int imPort = 4300;
-  String restServer = 'https://a1-hsb.easemob.com';
+  String imServer = ServerEnvironment.tke.msyncServer;
+  int imPort = ServerEnvironment.tke.msyncPort;
+  String restServer = ServerEnvironment.tke.restServer;
 
-  bool _isDarkMode = true; // 默认开启深色模式
+  final bool _isDarkMode = true; // 强制开启深色模式
   bool get isDarkMode => _isDarkMode;
-  set isDarkMode(bool value) {
-    if (_isDarkMode != value) {
-      _isDarkMode = value;
-      notifyListeners();
-    }
-  }
 
   bool _isLoggedIn = false; // 登录状态
   bool get isLoggedIn => _isLoggedIn;
@@ -97,10 +92,11 @@ class AppSettings extends ChangeNotifier {
     useCustomAppKey = prefs.getBool(_keyUseCustomAppKey) ?? false;
     _customAppKey = prefs.getString(_keyAppKey) ?? defaultCustomAppKey;
     useCustomServer = prefs.getBool(_keyUseCustomServer) ?? false;
-    imServer = prefs.getString(_keyImServer) ?? '81.70.142.13';
-    imPort = prefs.getInt(_keyImPort) ?? 4300;
+    imServer =
+        prefs.getString(_keyImServer) ?? ServerEnvironment.tke.msyncServer;
+    imPort = prefs.getInt(_keyImPort) ?? ServerEnvironment.tke.msyncPort;
     restServer =
-        prefs.getString(_keyRestServer) ?? 'https://a1-hsb.easemob.com';
+        prefs.getString(_keyRestServer) ?? ServerEnvironment.tke.restServer;
     // 加载历史记录 (为保持老版本兼容暂时留下，新版本UI不展示了)
     final historyJson = prefs.getStringList(_keyConfigHistory);
     if (historyJson != null) {
@@ -135,7 +131,8 @@ class AppSettings extends ChangeNotifier {
     }
 
     // 同时也装载那些基础的黑白模式/选中状态
-    _isDarkMode = prefs.getBool('is_dark_mode') ?? true;
+    // 强制使用深色模式
+    // _isDarkMode = prefs.getBool('is_dark_mode') ?? true;
     isLoggedIn = prefs.getBool('is_logged_in') ?? false;
     _isMode = prefs.getBool('is_mode') ?? true;
 
@@ -172,7 +169,7 @@ class AppSettings extends ChangeNotifier {
     await prefs.setString(_keyActiveEnvName, activeEnvName);
     await prefs.setString(_keyCustomEnvs, jsonEncode(_customEnvDict));
 
-    await prefs.setBool('is_dark_mode', _isDarkMode);
+    // 强制使用深色模式
     await prefs.setBool('is_logged_in', isLoggedIn);
     await prefs.setBool('is_mode', _isMode);
 
@@ -303,14 +300,20 @@ class ServerConfig {
   };
 
   factory ServerConfig.fromJson(Map<String, dynamic> json) {
+    String envName = json['envName'] as String? ?? 'TKE';
+    final fallbackEnv = ServerEnvironment.environments.firstWhere(
+      (e) => e.name == envName,
+      orElse: () => ServerEnvironment.tke,
+    );
+
     return ServerConfig(
-      envName: json['envName'] as String? ?? 'TKE',
-      appKey: json['appKey'] as String? ?? '',
-      restServer: json['restServer'] as String? ?? '',
-      msyncServer: json['msyncServer'] as String? ?? '',
-      msyncPort: json['msyncPort'] as int? ?? 6717,
-      wsServer: json['wsServer'] as String? ?? '',
-      wsPort: json['wsPort'] as int? ?? 443,
+      envName: envName,
+      appKey: json['appKey'] as String? ?? fallbackEnv.appKey,
+      restServer: json['restServer'] as String? ?? fallbackEnv.restServer,
+      msyncServer: json['msyncServer'] as String? ?? fallbackEnv.msyncServer,
+      msyncPort: json['msyncPort'] as int? ?? fallbackEnv.msyncPort,
+      wsServer: json['wsServer'] as String? ?? fallbackEnv.wsServer,
+      wsPort: json['wsPort'] as int? ?? fallbackEnv.wsPort,
       isMsync: json['isMsync'] as bool? ?? true,
     );
   }
