@@ -17,104 +17,114 @@ class _LoginPagePadState extends State<LoginPagePad> with LoginLogicMixin {
     final isDark = settings.isDarkMode;
 
     return Scaffold(
-      body: CommonGradientBackground(
-        isDark: isDark,
-        child: Center(
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 450),
-            padding: const EdgeInsets.all(40),
-            decoration: BoxDecoration(
-              color: AppColors.inputBackground(isDark).withValues(alpha: 0.8),
-              borderRadius: BorderRadius.circular(30),
-              border: Border.all(color: AppColors.glassBorder(isDark)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: CommonGradientBackground(
+          isDark: isDark,
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 40),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 450),
+                padding: const EdgeInsets.all(40),
+                decoration: BoxDecoration(
+                  color: AppColors.inputBackground(
+                    isDark,
+                  ).withValues(alpha: 0.8),
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(color: AppColors.glassBorder(isDark)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Icon(
-                  Icons.flash_on,
-                  size: 80,
-                  color: AppColors.primary(isDark),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'QA DEMO (Pad)',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary(isDark),
-                    letterSpacing: 2,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '环境: ${settings.activeEnvName} \nAppKey: ${settings.appKey}\n链接方式: ${settings.isMsync ? 'TCP' : 'WebSocket'}',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary(isDark),
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                _buildTextField(
-                  uidController,
-                  'UID',
-                  Icons.person_outline,
-                  isDark,
-                ),
-                const SizedBox(height: 20),
-                _buildTextField(
-                  pwdController,
-                  'Password',
-                  Icons.lock_outline,
-                  isDark,
-                  isObscured: true,
-                ),
-                const SizedBox(height: 40),
-                isLoading
-                    ? Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary(isDark),
-                        ),
-                      )
-                    : ElevatedButton(
-                        onPressed: handleLogin,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary(isDark),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 20),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Icon(
+                      Icons.flash_on,
+                      size: 80,
+                      color: AppColors.primary(isDark),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'QA DEMO (Pad)',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary(isDark),
+                        letterSpacing: 2,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '环境: ${settings.activeEnvName} \nAppKey: ${settings.appKey}\n链接方式: ${settings.isMsync ? 'TCP' : 'WebSocket'}',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary(isDark),
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    _buildTextField(
+                      uidController,
+                      'UID',
+                      Icons.person_outline,
+                      isDark,
+                    ),
+                    const SizedBox(height: 20),
+                    _buildTextField(
+                      pwdController,
+                      'Password',
+                      Icons.lock_outline,
+                      isDark,
+                      isObscured: true,
+                    ),
+                    const SizedBox(height: 40),
+                    isLoading
+                        ? Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.primary(isDark),
+                            ),
+                          )
+                        : ElevatedButton(
+                            onPressed: handleLogin,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary(isDark),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                            ),
+                            child: const Text(
+                              'LOGIN',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
                           ),
-                        ),
-                        child: const Text(
-                          'LOGIN',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
+                    const SizedBox(height: 20),
+                    TextButton(
+                      onPressed: () =>
+                          Navigator.pushNamed(context, '/server_config'),
+                      child: Text(
+                        '服务器配置',
+                        style: TextStyle(
+                          color: AppColors.textSecondary(isDark),
                         ),
                       ),
-                const SizedBox(height: 20),
-                TextButton(
-                  onPressed: () =>
-                      Navigator.pushNamed(context, '/server_config'),
-                  child: Text(
-                    '服务器配置',
-                    style: TextStyle(color: AppColors.textSecondary(isDark)),
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
