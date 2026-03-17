@@ -93,16 +93,17 @@ class _ServerConfigPageState extends State<ServerConfigPage>
     _settings.saveCustomEnv(activeEnv.name, customData);
     _settings.activeEnvName = activeEnv.name; // 记录当前选择的集群
 
+    // 因为这里强指定了环境，所以以前的 useCustom 状态就一直 true
+    // (必须在设置 _settings.appKey 之前设置，否则 setter 内部可能会失效)
+    _settings.useCustomAppKey = true;
+    _settings.useCustomServer = true;
+
     // 依然修改 AppSettings 老字段，以便于兼容之前的逻辑
     _settings.appKey = customData['appKey'] as String;
     _settings.restServer = customData['restServer'] as String;
     // 将 msync 对应给 imServer 等，这里先向后兼容老代码
     _settings.imServer = customData['msyncServer'] as String;
     _settings.imPort = customData['msyncPort'] as int;
-
-    // 因为这里强指定了环境，所以以前的 useCustom 状态就一直 true
-    _settings.useCustomAppKey = true;
-    _settings.useCustomServer = true;
 
     // 每次点击保存总是视作环境改变，并要求重启
     if (mounted) {

@@ -115,6 +115,17 @@ class AppSettings extends ChangeNotifier {
         _customEnvDict = decoded.map(
           (k, v) => MapEntry(k, Map<String, dynamic>.from(v as Map)),
         );
+
+        // 使用加载的多集群配置强覆盖遗留的内存字段
+        final currentEnv = _customEnvDict[activeEnvName];
+        if (currentEnv != null) {
+          useCustomAppKey = true;
+          useCustomServer = true;
+          _customAppKey = currentEnv['appKey'] as String? ?? _customAppKey;
+          restServer = currentEnv['restServer'] as String? ?? restServer;
+          imServer = currentEnv['msyncServer'] as String? ?? imServer;
+          imPort = currentEnv['msyncPort'] as int? ?? imPort;
+        }
       } catch (e) {
         _customEnvDict = {};
       }
