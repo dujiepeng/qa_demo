@@ -89,7 +89,7 @@ class _ServerConfigPageState extends State<ServerConfigPage>
       'isMsync': ctrl.isMsync,
     };
 
-    // 保存到 AppSettings (需要新增此功能)
+    // 保存到 AppSettings
     _settings.saveCustomEnv(activeEnv.name, customData);
     _settings.activeEnvName = activeEnv.name; // 记录当前选择的集群
 
@@ -98,12 +98,15 @@ class _ServerConfigPageState extends State<ServerConfigPage>
     _settings.useCustomAppKey = true;
     _settings.useCustomServer = true;
 
-    // 依然修改 AppSettings 老字段，以便于兼容之前的逻辑
+    // 依然修改 AppSettings 老字段，以便于兼容之前的逻辑和历史记录功能
     _settings.appKey = customData['appKey'] as String;
     _settings.restServer = customData['restServer'] as String;
     // 将 msync 对应给 imServer 等，这里先向后兼容老代码
     _settings.imServer = customData['msyncServer'] as String;
     _settings.imPort = customData['msyncPort'] as int;
+
+    // 保存到历史记录中
+    _settings.addCurrentConfigToHistory();
 
     // 每次点击保存总是视作环境改变，并要求重启
     if (mounted) {
@@ -129,6 +132,128 @@ class _ServerConfigPageState extends State<ServerConfigPage>
     }
   }
 
+  void _applyConfig(ServerConfig config) {
+    // 同步到设置对象并触发通知
+    _settings.applyConfig(config);
+
+    // 同步到 UI 表单控制器
+    final ctrl = _controllers[config.envName];
+    if (ctrl != null) {
+      ctrl.appKeyController.text = config.appKey;
+      ctrl.restServerController.text = config.restServer;
+      ctrl.msyncServerController.text = config.msyncServer;
+      ctrl.msyncPortController.text = config.msyncPort.toString();
+      ctrl.wsServerController.text = config.wsServer;
+      ctrl.wsPortController.text = config.wsPort.toString();
+      ctrl.isMsync = config.isMsync;
+
+      // 切换到对应的 tab
+      final index = _envs.indexWhere((e) => e.name == config.envName);
+      if (index != -1) {
+        _tabController.index = index;
+      }
+
+      setState(() {});
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('配置已加载，请点击保存记录生效')));
+    }
+  }
+
+  void _showHistoryDialog() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        final isDark = _settings.isDarkMode;
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.7,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      '配置历史',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary(isDark),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: _settings.configHistory.isEmpty
+                        ? Center(
+                            child: Text(
+                              '暂无历史记录',
+                              style: TextStyle(
+                                color: AppColors.textSecondary(isDark),
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: _settings.configHistory.length,
+                            itemBuilder: (context, index) {
+                              final config = _settings.configHistory[index];
+                              final subTitle =
+                                  '集群: ${config.envName} | 连接: ${config.isMsync ? 'TCP' : 'WebSocket'}';
+                              return ListTile(
+                                title: Text(
+                                  config.appKey,
+                                  style: TextStyle(
+                                    color: AppColors.textPrimary(isDark),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  subTitle,
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary(isDark),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  _applyConfig(config);
+                                },
+                                trailing: IconButton(
+                                  icon: Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.red.withValues(alpha: 0.7),
+                                  ),
+                                  onPressed: () {
+                                    setModalState(() {
+                                      _settings.removeConfigFromHistory(
+                                        config.appKey,
+                                      );
+                                    });
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = _settings.isDarkMode;
@@ -143,6 +268,14 @@ class _ServerConfigPageState extends State<ServerConfigPage>
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: '历史配置',
+            onPressed: _showHistoryDialog,
+          ),
+          const SizedBox(width: 10),
+        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppColors.primary(isDark),
@@ -223,6 +356,7 @@ class _ServerConfigPageState extends State<ServerConfigPage>
             hintText: 'REST 服务器地址',
             isDark: isDark,
           ),
+          const SizedBox(height: 20),
           _buildSectionTitle('MSYNC 配置', isDark),
           _buildSwitchItem(
             title: '使用 MSYNC 连接',

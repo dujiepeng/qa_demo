@@ -202,13 +202,18 @@ class AppSettings extends ChangeNotifier {
   static const String _keyConfigHistory = 'config_history';
 
   void addCurrentConfigToHistory() {
+    final currentDict = _customEnvDict[activeEnvName];
+    if (currentDict == null) return;
+
     final newConfig = ServerConfig(
+      envName: activeEnvName,
       appKey: appKey,
-      useCustomAppKey: useCustomAppKey,
-      useCustomServer: useCustomServer,
-      imServer: imServer,
-      imPort: imPort,
-      restServer: restServer,
+      restServer: currentDict['restServer'] as String? ?? restServer,
+      msyncServer: currentDict['msyncServer'] as String? ?? imServer,
+      msyncPort: currentDict['msyncPort'] as int? ?? imPort,
+      wsServer: currentDict['wsServer'] as String? ?? '',
+      wsPort: currentDict['wsPort'] as int? ?? 443,
+      isMsync: currentDict['isMsync'] as bool? ?? true,
     );
 
     // 如果已存在相同的 AppKey，先移除旧的
@@ -228,50 +233,72 @@ class AppSettings extends ChangeNotifier {
   }
 
   void applyConfig(ServerConfig config) {
-    useCustomAppKey = config.useCustomAppKey;
+    activeEnvName = config.envName;
+
+    // 把记录写入字典
+    if (_customEnvDict[activeEnvName] == null) {
+      _customEnvDict[activeEnvName] = {};
+    }
+    _customEnvDict[activeEnvName]!['appKey'] = config.appKey;
+    _customEnvDict[activeEnvName]!['restServer'] = config.restServer;
+    _customEnvDict[activeEnvName]!['msyncServer'] = config.msyncServer;
+    _customEnvDict[activeEnvName]!['msyncPort'] = config.msyncPort;
+    _customEnvDict[activeEnvName]!['wsServer'] = config.wsServer;
+    _customEnvDict[activeEnvName]!['wsPort'] = config.wsPort;
+    _customEnvDict[activeEnvName]!['isMsync'] = config.isMsync;
+
+    // 强制旧变量更新
     appKey = config.appKey;
-    useCustomServer = config.useCustomServer;
-    imServer = config.imServer;
-    imPort = config.imPort;
     restServer = config.restServer;
+    imServer = config.msyncServer;
+    imPort = config.msyncPort;
+
     notifyListeners();
   }
 }
 
 class ServerConfig {
+  final String envName;
   final String appKey;
-  final bool useCustomAppKey;
-  final bool useCustomServer;
-  final String imServer;
-  final int imPort;
   final String restServer;
+  final String msyncServer;
+  final int msyncPort;
+  final String wsServer;
+  final int wsPort;
+  final bool isMsync;
 
   ServerConfig({
+    required this.envName,
     required this.appKey,
-    required this.useCustomAppKey,
-    required this.useCustomServer,
-    required this.imServer,
-    required this.imPort,
     required this.restServer,
+    required this.msyncServer,
+    required this.msyncPort,
+    required this.wsServer,
+    required this.wsPort,
+    required this.isMsync,
   });
 
   Map<String, dynamic> toJson() => {
+    'envName': envName,
     'appKey': appKey,
-    'useCustomAppKey': useCustomAppKey,
-    'useCustomServer': useCustomServer,
-    'imServer': imServer,
-    'imPort': imPort,
     'restServer': restServer,
+    'msyncServer': msyncServer,
+    'msyncPort': msyncPort,
+    'wsServer': wsServer,
+    'wsPort': wsPort,
+    'isMsync': isMsync,
   };
 
   factory ServerConfig.fromJson(Map<String, dynamic> json) {
     return ServerConfig(
-      appKey: json['appKey'] as String,
-      useCustomAppKey: json['useCustomAppKey'] as bool,
-      useCustomServer: json['useCustomServer'] as bool,
-      imServer: json['imServer'] as String,
-      imPort: json['imPort'] as int,
-      restServer: json['restServer'] as String,
+      envName: json['envName'] as String? ?? 'TKE',
+      appKey: json['appKey'] as String? ?? '',
+      restServer: json['restServer'] as String? ?? '',
+      msyncServer: json['msyncServer'] as String? ?? '',
+      msyncPort: json['msyncPort'] as int? ?? 6717,
+      wsServer: json['wsServer'] as String? ?? '',
+      wsPort: json['wsPort'] as int? ?? 443,
+      isMsync: json['isMsync'] as bool? ?? true,
     );
   }
 }
