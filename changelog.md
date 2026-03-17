@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.76.0+183] - 2026-03-17
+### Fix
+- 针对 GitHub Actions 的 Node.js 20 弃用警告进行了优化：
+    - 在工作流中设置了 `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` 以提前启用 Node.js 24 运行环境。
+    - 升级 `softprops/action-gh-release` 插件至 `v2` 版本。
+
+## [1.76.0+182] - 2026-03-17
+### Fix
+- 优化了 GitHub Actions 工作流触发逻辑：
+    - 新增支持在 `main` 和 `dev` 分支推送时自动触发构建。
+    - 新增支持通过 GitHub Actions 界面手动触发构建 (`workflow_dispatch`)。
+    - 保留了推送 Tag 时自动创建 Release 的功能。
+
 ## [1.76.0+181] - 2026-03-17
 ### Refactor
 - 删除了“我的”界面的偏好设置与深色模式切换选项卡。
