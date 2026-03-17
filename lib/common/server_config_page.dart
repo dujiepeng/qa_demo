@@ -358,9 +358,7 @@ class _ServerConfigPageState extends State<ServerConfigPage>
                                   ),
                                   onPressed: () {
                                     setModalState(() {
-                                      _settings.removeConfigFromHistory(
-                                        config.appKey,
-                                      );
+                                      _settings.removeConfigFromHistory(config);
                                     });
                                   },
                                 ),

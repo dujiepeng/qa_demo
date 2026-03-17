@@ -216,8 +216,13 @@ class AppSettings extends ChangeNotifier {
       isMsync: currentDict['isMsync'] as bool? ?? true,
     );
 
-    // 如果已存在相同的 AppKey，先移除旧的
-    configHistory.removeWhere((config) => config.appKey == appKey);
+    // 如果已存在相同集群、AppKey 和连接方式的记录，先移除旧的
+    configHistory.removeWhere(
+      (config) =>
+          config.envName == activeEnvName &&
+          config.appKey == appKey &&
+          config.isMsync == newConfig.isMsync,
+    );
     // 插入到头部
     configHistory.insert(0, newConfig);
     // 限制历史记录数量，例如 20 条
@@ -226,8 +231,13 @@ class AppSettings extends ChangeNotifier {
     }
   }
 
-  void removeConfigFromHistory(String targetAppKey) {
-    configHistory.removeWhere((config) => config.appKey == targetAppKey);
+  void removeConfigFromHistory(ServerConfig targetConfig) {
+    configHistory.removeWhere(
+      (config) =>
+          config.envName == targetConfig.envName &&
+          config.appKey == targetConfig.appKey &&
+          config.isMsync == targetConfig.isMsync,
+    );
     isDirty = true;
     saveSettings(); // 这里直接保存一下，避免删除后重启又回来了
   }
