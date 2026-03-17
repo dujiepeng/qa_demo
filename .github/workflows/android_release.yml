@@ -2,8 +2,12 @@ name: Android Release
 
 on:
   push:
+    branches:
+      - main
+      - dev
     tags:
       - '*'
+  workflow_dispatch:
 
 permissions:
   contents: write
