@@ -57,7 +57,7 @@ class _LoginPagePadState extends State<LoginPagePad> with LoginLogicMixin {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '环境: ${settings.activeEnvName} \nAppKey: ${settings.appKey}',
+                  '环境: ${settings.activeEnvName} \nAppKey: ${settings.appKey}\n链接方式: ${settings.isMsync ? 'TCP' : 'WebSocket'}',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,

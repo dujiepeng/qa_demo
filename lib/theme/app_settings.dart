@@ -59,6 +59,9 @@ class AppSettings extends ChangeNotifier {
   // 当前选中的集群名称，例如 TKE / NGI / 开发沙箱
   String activeEnvName = 'TKE';
 
+  // 当前集群连接方式快捷读取
+  bool get isMsync => _customEnvDict[activeEnvName]?['isMsync'] ?? true;
+
   // 用于存储各个集群自定义后的字典缓存
   Map<String, Map<String, dynamic>> _customEnvDict = {};
 

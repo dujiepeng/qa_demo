@@ -67,7 +67,7 @@ class _LoginPageMobileState extends State<LoginPageMobile>
                       const SizedBox(height: 8),
                       Center(
                         child: Text(
-                          '环境: ${settings.activeEnvName}\nAppKey: ${settings.appKey}',
+                          '环境: ${settings.activeEnvName}\nAppKey: ${settings.appKey}\n链接方式: ${settings.isMsync ? 'TCP' : 'WebSocket'}',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 13,
