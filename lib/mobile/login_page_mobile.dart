@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 
 import '../theme/app_colors.dart';
-import '../theme/app_settings.dart';
 import '../common/widgets/common_gradient_background.dart';
+import '../common/mixins/login_logic_mixin.dart';
 
 class LoginPageMobile extends StatefulWidget {
   const LoginPageMobile({super.key});
@@ -12,98 +11,11 @@ class LoginPageMobile extends StatefulWidget {
   State<LoginPageMobile> createState() => _LoginPageMobileState();
 }
 
-class _LoginPageMobileState extends State<LoginPageMobile> {
-  final TextEditingController _uidController = TextEditingController();
-  final TextEditingController _pwdController = TextEditingController();
-  bool _isLoading = false;
-  final _settings = AppSettings();
-
-  Future<void> _handleLogin() async {
-    final uid = _uidController.text.trim();
-    final pwd = _pwdController.text.trim();
-
-    if (uid.isEmpty || pwd.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Please enter UID and Password',
-            style: TextStyle(
-              color: AppColors.textPrimary(_settings.isDarkMode),
-            ),
-          ),
-          backgroundColor: AppColors.primary(_settings.isDarkMode),
-        ),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-    final navigator = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      // 使用设置中的服务器配置进行初始化
-      if (_settings.isDirty) {
-        EMOptions options;
-        if (_settings.useCustomServer) {
-          // 如果开启了自定义服务器配置，在构造时直接传入详细信息
-          options = EMOptions.withAppKey(
-            _settings.appKey,
-            autoLogin: false,
-            debugMode: true,
-            imServer: _settings.imServer,
-            imPort: _settings.imPort,
-            restServer: _settings.restServer,
-            enableDNSConfig: false,
-          );
-
-          debugPrint(
-            'LoginPage: Initializing with CUSTOM server: ${_settings.imServer}:${_settings.imPort}',
-          );
-        } else {
-          // 默认配置
-          options = EMOptions.withAppKey(
-            _settings.appKey,
-            autoLogin: false,
-            debugMode: true,
-          );
-          debugPrint('LoginPage: Initializing with DEFAULT server');
-        }
-
-        EMClient.getInstance.init(options);
-        _settings.isDirty = false;
-        debugPrint(
-          'LoginPage: SDK Initialized with AppKey: ${_settings.appKey}',
-        );
-      }
-
-      await EMClient.getInstance.logout();
-      await EMClient.getInstance.loginWithPassword(uid, pwd);
-
-      if (!mounted) return;
-      navigator.pushReplacementNamed('/home');
-    } catch (e) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            'Login Failed: $e',
-            style: TextStyle(
-              color: AppColors.textPrimary(_settings.isDarkMode),
-            ),
-          ),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
+class _LoginPageMobileState extends State<LoginPageMobile>
+    with LoginLogicMixin {
   @override
   Widget build(BuildContext context) {
-    final isDark = _settings.isDarkMode;
+    final isDark = settings.isDarkMode;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -156,7 +68,7 @@ class _LoginPageMobileState extends State<LoginPageMobile> {
 
                       // UID Input
                       _buildTextField(
-                        controller: _uidController,
+                        controller: uidController,
                         hintText: 'UID',
                         icon: Icons.person_outline,
                         textInputAction: TextInputAction.next,
@@ -166,7 +78,7 @@ class _LoginPageMobileState extends State<LoginPageMobile> {
 
                       // Password Input
                       _buildTextField(
-                        controller: _pwdController,
+                        controller: pwdController,
                         hintText: 'Password',
                         icon: Icons.lock_outline,
                         isObscured: true,
@@ -176,14 +88,14 @@ class _LoginPageMobileState extends State<LoginPageMobile> {
                       const SizedBox(height: 30),
 
                       // Login Button
-                      _isLoading
+                      isLoading
                           ? Center(
                               child: CircularProgressIndicator(
                                 color: AppColors.primary(isDark),
                               ),
                             )
                           : ElevatedButton(
-                              onPressed: _handleLogin,
+                              onPressed: handleLogin,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary(isDark),
                                 foregroundColor: Colors.white,

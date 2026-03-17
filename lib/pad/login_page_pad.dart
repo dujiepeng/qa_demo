@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
-import '../theme/app_settings.dart';
 import '../common/widgets/common_gradient_background.dart';
-import 'package:im_flutter_sdk/im_flutter_sdk.dart';
+import '../common/mixins/login_logic_mixin.dart';
 
 class LoginPagePad extends StatefulWidget {
   const LoginPagePad({super.key});
@@ -11,67 +11,10 @@ class LoginPagePad extends StatefulWidget {
   State<LoginPagePad> createState() => _LoginPagePadState();
 }
 
-class _LoginPagePadState extends State<LoginPagePad> {
-  final TextEditingController _uidController = TextEditingController();
-  final TextEditingController _pwdController = TextEditingController();
-  bool _isLoading = false;
-  final _settings = AppSettings();
-
-  Future<void> _handleLogin() async {
-    final uid = _uidController.text.trim();
-    final pwd = _pwdController.text.trim();
-
-    if (uid.isEmpty || pwd.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: const Text('Please enter UID and Password')),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-    try {
-      if (_settings.isDirty) {
-        EMOptions options = _settings.useCustomServer
-            ? EMOptions.withAppKey(
-                _settings.appKey,
-                autoLogin: false,
-                debugMode: true,
-                imServer: _settings.imServer,
-                imPort: _settings.imPort,
-                restServer: _settings.restServer,
-                enableDNSConfig: false,
-              )
-            : EMOptions.withAppKey(
-                _settings.appKey,
-                autoLogin: false,
-                debugMode: true,
-              );
-
-        await EMClient.getInstance.init(options);
-        _settings.isDirty = false;
-      }
-
-      await EMClient.getInstance.logout();
-      await EMClient.getInstance.loginWithPassword(uid, pwd);
-
-      if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed('/home');
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Login Failed: $e'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
+class _LoginPagePadState extends State<LoginPagePad> with LoginLogicMixin {
   @override
   Widget build(BuildContext context) {
-    final isDark = _settings.isDarkMode;
+    final isDark = settings.isDarkMode;
 
     return Scaffold(
       body: CommonGradientBackground(
@@ -114,28 +57,28 @@ class _LoginPagePadState extends State<LoginPagePad> {
                 ),
                 const SizedBox(height: 40),
                 _buildTextField(
-                  _uidController,
+                  uidController,
                   'UID',
                   Icons.person_outline,
                   isDark,
                 ),
                 const SizedBox(height: 20),
                 _buildTextField(
-                  _pwdController,
+                  pwdController,
                   'Password',
                   Icons.lock_outline,
                   isDark,
                   isObscured: true,
                 ),
                 const SizedBox(height: 40),
-                _isLoading
+                isLoading
                     ? Center(
                         child: CircularProgressIndicator(
                           color: AppColors.primary(isDark),
                         ),
                       )
                     : ElevatedButton(
-                        onPressed: _handleLogin,
+                        onPressed: handleLogin,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary(isDark),
                           foregroundColor: Colors.white,
