@@ -65,8 +65,8 @@ class _ConversationListPageState extends State<ConversationListPage> {
     try {
       final result = await EMClient.getInstance.chatManager
           .fetchConversationsByOptions(
-        options: ConversationFetchOptions(pageSize: 30),
-      );
+            options: ConversationFetchOptions(pageSize: 30),
+          );
       if (mounted) {
         setState(() {
           _conversations = result.data;
@@ -100,8 +100,8 @@ class _ConversationListPageState extends State<ConversationListPage> {
     try {
       final result = await EMClient.getInstance.chatManager
           .fetchConversationsByOptions(
-        options: ConversationFetchOptions(pageSize: 30, cursor: _cursor),
-      );
+            options: ConversationFetchOptions(pageSize: 30, cursor: _cursor),
+          );
       if (mounted) {
         setState(() {
           _conversations.addAll(result.data);
@@ -259,7 +259,8 @@ class _ConversationListPageState extends State<ConversationListPage> {
                         : ListView.builder(
                             physics: const AlwaysScrollableScrollPhysics(),
                             controller: _scrollController,
-                            itemCount: _conversations.length + (_hasMore ? 1 : 0),
+                            itemCount:
+                                _conversations.length + (_hasMore ? 1 : 0),
                             itemBuilder: (context, index) {
                               if (index < _conversations.length) {
                                 final conv = _conversations[index];
@@ -350,134 +351,132 @@ class _ConversationListPageState extends State<ConversationListPage> {
           border: Border.all(color: AppColors.glassBorder(isDark)),
         ),
         child: ListTile(
-              tileColor: conversation.isPinned
-                  ? AppColors.primary(isDark).withValues(alpha: 0.05)
-                  : null,
+          tileColor: conversation.isPinned
+              ? AppColors.primary(isDark).withValues(alpha: 0.05)
+              : null,
 
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          leading: Stack(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.primary(isDark).withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: AppColors.primary(isDark)),
               ),
-              leading: Stack(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary(isDark).withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(icon, color: AppColors.primary(isDark)),
-                  ),
-                  FutureBuilder<int>(
-                    future: conversation.unreadCount(),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasData && snapshot.data! > 0) {
-                        return Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                            ),
-                            constraints: const BoxConstraints(
-                              minWidth: 16,
-                              minHeight: 16,
-                            ),
-                            child: Center(
-                              child: Text(
-                                '${snapshot.data}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+              FutureBuilder<int>(
+                future: conversation.unreadCount(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData && snapshot.data! > 0) {
+                    return Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${snapshot.data}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                        );
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
-                ],
-              ),
-              title: Row(
-                children: [
-                  if (conversation.isPinned)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 4),
-                      child: Icon(
-                        Icons.push_pin,
-                        size: 14,
-                        color: AppColors.primary(isDark),
+                        ),
                       ),
-                    ),
-                  Expanded(
-                    child: Text(
-                      conversation.id,
-                      style: TextStyle(
-                        color: AppColors.textPrimary(isDark),
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              subtitle: FutureBuilder<EMMessage?>(
-                future: conversation.latestMessage(),
-                builder: (context, snapshot) {
-                  String lastMsgStr = '暂无消息';
-                  if (snapshot.hasData && snapshot.data != null) {
-                    final msg = snapshot.data!;
-                    if (msg.body.type == MessageType.TXT) {
-                      lastMsgStr = (msg.body as EMTextMessageBody).content;
-                    } else {
-                      lastMsgStr = '[${msg.body.type.name}]';
-                    }
+                    );
                   }
-                  return Text(
-                    '[$typeStr] $lastMsgStr',
-                    style: TextStyle(color: AppColors.textSecondary(isDark)),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  );
+                  return const SizedBox.shrink();
                 },
               ),
-              trailing: Icon(
-                Icons.chevron_right,
-                color: AppColors.textSecondary(isDark),
-              ),
-              onTap: () {
-                if (widget.onItemTap != null) {
-                  widget.onItemTap!(conversation);
-                } else {
-                  Widget page;
-                  switch (conversation.type) {
-                    case EMConversationType.Chat:
-                      page = SingleChatPage(userId: conversation.id);
-                      break;
-                    case EMConversationType.GroupChat:
-                      page = GroupPage(groupId: conversation.id);
-                      break;
-                    case EMConversationType.ChatRoom:
-                      page = RoomPage(roomId: conversation.id);
-                      break;
-                  }
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => page),
-                  );
-                }
-              },
-            ),
+            ],
           ),
-        );
-      }
-
-
+          title: Row(
+            children: [
+              if (conversation.isPinned)
+                Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Icon(
+                    Icons.push_pin,
+                    size: 14,
+                    color: AppColors.primary(isDark),
+                  ),
+                ),
+              Expanded(
+                child: Text(
+                  conversation.id,
+                  style: TextStyle(
+                    color: AppColors.textPrimary(isDark),
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          subtitle: FutureBuilder<EMMessage?>(
+            future: conversation.latestMessage(),
+            builder: (context, snapshot) {
+              String lastMsgStr = '暂无消息';
+              if (snapshot.hasData && snapshot.data != null) {
+                final msg = snapshot.data!;
+                if (msg.body.type == MessageType.TXT) {
+                  lastMsgStr = (msg.body as EMTextMessageBody).content;
+                } else {
+                  lastMsgStr = '[${msg.body.type.name}]';
+                }
+              }
+              return Text(
+                '[$typeStr] $lastMsgStr',
+                style: TextStyle(color: AppColors.textSecondary(isDark)),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              );
+            },
+          ),
+          trailing: Icon(
+            Icons.chevron_right,
+            color: AppColors.textSecondary(isDark),
+          ),
+          onTap: () {
+            if (widget.onItemTap != null) {
+              widget.onItemTap!(conversation);
+            } else {
+              Widget page;
+              switch (conversation.type) {
+                case EMConversationType.Chat:
+                  page = SingleChatPage(userId: conversation.id);
+                  break;
+                case EMConversationType.GroupChat:
+                  page = GroupPage(groupId: conversation.id);
+                  break;
+                case EMConversationType.ChatRoom:
+                  page = RoomPage(roomId: conversation.id);
+                  break;
+              }
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => page),
+              );
+            }
+          },
+        ),
+      ),
+    );
+  }
 
   Widget _buildLoadingIndicator(bool isDark) {
     if (!_hasMore) return const SizedBox.shrink();

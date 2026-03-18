@@ -33,11 +33,11 @@ class ServerEnvironment {
   // 开发沙箱 集群默认配置
   static const ServerEnvironment sandbox = ServerEnvironment(
     name: '开发沙箱',
-    appKey: 'easemob#dutest', // 替换为真实的沙箱 AppKey
-    restServer: 'https://a1-sandbox.easemob.com', // 替换为真实的沙箱 REST
-    msyncServer: '10.10.10.3', // 替换为真实的沙箱 msync
-    msyncPort: 6717,
-    wsServer: 'wss://websocket-sandbox.easemob.com', // 替换为真实的沙箱 websocket
+    appKey: 'easemob-demo#chatlist', // 替换为真实的沙箱 AppKey
+    restServer: 'http://a1-hsb.easemob.com', // 替换为真实的沙箱 REST
+    msyncServer: '81.70.142.13', // 替换为真实的沙箱 msync
+    msyncPort: 4300,
+    wsServer: 'im-api-new-hsb.easemob.com', // 替换为真实的沙箱 websocket
     wsPort: 443,
   );
 
