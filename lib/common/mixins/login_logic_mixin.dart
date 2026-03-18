@@ -105,6 +105,10 @@ mixin LoginLogicMixin<T extends StatefulWidget> on State<T> {
       await EMClient.getInstance.logout();
       await EMClient.getInstance.loginWithPassword(uid, pwd);
 
+      // 登录成功，更新系统状态
+      settings.isLoggedIn = true;
+      await settings.saveSettings();
+
       if (!mounted) return;
       navigator.pushReplacementNamed('/home');
     } catch (e) {

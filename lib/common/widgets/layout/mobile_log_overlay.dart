@@ -24,12 +24,14 @@ class _MobileLogOverlayState extends State<MobileLogOverlay> {
     final isDark = settings.isDarkMode;
 
     // 如果未登录，则不显示日志面板，直接返回子页面
+    // 同时也确保这种情况下没有额外的 Material/Column 结构干扰背景
     if (!settings.isLoggedIn) {
       return widget.child;
     }
 
-    return Material(
-      child: Column(
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Column(
         children: [
           // 上半部分: 实际的业务页面内容
           Expanded(
