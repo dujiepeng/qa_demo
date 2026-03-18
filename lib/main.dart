@@ -15,6 +15,8 @@ import 'pages/conversation/conversation_list_page.dart';
 import 'common/utils/log_service.dart';
 import 'common/utils/version_manager.dart';
 import 'mobile/me_page_mobile.dart';
+import 'common/widgets/layout/mobile_log_overlay.dart';
+import 'common/widgets/responsive_layout.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -74,6 +76,15 @@ class _MyAppState extends State<MyApp> {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
+      builder: (context, child) {
+        if (child == null) return const SizedBox.shrink();
+        
+        // 使用 ResponsiveLayout 判断是否在移动端显示全局日志遮罩
+        return ResponsiveLayout(
+          mobile: MobileLogOverlay(child: child),
+          tablet: child,
+        );
+      },
       // 根据登录状态动态决定起始页面
       initialRoute: settings.isLoggedIn ? '/home' : '/login',
 
