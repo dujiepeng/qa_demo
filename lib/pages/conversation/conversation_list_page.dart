@@ -144,6 +144,24 @@ class _ConversationListPageState extends State<ConversationListPage> {
     }
   }
 
+  /// 切换置顶状态
+  Future<void> _togglePin(EMConversation conversation) async {
+    try {
+      final isPinned = conversation.isPinned;
+      await EMClient.getInstance.chatManager.pinConversation(
+        conversationId: conversation.id,
+        isPinned: !isPinned,
+      );
+      _fetchConversations(silent: true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('操作失败: $e')));
+      }
+    }
+  }
+
   /// 删除会话
   Future<void> _deleteConversation(EMConversation conversation) async {
     final confirm = await showDialog<bool>(
@@ -275,6 +293,10 @@ class _ConversationListPageState extends State<ConversationListPage> {
           ),
           items: [
             const PopupMenuItem(value: 'copy_id', child: Text('复制 ID')),
+            PopupMenuItem(
+              value: 'toggle_pin',
+              child: Text(conversation.isPinned ? '取消置顶' : '会话置顶'),
+            ),
             const PopupMenuItem(
               value: 'delete',
               child: Text('删除会话', style: TextStyle(color: Colors.red)),
@@ -284,6 +306,8 @@ class _ConversationListPageState extends State<ConversationListPage> {
 
         if (value == 'copy_id') {
           _copyToClipboard(conversation.id);
+        } else if (value == 'toggle_pin') {
+          _togglePin(conversation);
         } else if (value == 'delete') {
           _deleteConversation(conversation);
         }
@@ -296,109 +320,135 @@ class _ConversationListPageState extends State<ConversationListPage> {
           border: Border.all(color: AppColors.glassBorder(isDark)),
         ),
         child: ListTile(
-          leading: Stack(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.primary(isDark).withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: AppColors.primary(isDark)),
+              tileColor: conversation.isPinned
+                  ? AppColors.primary(isDark).withValues(alpha: 0.05)
+                  : null,
+
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-              FutureBuilder<int>(
-                future: conversation.unreadCount(),
-                builder: (context, snapshot) {
-                  if (snapshot.hasData && snapshot.data! > 0) {
-                    return Positioned(
-                      right: 0,
-                      top: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 16,
-                          minHeight: 16,
-                        ),
-                        child: Center(
-                          child: Text(
-                            '${snapshot.data}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
+              leading: Stack(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary(isDark).withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icon, color: AppColors.primary(isDark)),
+                  ),
+                  FutureBuilder<int>(
+                    future: conversation.unreadCount(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData && snapshot.data! > 0) {
+                        return Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${snapshot.data}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                ],
+              ),
+              title: Row(
+                children: [
+                  if (conversation.isPinned)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: Icon(
+                        Icons.push_pin,
+                        size: 14,
+                        color: AppColors.primary(isDark),
                       ),
-                    );
+                    ),
+                  Expanded(
+                    child: Text(
+                      conversation.id,
+                      style: TextStyle(
+                        color: AppColors.textPrimary(isDark),
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              subtitle: FutureBuilder<EMMessage?>(
+                future: conversation.latestMessage(),
+                builder: (context, snapshot) {
+                  String lastMsgStr = '暂无消息';
+                  if (snapshot.hasData && snapshot.data != null) {
+                    final msg = snapshot.data!;
+                    if (msg.body.type == MessageType.TXT) {
+                      lastMsgStr = (msg.body as EMTextMessageBody).content;
+                    } else {
+                      lastMsgStr = '[${msg.body.type.name}]';
+                    }
                   }
-                  return const SizedBox.shrink();
+                  return Text(
+                    '[$typeStr] $lastMsgStr',
+                    style: TextStyle(color: AppColors.textSecondary(isDark)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  );
                 },
               ),
-            ],
-          ),
-          title: Text(
-            conversation.id,
-            style: TextStyle(
-              color: AppColors.textPrimary(isDark),
-              fontWeight: FontWeight.bold,
+              trailing: Icon(
+                Icons.chevron_right,
+                color: AppColors.textSecondary(isDark),
+              ),
+              onTap: () {
+                if (widget.onItemTap != null) {
+                  widget.onItemTap!(conversation);
+                } else {
+                  Widget page;
+                  switch (conversation.type) {
+                    case EMConversationType.Chat:
+                      page = SingleChatPage(userId: conversation.id);
+                      break;
+                    case EMConversationType.GroupChat:
+                      page = GroupPage(groupId: conversation.id);
+                      break;
+                    case EMConversationType.ChatRoom:
+                      page = RoomPage(roomId: conversation.id);
+                      break;
+                  }
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => page),
+                  );
+                }
+              },
             ),
           ),
-          subtitle: FutureBuilder<EMMessage?>(
-            future: conversation.latestMessage(),
-            builder: (context, snapshot) {
-              String lastMsgStr = '暂无消息';
-              if (snapshot.hasData && snapshot.data != null) {
-                final msg = snapshot.data!;
-                if (msg.body.type == MessageType.TXT) {
-                  lastMsgStr = (msg.body as EMTextMessageBody).content;
-                } else {
-                  lastMsgStr = '[${msg.body.type.name}]';
-                }
-              }
-              return Text(
-                '[$typeStr] $lastMsgStr',
-                style: TextStyle(color: AppColors.textSecondary(isDark)),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              );
-            },
-          ),
-          trailing: Icon(
-            Icons.chevron_right,
-            color: AppColors.textSecondary(isDark),
-          ),
-          onTap: () {
-            if (widget.onItemTap != null) {
-              widget.onItemTap!(conversation);
-            } else {
-              Widget page;
-              switch (conversation.type) {
-                case EMConversationType.Chat:
-                  page = SingleChatPage(userId: conversation.id);
-                  break;
-                case EMConversationType.GroupChat:
-                  page = GroupPage(groupId: conversation.id);
-                  break;
-                case EMConversationType.ChatRoom:
-                  page = RoomPage(roomId: conversation.id);
-                  break;
-              }
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => page),
-              );
-            }
-          },
-        ),
-      ),
-    );
-  }
+        );
+      }
+
+
+
   Widget _buildLoadingIndicator(bool isDark) {
     if (!_hasMore) return const SizedBox.shrink();
     return Container(
