@@ -30,7 +30,7 @@ class _MobileLogOverlayState extends State<MobileLogOverlay> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.backgroundStart(isDark),
       body: Overlay(
         initialEntries: [
           OverlayEntry(

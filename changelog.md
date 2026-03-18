@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.76.0+194] - 2026-03-18
+### UI/UX
+- 恢复了“功能列表”页面的渐变背景效果。
+- 修复了全局日志面板容器（MobileLogOverlay）背景色缺失导致的黑屏问题。
+
 ## [1.76.0+193] - 2026-03-18
 ### Bug Fix
 - 修复了全局日志面板在作为 MaterialApp builder 注入时，导致子路由（如 Tooltip、PopupMenu）因找不到 Overlay 而崩溃的问题。通过在 Overlay 组件中包裹全局布局结构解决了此问题。
