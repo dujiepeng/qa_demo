@@ -23,6 +23,11 @@ class _MobileLogOverlayState extends State<MobileLogOverlay> {
     final settings = context.watch<AppSettings>();
     final isDark = settings.isDarkMode;
 
+    // 如果未登录，则不显示日志面板，直接返回子页面
+    if (!settings.isLoggedIn) {
+      return widget.child;
+    }
+
     return Material(
       child: Column(
         children: [
