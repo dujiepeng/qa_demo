@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
+import '../common/widgets/common_dialogs.dart';
 
 class GridItem {
   final String title;
@@ -70,6 +71,10 @@ class _PageMobileState extends State<PageMobile> {
         ),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: () => CommonDialogs.showUserInfoDialog(context, isDark),
+          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             onPressed: () => Navigator.pushNamed(context, '/me_page'),
