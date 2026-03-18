@@ -148,6 +148,11 @@ class MePageContent extends StatelessWidget {
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+            color: AppColors.textPrimary(isDark),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
           title: Text(
             '设置',
             style: TextStyle(color: AppColors.textPrimary(isDark)),
