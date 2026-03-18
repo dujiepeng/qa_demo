@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.76.0+193] - 2026-03-18
+### Bug Fix
+- 修复了全局日志面板在作为 MaterialApp builder 注入时，导致子路由（如 Tooltip、PopupMenu）因找不到 Overlay 而崩溃的问题。通过在 Overlay 组件中包裹全局布局结构解决了此问题。
+
 ## [1.76.0+192] - 2026-03-18
 ### Bug Fix
 - 修复了启用全局日志面板后登录页面背景变黑的问题。
