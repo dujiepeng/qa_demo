@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.76.0+197] - 2026-03-18
+### Bug Fix
+- 深度修复了在 Hot Reload（热重载）或登录状态切换时应用崩溃或报 `No Overlay widget found` 的问题。
+- 重构了 `MobileLogOverlay`，采用稳定的组件树结构并显式引入全局 `Overlay` 节点，确保子路由组件（如 Tooltip、弹出菜单）始终能找到所需的浮层环境。
+
 ## [1.76.0+196] - 2026-03-18
 ### Bug Fix
 - 修复了重启应用时可能出现的 `No Overlay widget found` 或 `Material` 相关启动错误。通过在 `MobileLogOverlay` 中使用 `Scaffold` 代替纯 `Material` 容器，为子组件提供了完整的 Flutter 运行时环境。
