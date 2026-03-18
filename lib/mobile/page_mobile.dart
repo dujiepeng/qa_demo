@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
-import '../common/widgets/common_gradient_background.dart';
-import '../common/widgets/common_dialogs.dart';
 
 class GridItem {
   final String title;
@@ -61,39 +59,34 @@ class _PageMobileState extends State<PageMobile> {
   Widget build(BuildContext context) {
     final isDark = _settings.isDarkMode;
 
-    return CommonGradientBackground(
-      isDark: isDark,
-      child: Scaffold(
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          title: Text(
-            '测试',
-            style: TextStyle(color: AppColors.textPrimary(isDark)),
-          ),
-          centerTitle: true,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.info_outline),
-              onPressed: () =>
-                  CommonDialogs.showUserInfoDialog(context, isDark),
-            ),
-          ],
+        elevation: 0,
+        title: Text(
+          '功能列表',
+          style: TextStyle(color: AppColors.textPrimary(isDark)),
         ),
-        body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: GridView.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 1.0,
-            ),
-            itemCount: _testItems.length,
-            itemBuilder: (context, index) =>
-                _buildGridItem(_testItems[index], isDark),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => Navigator.pushNamed(context, '/me_page'),
           ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: GridView.builder(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            childAspectRatio: 1.0,
+          ),
+          itemCount: _testItems.length,
+          itemBuilder: (context, index) => _buildGridItem(_testItems[index], isDark),
         ),
       ),
     );

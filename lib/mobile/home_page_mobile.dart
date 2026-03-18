@@ -1,10 +1,7 @@
 import 'package:chat_uikit_theme/chat_uikit_theme.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
-import '../common/utils/version_manager.dart';
-import '../common/utils/chat_event_widget.dart';
-import 'me_page_mobile.dart';
+import '../common/widgets/log_panel/log_panel.dart';
 import 'page_mobile.dart';
 
 class HomePageMobile extends StatefulWidget {
@@ -15,115 +12,62 @@ class HomePageMobile extends StatefulWidget {
 }
 
 class _HomePageMobileState extends State<HomePageMobile> {
-  int _currentIndex = 0;
-  late final Widget _mePage;
-  late final Widget _testPage;
-
-  @override
-  void initState() {
-    super.initState();
-    _mePage = const MePageMobile();
-    _testPage = const PageMobile();
-  }
+  // 日志高度
+  double _logPanelHeight = 200.0;
+  // 最小日志高度
+  static const double _minLogHeight = 100.0;
 
   @override
   Widget build(BuildContext context) {
     final isDark = ChatUIKitTheme.instance.color.isDark;
-    final List<Widget> pages = [_testPage, _mePage];
-    final List<BottomNavigationBarItem> items = const [
-      BottomNavigationBarItem(
-        icon: Icon(Icons.bug_report),
-        activeIcon: Icon(Icons.bug_report),
-        label: '测试',
-      ),
-      BottomNavigationBarItem(
-        icon: Icon(Icons.person_outline),
-        activeIcon: Icon(Icons.person),
-        label: '我',
-      ),
-    ];
 
-    int safeIndex = _currentIndex;
-    if (safeIndex >= pages.length) safeIndex = pages.length - 1;
+    return Scaffold(
+      backgroundColor: AppColors.backgroundStart(isDark),
+      body: Column(
+        children: [
+          // 上半部分: 测试导航页面
+          const Expanded(
+            child: PageMobile(),
+          ),
 
-    return ChatEventWidget(
-      child: Scaffold(
-        backgroundColor: AppColors.backgroundStart(isDark),
-        body: IndexedStack(index: safeIndex, children: pages),
-        bottomNavigationBar: _buildBottomNavigationBar(
-          context,
-          isDark,
-          items,
-          safeIndex,
-        ),
-      ),
-    );
-  }
+          // 可拖动的分割线
+          GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onVerticalDragUpdate: (details) {
+              setState(() {
+                _logPanelHeight -= details.delta.dy;
+                final maxHeight = MediaQuery.of(context).size.height * 0.7;
+                if (_logPanelHeight < _minLogHeight) {
+                  _logPanelHeight = _minLogHeight;
+                } else if (_logPanelHeight > maxHeight) {
+                  _logPanelHeight = maxHeight;
+                }
+              });
+            },
+            child: Container(
+              height: 20,
+              width: double.infinity,
+              color: isDark ? Colors.black26 : Colors.grey[300],
+              child: Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.glassBorder(isDark),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+            ),
+          ),
 
-  Widget _buildBottomNavigationBar(
-    BuildContext context,
-    bool isDark,
-    List<BottomNavigationBarItem> items,
-    int safeIndex,
-  ) {
-    return Container(
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
+          // 下半部分: 日志区域
+          SizedBox(
+            height: _logPanelHeight,
+            child: LogPanel(isDark: isDark),
           ),
         ],
       ),
-      child: Consumer<VersionManager>(
-        builder: (context, vm, _) {
-          return BottomNavigationBar(
-            currentIndex: safeIndex,
-            onTap: (index) => setState(() => _currentIndex = index),
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: isDark
-                ? ChatUIKitTheme.instance.color.neutralColor1
-                : ChatUIKitTheme.instance.color.neutralColor98,
-            selectedItemColor: AppColors.primary(isDark),
-            unselectedItemColor: AppColors.textSecondary(isDark),
-            showUnselectedLabels: true,
-            selectedFontSize: 12,
-            unselectedFontSize: 12,
-            items: items.map((item) {
-              if (item.label == '我' && vm.hasNewVersion) {
-                return BottomNavigationBarItem(
-                  icon: _buildBadgeIcon(item.icon),
-                  activeIcon: _buildBadgeIcon(item.activeIcon),
-                  label: item.label,
-                );
-              }
-              return item;
-            }).toList(),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildBadgeIcon(Widget icon) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        icon,
-        Positioned(
-          right: -2,
-          top: -2,
-          child: Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: Colors.red,
-              shape: BoxShape.circle,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

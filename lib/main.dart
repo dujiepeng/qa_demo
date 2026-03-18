@@ -14,6 +14,7 @@ import 'pages/single/single_chat_page.dart';
 import 'pages/conversation/conversation_list_page.dart';
 import 'common/utils/log_service.dart';
 import 'common/utils/version_manager.dart';
+import 'mobile/me_page_mobile.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -85,6 +86,7 @@ class _MyAppState extends State<MyApp> {
         '/single_chat': (context) => const SingleChatPage(),
         '/single_chat_list': (context) => const SingleChatListPage(),
         '/conversation_list': (context) => const ConversationListPage(),
+        '/me_page': (context) => const MePageMobile(),
       },
     );
   }

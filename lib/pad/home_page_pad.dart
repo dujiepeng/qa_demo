@@ -1,13 +1,10 @@
 import 'package:chat_uikit_theme/theme.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
-import 'dart:io';
-import 'dart:async';
 import '../common/widgets/common_dialogs.dart';
+import '../common/widgets/log_panel/log_panel.dart';
 import 'me_page_pad.dart';
 import 'page_pad.dart';
 
@@ -18,18 +15,8 @@ class HomePagePad extends StatefulWidget {
   State<HomePagePad> createState() => _HomePagePadState();
 }
 
-class _HomePagePadState extends State<HomePagePad>
-    with TickerProviderStateMixin {
-  late AnimationController _blinkController;
-  late Animation<double> _blinkAnimation;
+class _HomePagePadState extends State<HomePagePad> with TickerProviderStateMixin {
   late TabController _tabController;
-  final ScrollController _logScrollController = ScrollController();
-
-  // SDK 日志文件相关
-  String _sdkLogContent = '正在加载 SDK 日志...';
-  Timer? _logTimer;
-  String? _lastLogPath;
-  bool _autoScroll = true; // 自动滚动开关
 
   // 日志高度
   double _logPanelHeight = 300.0;
@@ -47,76 +34,11 @@ class _HomePagePadState extends State<HomePagePad>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-
-    _blinkController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-    _blinkAnimation = Tween<double>(begin: 1.0, end: 0.2).animate(
-      CurvedAnimation(parent: _blinkController, curve: Curves.easeInOut),
-    );
-
-    _initAndStartLogSync();
-  }
-
-  Future<void> _initAndStartLogSync() async {
-    try {
-      // 仅在初始化时获取一次路径
-      final logZipPath = await EMClient.getInstance.compressLogs();
-      _lastLogPath = logZipPath.replaceFirst('log.gz', 'easemob.log');
-      _startLogSync();
-    } catch (e) {
-      debugPrint('Init log path error: $e');
-    }
-  }
-
-  void _startLogSync() {
-    _logTimer?.cancel();
-    _logTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      _syncSdkLogs();
-    });
-  }
-
-  int _lastFileLength = 0;
-
-  Future<void> _syncSdkLogs() async {
-    if (_lastLogPath == null) return;
-    try {
-      final file = File(_lastLogPath!);
-      if (await file.exists()) {
-        final stat = await file.stat();
-        // 只有当文件长度发生变化时才重新读取
-        if (stat.size != _lastFileLength) {
-          final content = await file.readAsString();
-          if (mounted) {
-            setState(() {
-              _sdkLogContent = content;
-              _lastFileLength = stat.size;
-            });
-            // 只有开启自动滚动时才滚动到底部
-            if (_autoScroll) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (_logScrollController.hasClients) {
-                  _logScrollController.jumpTo(
-                    _logScrollController.position.maxScrollExtent,
-                  );
-                }
-              });
-            }
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint('Sync SDK logs error: $e');
-    }
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    _blinkController.dispose();
-    _logScrollController.dispose();
-    _logTimer?.cancel();
     super.dispose();
   }
 
@@ -293,7 +215,7 @@ class _HomePagePadState extends State<HomePagePad>
         // 下半部分: 日志区域
         SizedBox(
           height: _logPanelHeight,
-          child: _buildLogPanel(context, isDark),
+          child: LogPanel(isDark: isDark),
         ),
       ],
     );
@@ -397,153 +319,6 @@ class _HomePagePadState extends State<HomePagePad>
         ),
         const SizedBox(width: 12),
       ],
-    );
-  }
-
-  Widget _buildLogPanel(BuildContext context, bool isDark) {
-    if (_autoScroll) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_logScrollController.hasClients) {
-          _logScrollController.jumpTo(
-            _logScrollController.position.maxScrollExtent,
-          );
-        }
-      });
-    }
-
-    return Container(
-      color: isDark ? Colors.black87 : Colors.grey[100],
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '日志',
-                style: TextStyle(
-                  color: AppColors.primary(isDark),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-              Row(
-                children: [
-                  Builder(
-                    builder: (context) {
-                      if (!_autoScroll) {
-                        _blinkController.repeat(reverse: true);
-                      } else {
-                        _blinkController.stop();
-                        _blinkController.value = 0;
-                      }
-
-                      return FadeTransition(
-                        opacity: _autoScroll
-                            ? const AlwaysStoppedAnimation(1.0)
-                            : _blinkAnimation,
-                        child: IconButton(
-                          icon: Icon(
-                            _autoScroll
-                                ? Icons.pause_circle_outline
-                                : Icons.play_circle_outline,
-                            size: 18,
-                            color: _autoScroll ? null : Colors.orange,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _autoScroll = !_autoScroll;
-                              if (_autoScroll) {
-                                // 立即触发一次滚动到底部
-                                WidgetsBinding.instance.addPostFrameCallback((
-                                  _,
-                                ) {
-                                  if (_logScrollController.hasClients) {
-                                    _logScrollController.jumpTo(
-                                      _logScrollController
-                                          .position
-                                          .maxScrollExtent,
-                                    );
-                                  }
-                                });
-                              }
-                            });
-                          },
-                          tooltip: _autoScroll ? '暂停滚动' : '继续滚动',
-                        ),
-                      );
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.copy_all, size: 18),
-                    onPressed: () async {
-                      if (_sdkLogContent.isNotEmpty) {
-                        await Clipboard.setData(
-                          ClipboardData(text: _sdkLogContent),
-                        );
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('SDK日志已复制')),
-                          );
-                        }
-                      }
-                    },
-                    tooltip: '复制全部',
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, size: 18),
-                    onPressed: () async {
-                      if (_lastLogPath != null) {
-                        final file = File(_lastLogPath!);
-                        if (await file.exists()) {
-                          await file.writeAsString('');
-                          setState(() {
-                            _sdkLogContent = '';
-                            _autoScroll = true; // 清空后自动恢复播放状态
-                          });
-                        }
-                      }
-                    },
-                    tooltip: '清空日志',
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const Divider(),
-          Expanded(
-            child: NotificationListener<ScrollNotification>(
-              onNotification: (notification) {
-                if (notification is ScrollUpdateNotification &&
-                    notification.scrollDelta != null &&
-                    notification.scrollDelta! < 0) {
-                  // 如果是向上滚动，且当前是自动滚动状态，则切换为手动状态
-                  if (_autoScroll) {
-                    setState(() {
-                      _autoScroll = false;
-                    });
-                  }
-                }
-                return false;
-              },
-              child: SingleChildScrollView(
-                controller: _logScrollController,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: SelectableText(
-                  _sdkLogContent,
-                  style: TextStyle(
-                    fontFamily: 'Courier',
-                    fontSize: 12,
-                    color: isDark ? Colors.greenAccent : Colors.black87,
-                    height: 1.5,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
