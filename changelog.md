@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.76.0+198] - 2026-03-18
+### Optimization
+- 优化了全局日志面板的挂载结构，将主 Navigator 从 OverlayEntry 中移出，确保热重载（Hot Reload）时的极高稳定性。
+- 为日志面板区域独立提供 Overlay 环境，既保证了面板内部组件（如 Tooltip）的正常工作，又避免了对应用主路由栈的干扰。
+
 ## [1.76.0+197] - 2026-03-18
 ### Bug Fix
 - 深度修复了在 Hot Reload（热重载）或登录状态切换时应用崩溃或报 `No Overlay widget found` 的问题。
