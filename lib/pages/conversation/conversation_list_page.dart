@@ -198,6 +198,20 @@ class _ConversationListPageState extends State<ConversationListPage> {
     }
   }
 
+  /// 设置为已读
+  Future<void> _markAsRead(EMConversation conversation) async {
+    try {
+      await conversation.markAllMessagesAsRead();
+      _fetchConversations(silent: true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('操作失败: $e')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -297,6 +311,20 @@ class _ConversationListPageState extends State<ConversationListPage> {
               value: 'toggle_pin',
               child: Text(conversation.isPinned ? '取消置顶' : '会话置顶'),
             ),
+            PopupMenuItem(
+              value: 'mark_as_read',
+              child: FutureBuilder<int>(
+                future: conversation.unreadCount(),
+                builder: (context, snapshot) {
+                  return Text(
+                    '设置为已读',
+                    style: TextStyle(
+                      color: (snapshot.data ?? 0) > 0 ? null : Colors.grey,
+                    ),
+                  );
+                },
+              ),
+            ),
             const PopupMenuItem(
               value: 'delete',
               child: Text('删除会话', style: TextStyle(color: Colors.red)),
@@ -308,6 +336,8 @@ class _ConversationListPageState extends State<ConversationListPage> {
           _copyToClipboard(conversation.id);
         } else if (value == 'toggle_pin') {
           _togglePin(conversation);
+        } else if (value == 'mark_as_read') {
+          _markAsRead(conversation);
         } else if (value == 'delete') {
           _deleteConversation(conversation);
         }
