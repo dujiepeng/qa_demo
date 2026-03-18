@@ -22,6 +22,9 @@ class _ConversationListPageState extends State<ConversationListPage> {
   final ScrollController _scrollController = ScrollController();
   List<EMConversation> _conversations = [];
   bool _isLoading = false;
+  String? _cursor;
+  bool _hasMore = true;
+  bool _isLoadingMore = false;
 
   @override
   void initState() {
@@ -39,6 +42,7 @@ class _ConversationListPageState extends State<ConversationListPage> {
         onConversationRead: (from, to) => _fetchConversations(silent: true),
       ),
     );
+    _scrollController.addListener(_onScroll);
   }
 
   @override
@@ -60,10 +64,14 @@ class _ConversationListPageState extends State<ConversationListPage> {
 
     try {
       final result = await EMClient.getInstance.chatManager
-          .loadAllConversations();
+          .fetchConversationsByOptions(
+        options: ConversationFetchOptions(pageSize: 30),
+      );
       if (mounted) {
         setState(() {
-          _conversations = result;
+          _conversations = result.data;
+          _cursor = result.cursor;
+          _hasMore = result.data.length >= 30;
         });
       }
     } catch (e) {
@@ -78,6 +86,48 @@ class _ConversationListPageState extends State<ConversationListPage> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  /// 加载更多会话
+  Future<void> _loadMore() async {
+    if (_isLoadingMore || !_hasMore) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      final result = await EMClient.getInstance.chatManager
+          .fetchConversationsByOptions(
+        options: ConversationFetchOptions(pageSize: 30, cursor: _cursor),
+      );
+      if (mounted) {
+        setState(() {
+          _conversations.addAll(result.data);
+          _cursor = result.cursor;
+          _hasMore = result.data.length >= 30;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载更多失败: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingMore = false;
+        });
+      }
+    }
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      _loadMore();
     }
   }
 
@@ -177,10 +227,14 @@ class _ConversationListPageState extends State<ConversationListPage> {
                         : ListView.builder(
                             physics: const AlwaysScrollableScrollPhysics(),
                             controller: _scrollController,
-                            itemCount: _conversations.length,
+                            itemCount: _conversations.length + (_hasMore ? 1 : 0),
                             itemBuilder: (context, index) {
-                              final conv = _conversations[index];
-                              return _buildConversationItem(conv, isDark);
+                              if (index < _conversations.length) {
+                                final conv = _conversations[index];
+                                return _buildConversationItem(conv, isDark);
+                              } else {
+                                return _buildLoadingIndicator(isDark);
+                              }
                             },
                           ),
                   ),
@@ -342,6 +396,17 @@ class _ConversationListPageState extends State<ConversationListPage> {
             }
           },
         ),
+      ),
+    );
+  }
+  Widget _buildLoadingIndicator(bool isDark) {
+    if (!_hasMore) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      alignment: Alignment.center,
+      child: CircularProgressIndicator(
+        color: AppColors.primary(isDark),
+        strokeWidth: 2,
       ),
     );
   }

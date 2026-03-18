@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.76.0+184] - 2026-03-18
+### Feature
+- 为会话列表页面 (`ConversationListPage`) 增加了下拉刷新和基于游标 (Cursor) 的分页加载更多功能。
+
 ## [1.76.0+183] - 2026-03-17
 ### Fix
 - 针对 GitHub Actions 的 Node.js 20 弃用警告进行了优化：

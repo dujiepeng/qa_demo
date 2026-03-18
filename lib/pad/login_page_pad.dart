@@ -118,12 +118,18 @@ class _LoginPagePadState extends State<LoginPagePad> with LoginLogicMixin {
                       children: [
                         TextButton.icon(
                           onPressed: () async {
-                            final logZipPath = await EMClient.getInstance.compressLogs();
-                            final logPath = logZipPath.replaceFirst('log.gz', 'easemob.log');
+                            final logZipPath = await EMClient.getInstance
+                                .compressLogs();
+                            final logPath = logZipPath.replaceFirst(
+                              'log.gz',
+                              'easemob.log',
+                            );
                             if (mounted) {
+                              // ignore: use_build_context_synchronously
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (context) => LogContentPage(logPath: logPath),
+                                  builder: (context) =>
+                                      LogContentPage(logPath: logPath),
                                 ),
                               );
                             }
