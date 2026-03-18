@@ -30,10 +30,10 @@ class _MobileLogOverlayState extends State<MobileLogOverlay> {
     }
 
     // 登录后，在导航栈下方增加日志区域
-    // 使用 Column + Expanded 确保业务逻辑在上方占据剩余空间
-    return Material(
-      color: Colors.transparent, // 关键：背景设为透明，否则会遮挡子页面的背景
-      child: Column(
+    // 使用 Scaffold + Column 确保提供 Overlay, MediaQuery 等 Flutter 核心环境
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Column(
         children: [
           // 上半部分: 业务页面（Navigator 渲染的内容）
           Expanded(

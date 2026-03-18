@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.76.0+196] - 2026-03-18
+### Bug Fix
+- 修复了重启应用时可能出现的 `No Overlay widget found` 或 `Material` 相关启动错误。通过在 `MobileLogOverlay` 中使用 `Scaffold` 代替纯 `Material` 容器，为子组件提供了完整的 Flutter 运行时环境。
+
 ## [1.76.0+195] - 2026-03-18
 ### Bug Fix
 - 修复了跳转到手机端设置页面后返回键不可见的问题：在 `MePageContent` 中添加了显式的返回键及配色。
