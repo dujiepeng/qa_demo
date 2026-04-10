@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.76.7+205] - 2026-04-10
+### Bug Fix
+- 修复 `SingleChatPage` 中点击日志区域无法收起键盘的问题。根因：`LogView` 内的 `ListView` 条目都套了 `GestureDetector`（长按菜单），它们在手势竞技场中赢过外层的 `onTap`，导致父级 unfocus 失效。修复：在 `_buildLogPanel` 的返回值外层再显式套一个 `GestureDetector(onTap: unfocus)`，由于内部只监听 `onLongPressStart` 而非 `onTap`，二者手势类型不冲突，均可正常工作。
+
 ## [1.76.6+204] - 2026-04-10
 ### UI/UX
 - `SingleChatPage` 增加点击空白区域收起键盘并取消输入框焦点的交互（`GestureDetector` + `FocusScope.unfocus()`）。

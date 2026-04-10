@@ -204,10 +204,15 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
   }
 
   Widget _buildLogPanel(bool isDark) {
-    return LogView(
-      controller: _logController,
-      isDark: isDark,
-      menuBuilder: (entry) {
+    // 包一层 GestureDetector，使点击日志区空白处也能收起键盘。
+    // LogView 内部只用了 onLongPressStart（长按菜单），与 onTap 手势类型不同，互不干扰。
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: LogView(
+        controller: _logController,
+        isDark: isDark,
+        menuBuilder: (entry) {
         final items = <LogMenuItem>[];
         // 复制按钮始终显示
         items.add(
@@ -310,7 +315,8 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
         }
         return items;
       },
-    );
+      ),  // LogView 的闭合
+    );  // GestureDetector 的闭合
   }
 
   Future<void> _sendTextMessage(String text) async {
@@ -505,6 +511,7 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
   }
 
   String? _cursor;
+  final int _pageSize = 30;
   Widget _buildMessageButtons(bool isDark) {
     final items = [
       GridActionItem(
@@ -516,41 +523,16 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
                 _userIdController.text,
                 EMConversationType.Chat,
                 cursor: _cursor,
-                pageSize: 30,
+                pageSize: _pageSize,
               );
           _cursor = result.cursor;
-          addLog('拉取消息成功: ${result.data.length}');
-        },
-      ),
-      GridActionItem(
-        icon: Icons.info_outline,
-        label: '信息',
-        onTap: () async {
-          final currentUser = await EMClient.getInstance.getCurrentUserId();
-          final deviceId = await EMClient.getInstance.getCurrentDeviceId();
-
-          if (mounted) {
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('个人信息'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('当前用户: $currentUser'),
-                    const SizedBox(height: 8),
-                    Text('设备ID: $deviceId'),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('确定'),
-                  ),
-                ],
-              ),
+          if (result.data.length < _pageSize) {
+            addSendLog(
+              '拉取消息成功: ${result.data.length}/$_pageSize, 已无更多,再点将重新拉取',
+              color: Colors.red,
             );
+          } else {
+            addSendLog('拉取消息成功: ${result.data.length}/$_pageSize, 还有更多');
           }
         },
       ),
