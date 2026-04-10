@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.76.1+199] - 2026-04-10
+### Doc
+- 修正了 `Summary.md` 中过时的目录架构描述，将已经移除的 `lib/test_pages` 更新为 `lib/pages`。
+
 ## [1.76.0+198] - 2026-03-18
 ### Optimization
 - 优化了全局日志面板的挂载结构，将主 Navigator 从 OverlayEntry 中移出，确保热重载（Hot Reload）时的极高稳定性。
