@@ -78,7 +78,7 @@ class _MyAppState extends State<MyApp> {
       ),
       builder: (context, child) {
         if (child == null) return const SizedBox.shrink();
-        
+
         // 使用 ResponsiveLayout 判断是否在移动端显示全局日志遮罩
         return ResponsiveLayout(
           mobile: MobileLogOverlay(child: child),

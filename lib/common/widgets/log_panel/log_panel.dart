@@ -100,7 +100,7 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final isDark = widget.isDark;
-    
+
     if (_autoScroll) {
       _scrollToBottom();
     }

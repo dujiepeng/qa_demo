@@ -89,7 +89,38 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
             tag: 'message',
           );
         },
-        onMessagesRecalled: (messages) {},
+        onMessagesRecalled: (messages) {
+          final recalledMessages = messages.map((e) => e.msgId).toSet();
+          List<LogEntry> list = [];
+          logController.entities
+              .where((element) => element.attachment is EMMessage)
+              .forEach((element) {
+                final message = element.attachment as EMMessage;
+                if (recalledMessages.contains(message.msgId)) {
+                  list.add(element);
+                }
+              });
+          logController.changeEntities(list, style: LogStyle.lineThrough);
+          addSendLog('收到撤回事件');
+        },
+        onMessagesRead: (messages) {
+          final recalledMessages = messages.map((e) => e.msgId).toSet();
+          List<LogEntry> list = [];
+          logController.entities
+              .where((element) => element.attachment is EMMessage)
+              .forEach((element) {
+                final message = element.attachment as EMMessage;
+                if (recalledMessages.contains(message.msgId)) {
+                  list.add(element);
+                }
+              });
+          logController.changeEntities(
+            list,
+            style: LogStyle.none,
+            color: Colors.yellow,
+          );
+          addSendLog('收到消息已读, 已读消息会变成黄色');
+        },
       ),
     );
   }
@@ -173,7 +204,6 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
                   ),
                 );
               }
-              return null;
             },
           ),
         );
@@ -194,7 +224,6 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
                 } catch (e) {
                   addAppErrLog('发送已读确认失败: $e');
                 }
-                return null;
               },
             ),
           );
@@ -209,11 +238,13 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
                         type: EMConversationType.values[message.chatType.index],
                         msgIds: [message.msgId],
                       );
-                  return LogStyle.lineThrough; // 返回划掉样式
+                  logController.changeEntities([
+                    entry,
+                  ], style: LogStyle.lineThrough);
+                  addSendLog('从服务器删除成功');
                 } catch (e) {
                   addAppErrLog('删除失败: $e');
                 }
-                return null;
               },
             ),
           );
@@ -236,7 +267,6 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
                 } catch (e) {
                   addAppErrLog('修改失败: $e');
                 }
-                return null;
               },
             ),
           );
@@ -248,10 +278,14 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
                   await EMClient.getInstance.chatManager.recallMessage(
                     message.msgId,
                   );
-                  return LogStyle.lineThrough; // 返回划掉样式
+                  logController.changeEntities(
+                    [entry],
+                    color: Colors.red,
+                    style: LogStyle.lineThrough,
+                  );
+                  addSendLog("撤回成功", color: Colors.green);
                 } catch (e) {
                   addAppErrLog('撤回失败: $e');
-                  return null;
                 }
               },
             ),

@@ -9,14 +9,15 @@ import '../widgets/log_view.dart';
 mixin BaseMixin<T extends StatefulWidget> on State<T> {
   LogController get logController;
 
-  /// 基础日志记录方法
-  void addLog(
+  /// 基础日志记录方法，返回新增的 [LogEntry] 引用。
+  /// 如需后续从外部更新或删除该条日志，持有返回值即可。
+  LogEntry addLog(
     String content, {
     Color color = Colors.grey,
     Object? attachment,
     String? tag,
   }) {
-    logController.addLog(
+    return logController.addLog(
       content,
       color: color,
       attachment: attachment,
@@ -25,10 +26,11 @@ mixin BaseMixin<T extends StatefulWidget> on State<T> {
   }
 
   /// 记录错误日志
-  void addAppErrLog(String content) => addLog(content, color: Colors.red);
+  LogEntry addAppErrLog(String content) =>
+      addLog(content, color: Colors.red);
 
   /// 记录发送类日志
-  void addSendLog(
+  LogEntry addSendLog(
     String content, {
     Color color = Colors.green,
     Object? attachment,
@@ -36,7 +38,7 @@ mixin BaseMixin<T extends StatefulWidget> on State<T> {
   }) => addLog(content, color: color, attachment: attachment, tag: tag);
 
   /// 记录接收类日志
-  void addReceiveLog(
+  LogEntry addReceiveLog(
     String content, {
     Color color = Colors.blue,
     Object? attachment,
