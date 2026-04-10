@@ -146,6 +146,8 @@ class LogView extends StatelessWidget {
                           final entry = controller.logs[index];
                           return GestureDetector(
                             onLongPressStart: (details) async {
+                              // 长按时先收起键盘，避免菜单弹出后焦点仍停留在输入框
+                              FocusScope.of(context).unfocus();
                               if (menuBuilder == null) return;
                               final items = menuBuilder!(entry);
                               if (items.isEmpty) return;
