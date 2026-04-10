@@ -108,9 +108,86 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
       ),
       centerTitle: true,
       actions: [
+        // 日志按钮：查看 SDK 日志文件
         IconButton(
-          icon: const Icon(Icons.info),
-          onPressed: () => Navigator.of(context).pushNamed('/server_config'),
+          icon: const Icon(Icons.article_outlined),
+          tooltip: '日志',
+          onPressed: () async {
+            final logZipPath = await EMClient.getInstance.compressLogs();
+            final logPath = logZipPath.replaceFirst('log.gz', 'easemob.log');
+            if (mounted) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => LogContentPage(logPath: logPath),
+                ),
+              );
+            }
+          },
+        ),
+        // 信息按钮：显示当前用户、设备及服务器配置信息
+        IconButton(
+          icon: const Icon(Icons.info_outline),
+          tooltip: '信息',
+          onPressed: () async {
+            final currentUser = await EMClient.getInstance.getCurrentUserId();
+            final deviceId = await EMClient.getInstance.getCurrentDeviceId();
+            final env = _settings.activeEnvName;
+            final appKey = _settings.appKey;
+            final rest = _settings.restServer;
+            final activeConf = _settings.activeConfig;
+            final isMsync = _settings.isMsync;
+            final serverHost = isMsync
+                ? (activeConf?.msyncServer ?? _settings.imServer)
+                : (activeConf?.wsServer ?? _settings.imServer);
+            final serverPort = isMsync
+                ? (activeConf?.msyncPort ?? _settings.imPort)
+                : (activeConf?.wsPort ?? _settings.imPort);
+            final connMode = isMsync ? 'TCP (MSYNC)' : 'WebSocket';
+
+            if (mounted) {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('信息'),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '用户信息',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text('当前用户: $currentUser'),
+                      const SizedBox(height: 4),
+                      Text('设备ID: $deviceId'),
+                      const Divider(height: 20),
+                      const Text(
+                        '服务器配置',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text('集群环境: $env'),
+                      const SizedBox(height: 4),
+                      Text('AppKey: $appKey'),
+                      const SizedBox(height: 4),
+                      Text('REST: $rest'),
+                      const SizedBox(height: 4),
+                      Text('IM 服务器: $serverHost:$serverPort'),
+                      const SizedBox(height: 4),
+                      Text('连接方式: $connMode'),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('确定'),
+                    ),
+                  ],
+                ),
+              );
+            }
+          },
         ),
       ],
     );
@@ -138,9 +215,11 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
         SizedBox(height: isWide ? 20 : 10),
         _buildMessageTypeButtons(isDark),
         const SizedBox(height: 10),
-        CommonSectionTitle(title: '工具', isDark: isDark),
+        CommonSectionTitle(title: '功能', isDark: isDark),
         SizedBox(height: isWide ? 20 : 10),
-        _buildItemsButtons(isDark),
+        _buildMessageButtons(isDark),
+        const SizedBox(height: 10),
+        // 「工具」区已移至 AppBar 右上角
       ],
     );
   }
@@ -439,22 +518,12 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
     );
   }
 
-  Widget _buildItemsButtons(bool isDark) {
+  Widget _buildMessageButtons(bool isDark) {
     final items = [
       GridActionItem(
         icon: Icons.article_outlined,
         label: '日志',
-        onTap: () async {
-          final logZipPath = await EMClient.getInstance.compressLogs();
-          final logPath = logZipPath.replaceFirst('log.gz', 'easemob.log');
-          if (mounted) {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => LogContentPage(logPath: logPath),
-              ),
-            );
-          }
-        },
+        onTap: () async {},
       ),
       GridActionItem(
         icon: Icons.info_outline,
@@ -495,4 +564,5 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
       child: GridActionMenu(items: items, isDark: isDark, columns: 6),
     );
   }
+
 }

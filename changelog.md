@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.76.3+201] - 2026-04-10
+### UI/UX
+- **`SingleChatPage` 工具按钮移位**：将「工具」区的「日志」和「信息」两个按钮全部移至 AppBar 右上角，删除了原有的服务器配置跳转按钮。
+- **信息弹窗增强**：「信息」弹窗新增服务器配置展示，包括集群环境、AppKey、REST 地址、IM 服务器:Port 及连接方式（TCP MSYNC / WebSocket）。
+- 移除了控制面板中帏余的「工具」 Section 和对应的 `_buildItemsButtons` 方法。
+
 ## [1.76.2+200] - 2026-04-10
 ### Bug Fix
 - **根本修复「冷启动崩溃」问题**：将 SDK 初始化逻辑从 `LoginLogicMixin` 中提取为独立的顶层工具函数 `ensureSdkInit()`。
