@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.76.2+200] - 2026-04-10
+### Bug Fix
+- **根本修复「冷启动崩溃」问题**：将 SDK 初始化逻辑从 `LoginLogicMixin` 中提取为独立的顶层工具函数 `ensureSdkInit()`。
+  - 新函数内置幂等保护（`isInit` 为 true 时直接跳过），不会产生重复 init 开销。
+  - 在 `HomePage.initState()` 中通过 `addPostFrameCallback` 补调 `ensureSdkInit`，确保冷启动（`isLoggedIn=true` 直接到 `/home`）时 SDK 也能被正确初始化，彻底杜绝 `compressLogs()` 等 SDK API 因未初始化而崩溃的问题。
+  - `LoginLogicMixin.handleLogin()` 改为复用 `ensureSdkInit`，消除了约 60 行重复的初始化代码。
+
 ## [1.76.1+199] - 2026-04-10
 ### Doc
 - 修正了 `Summary.md` 中过时的目录架构描述，将已经移除的 `lib/test_pages` 更新为 `lib/pages`。

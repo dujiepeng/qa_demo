@@ -4,6 +4,73 @@ import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../../theme/app_settings.dart';
 import '../../theme/app_colors.dart';
 
+/// 确保 SDK 已初始化的全局工具函数。
+/// 可以被 LoginLogicMixin 和 HomePage 共同调用。
+/// 如果 SDK 已经初始化（isInit=true），则什么都不做直接返回。
+Future<void> ensureSdkInit(AppSettings settings) async {
+  // 如果已经初始化过，直接跳过，避免重复 init
+  if (settings.isInit) return;
+
+  // 根据当前配置构建 EMOptions
+  EMOptions options;
+  if (settings.activeEnvName != 'ebs') {
+    // 非 ebs 的开发/私有集群，在构造时直接传入详细信息
+    final isWs = !settings.isMsync;
+    final activeConf = settings.activeConfig;
+
+    final serverHost = isWs
+        ? (activeConf?.wsServer ?? settings.imServer)
+        : (activeConf?.msyncServer ?? settings.imServer);
+    final serverPort = isWs
+        ? (activeConf?.wsPort ?? settings.imPort)
+        : (activeConf?.msyncPort ?? settings.imPort);
+
+    if (isWs) {
+      options = EMOptions.withAppKey(
+        settings.appKey,
+        autoLogin: false,
+        debugMode: true,
+        restServer: settings.restServer,
+        enableDNSConfig: false,
+        usingHttpsOnly: false,
+        webSocketPort: serverPort,
+        webSocketServer: serverHost,
+        enableTLS: true,
+      );
+    } else {
+      options = EMOptions.withAppKey(
+        settings.appKey,
+        autoLogin: false,
+        debugMode: true,
+        imServer: serverHost,
+        imPort: serverPort,
+        restServer: settings.restServer,
+        enableDNSConfig: false,
+        usingHttpsOnly: false,
+        enableTLS: false,
+      );
+    }
+
+    debugPrint(
+      'ensureSdkInit: Initializing with CUSTOM server (${settings.activeEnvName}): $serverHost:$serverPort, Mode: ${isWs ? 'WebSocket' : 'TCP'}',
+    );
+  } else {
+    // ebs 公有云环境，只传 AppKey
+    options = EMOptions.withAppKey(
+      settings.appKey,
+      autoLogin: false,
+      debugMode: true,
+    );
+    debugPrint('ensureSdkInit: Initializing with ONLINE (ebs) environment');
+  }
+
+  await EMClient.getInstance.init(options);
+  // 标记初始化完成，通知依赖此状态的 Widget 刷新
+  settings.isInit = true;
+  settings.isDirty = false;
+  debugPrint('ensureSdkInit: SDK Initialized with AppKey: ${settings.appKey}');
+}
+
 /// 提取出的公用登录逻辑，供 Mobile 和 Pad 的 LoginPage 使用
 mixin LoginLogicMixin<T extends StatefulWidget> on State<T> {
   final TextEditingController uidController = TextEditingController();
@@ -40,67 +107,9 @@ mixin LoginLogicMixin<T extends StatefulWidget> on State<T> {
     final messenger = ScaffoldMessenger.of(context);
 
     try {
-      // 使用设置中的服务器配置进行初始化
-      if (settings.isDirty) {
-        EMOptions options;
-        if (settings.activeEnvName != 'ebs') {
-          // 非ebs的开发/私有集群，在构造时直接传入详细信息
-
-          final isWs = !settings.isMsync;
-          final activeConf = settings.activeConfig;
-
-          final serverHost = isWs
-              ? (activeConf?.wsServer ?? settings.imServer)
-              : (activeConf?.msyncServer ?? settings.imServer);
-          final serverPort = isWs
-              ? (activeConf?.wsPort ?? settings.imPort)
-              : (activeConf?.msyncPort ?? settings.imPort);
-
-          if (isWs) {
-            options = EMOptions.withAppKey(
-              settings.appKey,
-              autoLogin: false,
-              debugMode: true,
-              restServer: settings.restServer,
-              enableDNSConfig: false,
-              usingHttpsOnly: false,
-              webSocketPort: serverPort,
-              webSocketServer: serverHost,
-              enableTLS: true,
-            );
-          } else {
-            options = EMOptions.withAppKey(
-              settings.appKey,
-              autoLogin: false,
-              debugMode: true,
-              imServer: serverHost,
-              imPort: serverPort,
-              restServer: settings.restServer,
-              enableDNSConfig: false,
-              usingHttpsOnly: false,
-              enableTLS: false,
-            );
-          }
-
-          debugPrint(
-            'LoginLogicMixin: Initializing with CUSTOM server (${settings.activeEnvName}): $serverHost:$serverPort, Mode: ${isWs ? 'WebSocket' : 'TCP'}',
-          );
-        } else {
-          // ebs环境配置
-          options = EMOptions.withAppKey(
-            settings.appKey,
-            autoLogin: false,
-            debugMode: true,
-          );
-          debugPrint('LoginLogicMixin: Initializing with ONLINE environment');
-        }
-
-        await EMClient.getInstance.init(options);
-        settings.isDirty = false;
-        debugPrint(
-          'LoginLogicMixin: SDK Initialized with AppKey: ${settings.appKey}',
-        );
-      }
+      // 确保 SDK 已初始化。
+      // 复用 ensureSdkInit 工具函数，避免重复的初始化逻辑。
+      await ensureSdkInit(settings);
 
       await EMClient.getInstance.logout();
       await EMClient.getInstance.loginWithPassword(uid, pwd);

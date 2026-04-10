@@ -40,6 +40,15 @@ class AppSettings extends ChangeNotifier {
     }
   }
 
+  bool _isInit = false; // 初始化状态
+  bool get isInit => _isInit;
+  set isInit(bool value) {
+    if (_isInit != value) {
+      _isInit = value;
+      notifyListeners();
+    }
+  }
+
   bool _isMode = true; // 测试模式
   bool get isMode => _isMode;
   set isMode(bool value) {

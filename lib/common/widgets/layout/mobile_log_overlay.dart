@@ -34,9 +34,7 @@ class _MobileLogOverlayState extends State<MobileLogOverlay> {
         children: [
           // 上半部分: 业务页面（Navigator 渲染的内容）
           // 直接放在 Column 中，它是组件树的固定成员，Hot Reload 极其稳定。
-          Expanded(
-            child: widget.child,
-          ),
+          Expanded(child: widget.child),
 
           // 下半部分: 日志区域
           if (settings.isLoggedIn)
@@ -49,6 +47,7 @@ class _MobileLogOverlayState extends State<MobileLogOverlay> {
   }
 
   Widget _buildLogArea(bool isDark) {
+    final settings = context.watch<AppSettings>();
     // 为日志面板专门提供一个 Overlay 环境，以支持其内部的 Tooltip 和 SnackBar。
     // 这样它既不会干扰主 Navigator，又能满足自身的浮层需求。
     return SizedBox(
@@ -93,7 +92,9 @@ class _MobileLogOverlayState extends State<MobileLogOverlay> {
                   ),
                   // 日志面板
                   Expanded(
-                    child: LogPanel(isDark: isDark),
+                    child: settings.isInit
+                        ? LogPanel(isDark: isDark)
+                        : const SizedBox.shrink(),
                   ),
                 ],
               ),
