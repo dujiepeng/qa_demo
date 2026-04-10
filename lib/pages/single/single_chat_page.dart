@@ -5,7 +5,6 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 import '../../common/widgets/log_view.dart';
 import '../../common/widgets/grid_action_menu.dart';
-import '../../common/log_content_page.dart';
 import '../../common/widgets/common_input_row.dart';
 import '../../common/widgets/common_section_title.dart';
 import '../../common/widgets/common_layout.dart';
@@ -108,22 +107,6 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
       ),
       centerTitle: true,
       actions: [
-        // 日志按钮：查看 SDK 日志文件
-        IconButton(
-          icon: const Icon(Icons.article_outlined),
-          tooltip: '日志',
-          onPressed: () async {
-            final logZipPath = await EMClient.getInstance.compressLogs();
-            final logPath = logZipPath.replaceFirst('log.gz', 'easemob.log');
-            if (mounted) {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => LogContentPage(logPath: logPath),
-                ),
-              );
-            }
-          },
-        ),
         // 信息按钮：显示当前用户、设备及服务器配置信息
         IconButton(
           icon: const Icon(Icons.info_outline),
