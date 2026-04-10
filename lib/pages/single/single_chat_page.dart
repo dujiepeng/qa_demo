@@ -8,6 +8,7 @@ import '../../common/widgets/grid_action_menu.dart';
 import '../../common/widgets/common_input_row.dart';
 import '../../common/widgets/common_section_title.dart';
 import '../../common/widgets/common_layout.dart';
+import '../../common/widgets/info_dialog.dart';
 import '../../common/mixins/base_mixin.dart';
 
 class SingleChatPage extends StatefulWidget {
@@ -88,6 +89,7 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
             tag: 'message',
           );
         },
+        onMessagesRecalled: (messages) {},
       ),
     );
   }
@@ -107,66 +109,8 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
         IconButton(
           icon: const Icon(Icons.info_outline),
           tooltip: '信息',
-          onPressed: () async {
-            final currentUser = await EMClient.getInstance.getCurrentUserId();
-            final deviceId = await EMClient.getInstance.getCurrentDeviceId();
-            final env = _settings.activeEnvName;
-            final appKey = _settings.appKey;
-            final rest = _settings.restServer;
-            final activeConf = _settings.activeConfig;
-            final isMsync = _settings.isMsync;
-            final serverHost = isMsync
-                ? (activeConf?.msyncServer ?? _settings.imServer)
-                : (activeConf?.wsServer ?? _settings.imServer);
-            final serverPort = isMsync
-                ? (activeConf?.msyncPort ?? _settings.imPort)
-                : (activeConf?.wsPort ?? _settings.imPort);
-            final connMode = isMsync ? 'TCP (MSYNC)' : 'WebSocket';
-
-            if (mounted) {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('信息'),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        '用户信息',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 4),
-                      Text('当前用户: $currentUser'),
-                      const SizedBox(height: 4),
-                      Text('设备ID: $deviceId'),
-                      const Divider(height: 20),
-                      const Text(
-                        '服务器配置',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 4),
-                      Text('集群环境: $env'),
-                      const SizedBox(height: 4),
-                      Text('AppKey: $appKey'),
-                      const SizedBox(height: 4),
-                      Text('REST: $rest'),
-                      const SizedBox(height: 4),
-                      Text('IM 服务器: $serverHost:$serverPort'),
-                      const SizedBox(height: 4),
-                      Text('连接方式: $connMode'),
-                    ],
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('确定'),
-                    ),
-                  ],
-                ),
-              );
-            }
-          },
+          // 复用通用 InfoDialog，自动拉取用户信息和服务器配置后展示弹窗
+          onPressed: () => InfoDialog.show(context, _settings),
         ),
       ],
     );
@@ -206,13 +150,13 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
   Widget _buildLogPanel(bool isDark) {
     // 包一层 GestureDetector，使点击日志区空白处也能收起键盘。
     // LogView 内部只用了 onLongPressStart（长按菜单），与 onTap 手势类型不同，互不干扰。
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: LogView(
-        controller: _logController,
-        isDark: isDark,
-        menuBuilder: (entry) {
+    return LogView(
+      controller: _logController,
+      isDark: isDark,
+      menuShowCallback: () {
+        FocusScope.of(context).unfocus();
+      },
+      menuBuilder: (entry) {
         final items = <LogMenuItem>[];
         // 复制按钮始终显示
         items.add(
@@ -315,8 +259,7 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
         }
         return items;
       },
-      ),  // LogView 的闭合
-    );  // GestureDetector 的闭合
+    );
   }
 
   Future<void> _sendTextMessage(String text) async {

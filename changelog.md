@@ -1,8 +1,9 @@
 # Changelog
 
-## [1.76.8+206] - 2026-04-10
-### Bug Fix
-- 修复 `LogView` 长按日志条目触发菜单时，输入框焦点未消失的问题：在 `onLongPressStart` 回调开头添加 `FocusScope.of(context).unfocus()`，确保弹出菜单前键盘先收起。
+## [1.76.9+207] - 2026-04-10
+### Refactor
+- 新增 `lib/common/widgets/info_dialog.dart`：将「信息」弹窗提取为独立的 `InfoDialog` 工具类，通过静态方法 `InfoDialog.show(context, settings)` 调用，内部自动异步获取用户 ID、设备 ID 及服务器配置后展示弹窗。
+- `SingleChatPage` AppBar 信息按钮改用 `InfoDialog.show()`，删除约 60 行内联逻辑。其他页面（群聊、聊天室等）可直接复用此 Widget。
 
 ## [1.76.5+203] - 2026-04-10
 ### Bug Fix
