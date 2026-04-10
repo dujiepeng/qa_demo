@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.76.5+203] - 2026-04-10
+### Bug Fix
+- 修复 `SingleChatPage` 中，在对方 ID 输入框打字时焦点会错误跳回消息输入框的问题。
+  - 根因：`initState` 中为 `_userIdController` 注册了一个 `addListener(() { setState(() {}); })`，每次输入都触发整页重建，`CommonInputRow` 内的 `TextField` 没有稳定的 `FocusNode`，导致焦点被重新分配到消息输入行。
+  - 修复：移除该冗余 listener。`build()` 中无任何地方直接读取 `_userIdController.text` 做条件渲染，`setState` 完全无必要。
+
 ## [1.76.4+202] - 2026-04-10
 ### UI/UX
 - 移除 `SingleChatPage` AppBar 右上角的「日志」按钮，仅保留「信息」按钮。

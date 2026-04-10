@@ -41,9 +41,6 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
       _userIdController.text = widget.userId!;
     }
 
-    _userIdController.addListener(() {
-      setState(() {});
-    });
   }
 
   @override
@@ -286,6 +283,7 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
                     '${msg.from}: ${msg.toJson().toString()}',
                     attachment: msg,
                     tag: 'message',
+                    color: Colors.purple,
                   );
                 } catch (e) {
                   addAppErrLog('修改失败: $e');
@@ -501,12 +499,23 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
     );
   }
 
+  String? _cursor;
   Widget _buildMessageButtons(bool isDark) {
     final items = [
       GridActionItem(
         icon: Icons.article_outlined,
-        label: '日志',
-        onTap: () async {},
+        label: '拉消息',
+        onTap: () async {
+          EMCursorResult result = await EMClient.getInstance.chatManager
+              .fetchHistoryMessagesByOption(
+                _userIdController.text,
+                EMConversationType.Chat,
+                cursor: _cursor,
+                pageSize: 30,
+              );
+          _cursor = result.cursor;
+          addLog('拉取消息成功: ${result.data.length}');
+        },
       ),
       GridActionItem(
         icon: Icons.info_outline,
@@ -547,5 +556,4 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
       child: GridActionMenu(items: items, isDark: isDark, columns: 6),
     );
   }
-
 }
