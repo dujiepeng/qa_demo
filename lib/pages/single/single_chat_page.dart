@@ -40,7 +40,6 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
     if (widget.userId != null) {
       _userIdController.text = widget.userId!;
     }
-
   }
 
   @override
@@ -353,16 +352,22 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
   @override
   Widget build(BuildContext context) {
     final isDark = _settings.isDarkMode;
-    return CommonLayout(
-      isDark: isDark,
-      showAppBar: widget.showAppBar,
-      appBar: widget.showAppBar ? _buildAppBar(isDark) : null,
-      controlPanel: LayoutBuilder(
-        builder: (context, constraints) {
-          return _buildControlPanel(isDark, constraints.maxWidth > 800);
-        },
+    // GestureDetector 捕获空白区域点击，收起键盘并取消输入框焦点。
+    // behavior: translucent 确保事件能继续穿透到子组件（按钮等仍可正常响应）。
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: CommonLayout(
+        isDark: isDark,
+        showAppBar: widget.showAppBar,
+        appBar: widget.showAppBar ? _buildAppBar(isDark) : null,
+        controlPanel: LayoutBuilder(
+          builder: (context, constraints) {
+            return _buildControlPanel(isDark, constraints.maxWidth > 800);
+          },
+        ),
+        logPanel: _buildLogPanel(isDark),
       ),
-      logPanel: _buildLogPanel(isDark),
     );
   }
 

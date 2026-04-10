@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.76.6+204] - 2026-04-10
+### UI/UX
+- `SingleChatPage` 增加点击空白区域收起键盘并取消输入框焦点的交互（`GestureDetector` + `FocusScope.unfocus()`）。
+
 ## [1.76.5+203] - 2026-04-10
 ### Bug Fix
 - 修复 `SingleChatPage` 中，在对方 ID 输入框打字时焦点会错误跳回消息输入框的问题。
