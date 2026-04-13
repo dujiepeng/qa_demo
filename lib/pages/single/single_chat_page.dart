@@ -493,7 +493,7 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
     final items = [
       GridActionItem(
         icon: Icons.article_outlined,
-        label: '拉消息',
+        label: '拉消息1',
         onTap: () async {
           EMCursorResult result = await EMClient.getInstance.chatManager
               .fetchHistoryMessagesByOption(
@@ -505,7 +505,30 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
           _cursor = result.cursor;
           if (result.data.length < _pageSize) {
             addSendLog(
-              '拉取消息成功: ${result.data.length}/$_pageSize, 已无更多,再点将重新拉取',
+              '1拉取消息成功: ${result.data.length}/$_pageSize, 已无更多,再点将重新拉取',
+              color: Colors.red,
+            );
+          } else {
+            addSendLog('拉取消息成功: ${result.data.length}/$_pageSize, 还有更多');
+          }
+        },
+      ),
+      GridActionItem(
+        icon: Icons.article_outlined,
+        label: '拉消息2',
+        onTap: () async {
+          EMCursorResult result = await EMClient.getInstance.chatManager
+              // ignore: deprecated_member_use
+              .fetchHistoryMessages(
+                conversationId: _userIdController.text,
+                type: EMConversationType.Chat,
+                startMsgId: _cursor ?? "",
+                pageSize: _pageSize,
+              );
+          _cursor = result.cursor;
+          if (result.data.length < _pageSize) {
+            addSendLog(
+              '2拉取消息成功: ${result.data.length}/$_pageSize, 已无更多,再点将重新拉取',
               color: Colors.red,
             );
           } else {

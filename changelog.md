@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.77.0+208] - 2026-04-13
+### Feature
+- `SingleChatPage` 新增「拉消息2」按钮（使用旧版 `fetchHistoryMessages` API），与「拉消息1」（`fetchHistoryMessagesByOption`）并排，可做对比测试。
+### Refactor
+- `LogEntry.content` / `color` 改为可变字段，支持外部修改。
+- `LogController.addLog` 返回 `LogEntry` 引用，新增 `updateEntry()` / `removeEntry()` / `changeEntities()` 方法，支持从外部精确控制任意日志条目的内容、颜色和样式。
+- `BaseMixin` 中所有日志方法（`addLog` / `addSendLog` / `addReceiveLog` / `addAppErrLog`）同步改为返回 `LogEntry`，现有调用方无需更改（忽略返回值即可）。
+- 撤回消息后通过 `changeEntities` 直接将对应 `LogEntry` 标记为划线+红色，移除了通过 `onTap` 返回值修改样式的旧机制。
+
 ## [1.76.9+207] - 2026-04-10
 ### Refactor
 - 新增 `lib/common/widgets/info_dialog.dart`：将「信息」弹窗提取为独立的 `InfoDialog` 工具类，通过静态方法 `InfoDialog.show(context, settings)` 调用，内部自动异步获取用户 ID、设备 ID 及服务器配置后展示弹窗。
