@@ -7,10 +7,67 @@ import '../../theme/app_settings.dart';
 import '../utils/version_manager.dart';
 import 'update_dialog.dart';
 import 'common_gradient_background.dart';
+import 'version_check_feedback.dart';
 
 class MePageContent extends StatelessWidget {
   final bool showAppBar;
   const MePageContent({super.key, this.showAppBar = false});
+
+  Future<void> _handleManualCheck(BuildContext context) async {
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final progressRoute = DialogRoute<void>(
+      barrierDismissible: false,
+      context: context,
+      builder: (dialogContext) => const AlertDialog(
+        content: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('正在检查新版本...'),
+          ],
+        ),
+      ),
+    );
+    navigator.push(progressRoute);
+
+    final result = await VersionManager().checkWithResult(
+      force: true,
+      source: VersionCheckSource.manualSettings,
+    );
+    if (progressRoute.isActive) {
+      navigator.removeRoute(progressRoute);
+    }
+    if (!context.mounted) return;
+
+    switch (result.status) {
+      case VersionCheckStatus.hasUpdate:
+        UpdateDialog.show(
+          context,
+          version: result.latestVersion,
+          releaseNotes: result.releaseNotes,
+          downloadUrl: result.downloadUrl,
+        );
+        break;
+      case VersionCheckStatus.upToDate:
+        await showVersionCheckMessage(
+          context,
+          title: '版本检查',
+          message: result.message,
+        );
+        break;
+      case VersionCheckStatus.networkError:
+        await showVersionCheckMessage(
+          context,
+          title: '检查失败',
+          message: result.message,
+        );
+        break;
+      case VersionCheckStatus.idle:
+      case VersionCheckStatus.checking:
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +84,6 @@ class MePageContent extends StatelessWidget {
         bottom: 20,
       ),
       children: [
-
         _buildSettingSectionTitle('高级设置', isDark),
         Container(
           decoration: BoxDecoration(
@@ -98,13 +154,18 @@ class MePageContent extends StatelessWidget {
                         fontSize: 14,
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '检查新版本',
+                      style: TextStyle(
+                        color: AppColors.primary(isDark),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
-                onTap: () {
-                  if (vm.hasNewVersion) {
-                    UpdateDialog.show(context);
-                  }
-                },
+                onTap: () => _handleManualCheck(context),
               );
             },
           ),

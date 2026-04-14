@@ -13,6 +13,7 @@ import 'pages/single/single_chat_list_page.dart';
 import 'pages/single/single_chat_page.dart';
 import 'pages/conversation/conversation_list_page.dart';
 import 'common/utils/log_service.dart';
+import 'common/utils/app_route_observer.dart';
 import 'common/utils/version_manager.dart';
 import 'mobile/me_page_mobile.dart';
 import 'common/widgets/layout/mobile_log_overlay.dart';
@@ -28,7 +29,7 @@ void main() async {
   await AppSettings().loadSettings();
 
   // 启动后台版本检查
-  VersionManager().checkVersion();
+  VersionManager().silentCheck(source: VersionCheckSource.startupSilent);
 
   runApp(
     MultiProvider(
@@ -71,6 +72,7 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       title: 'QA Flutter',
       debugShowCheckedModeBanner: false,
+      navigatorObservers: [appRouteObserver],
 
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),

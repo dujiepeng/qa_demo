@@ -7,11 +7,11 @@ import '../../theme/app_settings.dart';
 import '../../common/widgets/input_dialog.dart';
 import '../../common/widgets/log_view.dart';
 import '../../common/widgets/grid_action_menu.dart';
-import '../../common/log_content_page.dart';
 import '../../common/widgets/common_input_row.dart';
 import '../../common/widgets/common_section_title.dart';
 import '../../common/widgets/common_layout.dart';
 import '../../common/mixins/base_mixin.dart';
+import '../../common/widgets/log_page_launcher.dart';
 import 'group_admins_page.dart';
 import 'group_change_owner_page.dart';
 import 'group_members_page.dart';
@@ -218,7 +218,7 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
                   ),
                 );
               }
-              return null;
+              return;
             },
           ),
         ];
@@ -649,17 +649,7 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
       GridActionItem(
         icon: Icons.article_outlined,
         label: '日志',
-        onTap: () async {
-          final logZipPath = await EMClient.getInstance.compressLogs();
-          final logPath = logZipPath.replaceFirst('log.gz', 'easemob.log');
-          if (mounted) {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => LogContentPage(logPath: logPath),
-              ),
-            );
-          }
-        },
+        onTap: () => openSdkLogPage(context),
       ),
     ];
     return SizedBox(

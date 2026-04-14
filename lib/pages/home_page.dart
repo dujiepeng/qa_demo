@@ -40,6 +40,15 @@ class _HomePageState extends State<HomePage> {
 
   void _checkAndShowUpdateDialog() {
     if (!mounted) return;
+    final route = ModalRoute.of(context);
+    final source = VersionManager().lastCheckSource;
+    final isAutomaticCheck =
+        source == VersionCheckSource.startupSilent ||
+        source == VersionCheckSource.loginSilent;
+
+    if (route?.isCurrent != true) return;
+    if (!isAutomaticCheck) return;
+
     if (VersionManager().hasNewVersion && !_hasShownUpdateDialog) {
       _hasShownUpdateDialog = true;
       UpdateDialog.show(context);

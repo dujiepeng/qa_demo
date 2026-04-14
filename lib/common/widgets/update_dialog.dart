@@ -17,15 +17,24 @@ class UpdateDialog extends StatelessWidget {
     required this.downloadUrl,
   });
 
-  static void show(BuildContext context) {
-    if (!VersionManager().hasNewVersion) return;
+  static void show(
+    BuildContext context, {
+    String? version,
+    String? releaseNotes,
+    String? downloadUrl,
+  }) {
+    final resolvedVersion = version ?? VersionManager().latestVersion;
+    final resolvedNotes = releaseNotes ?? VersionManager().releaseNotes;
+    final resolvedDownloadUrl = downloadUrl ?? VersionManager().downloadUrl;
+
+    if (resolvedVersion.isEmpty) return;
 
     showDialog(
       context: context,
       builder: (context) => UpdateDialog(
-        version: VersionManager().latestVersion,
-        releaseNotes: VersionManager().releaseNotes,
-        downloadUrl: VersionManager().downloadUrl,
+        version: resolvedVersion,
+        releaseNotes: resolvedNotes,
+        downloadUrl: resolvedDownloadUrl,
       ),
     );
   }
@@ -69,7 +78,9 @@ class UpdateDialog extends StatelessWidget {
 
             Navigator.of(context).pop();
             final uri = Uri.parse(
-              'https://github.com/dujiepeng/qa_demo/releases',
+              downloadUrl.isNotEmpty
+                  ? downloadUrl
+                  : 'https://github.com/dujiepeng/qa_demo/releases',
             );
             await launchUrl(uri, mode: LaunchMode.externalApplication);
           },

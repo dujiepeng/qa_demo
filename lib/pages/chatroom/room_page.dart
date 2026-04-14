@@ -12,11 +12,11 @@ import 'room_mute_list_page.dart';
 import 'room_change_owner_page.dart';
 import '../../common/widgets/log_view.dart';
 import '../../common/widgets/grid_action_menu.dart';
-import '../../common/log_content_page.dart';
 import '../../common/widgets/common_input_row.dart';
 import '../../common/widgets/common_section_title.dart';
 import '../../common/widgets/common_layout.dart';
 import '../../common/mixins/base_mixin.dart';
+import '../../common/widgets/log_page_launcher.dart';
 
 /// 聊天室信息编辑类型
 enum RoomInfoEditType { name, description, announcement }
@@ -231,7 +231,7 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
                   ),
                 );
               }
-              return null;
+              return;
             },
           ),
         ];
@@ -732,17 +732,7 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
       GridActionItem(
         icon: Icons.article_outlined,
         label: '日志',
-        onTap: () async {
-          final logZipPath = await EMClient.getInstance.compressLogs();
-          final logPath = logZipPath.replaceFirst('log.gz', 'easemob.log');
-          if (mounted) {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => LogContentPage(logPath: logPath),
-              ),
-            );
-          }
-        },
+        onTap: () => openSdkLogPage(context),
       ),
     ];
     return SizedBox(

@@ -1,13 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:im_flutter_sdk/im_flutter_sdk.dart';
+
 import '../../../theme/app_colors.dart';
-import 'dart:io';
-import 'dart:async';
+import '../../utils/sdk_log_update_stream.dart';
+import 'log_panel_controller.dart';
+import 'log_panel_visibility_observer.dart';
 
 class LogPanel extends StatefulWidget {
   final bool isDark;
-  const LogPanel({super.key, required this.isDark});
+  final PrepareLogFileForPanelCallback? prepareLogFile;
+  final ReadLogPanelStateCallback? readLogState;
+  final LogUpdateStreamFactory? logUpdateStreamFactory;
+  final bool enableFallbackPolling;
+  const LogPanel({
+    super.key,
+    required this.isDark,
+    this.prepareLogFile,
+    this.readLogState,
+    this.logUpdateStreamFactory,
+    this.enableFallbackPolling = true,
+  });
 
   @override
   State<LogPanel> createState() => _LogPanelState();
@@ -16,13 +28,12 @@ class LogPanel extends StatefulWidget {
 class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
   late AnimationController _blinkController;
   late Animation<double> _blinkAnimation;
+  late final LogPanelController _controller;
+  late final LogPanelVisibilityObserver _visibilityObserver;
   final ScrollController _logScrollController = ScrollController();
 
-  String _sdkLogContent = '正在加载 SDK 日志...';
-  Timer? _logTimer;
-  String? _lastLogPath;
   bool _autoScroll = true;
-  int _lastFileLength = 0;
+  bool _hasPendingNewLogs = false;
 
   @override
   void initState() {
@@ -34,48 +45,42 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
     _blinkAnimation = Tween<double>(begin: 1.0, end: 0.2).animate(
       CurvedAnimation(parent: _blinkController, curve: Curves.easeInOut),
     );
+    _controller = LogPanelController(
+      prepareLogFile: widget.prepareLogFile,
+      readLogState: widget.readLogState,
+      logUpdateStreamFactory: widget.logUpdateStreamFactory,
+      enableFallbackPolling: widget.enableFallbackPolling,
+      onStateChanged: _handleControllerStateChanged,
+    );
+    _visibilityObserver = LogPanelVisibilityObserver(
+      onVisibilityChanged: _controller.setMonitoringActive,
+    );
 
-    _initAndStartLogSync();
+    _initializeController();
   }
 
-  Future<void> _initAndStartLogSync() async {
-    try {
-      final logZipPath = await EMClient.getInstance.compressLogs();
-      _lastLogPath = logZipPath.replaceFirst('log.gz', 'easemob.log');
-      _startLogSync();
-    } catch (e) {
-      debugPrint('Init log path error: $e');
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _visibilityObserver.attach(context);
+  }
+
+  Future<void> _initializeController() async {
+    await _controller.initialize();
+  }
+
+  void _handleControllerStateChanged() {
+    if (!mounted) {
+      return;
     }
-  }
 
-  void _startLogSync() {
-    _logTimer?.cancel();
-    _logTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      _syncSdkLogs();
-    });
-  }
-
-  Future<void> _syncSdkLogs() async {
-    if (_lastLogPath == null) return;
-    try {
-      final file = File(_lastLogPath!);
-      if (await file.exists()) {
-        final stat = await file.stat();
-        if (stat.size != _lastFileLength) {
-          final content = await file.readAsString();
-          if (mounted) {
-            setState(() {
-              _sdkLogContent = content;
-              _lastFileLength = stat.size;
-            });
-            if (_autoScroll) {
-              _scrollToBottom();
-            }
-          }
-        }
+    setState(() {
+      if (!_autoScroll) {
+        _hasPendingNewLogs = true;
       }
-    } catch (e) {
-      debugPrint('Sync SDK logs error: $e');
+    });
+    if (_autoScroll) {
+      _scrollToBottom();
     }
   }
 
@@ -91,19 +96,16 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _visibilityObserver.detach();
+    _controller.dispose();
     _blinkController.dispose();
     _logScrollController.dispose();
-    _logTimer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = widget.isDark;
-
-    if (_autoScroll) {
-      _scrollToBottom();
-    }
 
     return Container(
       color: isDark ? Colors.black87 : Colors.grey[100],
@@ -124,6 +126,21 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
               ),
               Row(
                 children: [
+                  if (_hasPendingNewLogs && !_autoScroll)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: TextButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _autoScroll = true;
+                            _hasPendingNewLogs = false;
+                          });
+                          _scrollToBottom();
+                        },
+                        icon: const Icon(Icons.fiber_new, size: 16),
+                        label: const Text('新日志'),
+                      ),
+                    ),
                   Builder(
                     builder: (context) {
                       if (!_autoScroll) {
@@ -149,6 +166,9 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
                             setState(() {
                               _autoScroll = !_autoScroll;
                               if (_autoScroll) {
+                                _hasPendingNewLogs = false;
+                              }
+                              if (_autoScroll) {
                                 _scrollToBottom();
                               }
                             });
@@ -161,9 +181,9 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
                   IconButton(
                     icon: const Icon(Icons.copy_all, size: 18),
                     onPressed: () async {
-                      if (_sdkLogContent.isNotEmpty) {
+                      if (_controller.content.isNotEmpty) {
                         await Clipboard.setData(
-                          ClipboardData(text: _sdkLogContent),
+                          ClipboardData(text: _controller.content),
                         );
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -177,16 +197,12 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
                   IconButton(
                     icon: const Icon(Icons.delete_outline, size: 18),
                     onPressed: () async {
-                      if (_lastLogPath != null) {
-                        final file = File(_lastLogPath!);
-                        if (await file.exists()) {
-                          await file.writeAsString('');
-                          setState(() {
-                            _sdkLogContent = '';
-                            _autoScroll = true;
-                          });
-                        }
-                      }
+                      await _controller.clearLog();
+                      if (!mounted) return;
+                      setState(() {
+                        _autoScroll = true;
+                        _hasPendingNewLogs = false;
+                      });
                     },
                     tooltip: '清空日志',
                   ),
@@ -213,7 +229,7 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
                 controller: _logScrollController,
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: SelectableText(
-                  _sdkLogContent,
+                  _controller.content,
                   style: TextStyle(
                     fontFamily: 'Courier',
                     fontSize: 12,
