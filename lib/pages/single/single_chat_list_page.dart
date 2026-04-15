@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
+import 'package:qa_flutter/pages/single/contact_api.dart';
 import 'package:qa_flutter/pages/single/single_chat_page.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
@@ -9,7 +10,15 @@ import '../../common/widgets/common_gradient_background.dart';
 /// 好友列表页面
 class SingleChatListPage extends StatefulWidget {
   final Function(String userId)? onItemTap;
-  const SingleChatListPage({super.key, this.onItemTap});
+  final Future<List<EMContact>> Function()? loadContacts;
+  final Future<void> Function(String userId)? addUserToBlockList;
+
+  const SingleChatListPage({
+    super.key,
+    this.onItemTap,
+    this.loadContacts,
+    this.addUserToBlockList,
+  });
 
   @override
   State<SingleChatListPage> createState() => _SingleChatListPageState();
@@ -70,8 +79,7 @@ class _SingleChatListPageState extends State<SingleChatListPage> {
     });
 
     try {
-      final result = await EMClient.getInstance.contactManager
-          .fetchAllContacts();
+      final result = await (widget.loadContacts ?? fetchContactsFromSdk).call();
       setState(() {
         _contacts = result;
       });
@@ -197,6 +205,26 @@ class _SingleChatListPageState extends State<SingleChatListPage> {
     }
   }
 
+  Future<void> _addToBlackList(String username) async {
+    try {
+      await (widget.addUserToBlockList ?? addUserToBlockListFromSdk).call(
+        username,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$username 已加入黑名单')));
+        _fetchContacts();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加入黑名单失败: ${e.toString()}')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -289,6 +317,10 @@ class _SingleChatListPageState extends State<SingleChatListPage> {
                                         child: Text('复制 ID'),
                                       ),
                                       const PopupMenuItem(
+                                        value: 'add_to_blacklist',
+                                        child: Text('加入黑名单'),
+                                      ),
+                                      const PopupMenuItem(
                                         value: 'delete',
                                         child: Text('删除'),
                                       ),
@@ -297,6 +329,8 @@ class _SingleChatListPageState extends State<SingleChatListPage> {
 
                                   if (value == 'copy_id') {
                                     _copyToClipboard(contact.userId);
+                                  } else if (value == 'add_to_blacklist') {
+                                    _addToBlackList(contact.userId);
                                   } else if (value == 'delete') {
                                     _deleteContact(contact.userId);
                                   }

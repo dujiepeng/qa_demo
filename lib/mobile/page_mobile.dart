@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:qa_flutter/pages/single/black_list_page.dart';
+import 'package:qa_flutter/pages/single/contact_presence_page.dart';
 import '../common/widgets/common_gradient_background.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
@@ -45,6 +47,16 @@ class _PageMobileState extends State<PageMobile> {
         onTap: () => Navigator.pushNamed(context, '/single_chat_list'),
       ),
       GridItem(
+        title: '联系人',
+        icon: Icons.contacts_outlined,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ContactPresencePage()),
+          );
+        },
+      ),
+      GridItem(
         title: '群聊',
         icon: Icons.group_outlined,
         onTap: () => Navigator.pushNamed(context, '/group_list'),
@@ -53,6 +65,16 @@ class _PageMobileState extends State<PageMobile> {
         title: '聊天室',
         icon: Icons.list_alt_outlined,
         onTap: () => Navigator.pushNamed(context, '/room_list'),
+      ),
+      GridItem(
+        title: '黑名单',
+        icon: Icons.block_outlined,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const BlackListPage()),
+          );
+        },
       ),
     ];
   }

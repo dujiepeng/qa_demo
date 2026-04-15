@@ -16,7 +16,7 @@ class _MobileLogOverlayState extends State<MobileLogOverlay> {
   static const double _bubbleSize = 56.0;
   static const double _bubbleEdgeMargin = 8.0;
   double _logPanelHeight = 200.0;
-  static const double _minLogHeight = 120.0;
+  static const double _minLogHeight = 128.0;
   double? _bubbleVerticalRatioOverride;
   bool? _bubbleOnRightSideOverride;
 
@@ -76,31 +76,53 @@ class _MobileLogOverlayState extends State<MobileLogOverlay> {
                         });
                       },
                       child: Container(
-                        height: 28,
+                        height: 44,
                         width: double.infinity,
                         color: isDark ? Colors.black26 : Colors.grey[300],
-                        padding: const EdgeInsets.only(left: 12, right: 4),
-                        child: Row(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        child: Stack(
+                          alignment: Alignment.center,
                           children: [
-                            Expanded(
-                              child: Center(
-                                child: Container(
-                                  width: 40,
-                                  height: 4,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.glassBorder(isDark),
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
+                            IgnorePointer(
+                              child: Container(
+                                width: 40,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: AppColors.glassBorder(isDark),
+                                  borderRadius: BorderRadius.circular(2),
                                 ),
                               ),
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.minimize, size: 18),
-                              tooltip: '最小化日志',
-                              splashRadius: 18,
-                              onPressed: () {
-                                settings.setLogOverlayMinimized(true);
-                              },
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  minimumSize: const Size(88, 28),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                  ),
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  visualDensity: VisualDensity.compact,
+                                  side: BorderSide(
+                                    color: AppColors.glassBorder(isDark),
+                                  ),
+                                  backgroundColor: isDark
+                                      ? Colors.black54
+                                      : Colors.white.withValues(alpha: 0.92),
+                                  foregroundColor: AppColors.textPrimary(isDark),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                onPressed: () {
+                                  settings.setLogOverlayMinimized(true);
+                                },
+                                child: const Text('最小化'),
+                              ),
                             ),
                           ],
                         ),

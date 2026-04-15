@@ -94,9 +94,9 @@ void main() {
       ),
     );
 
-    expect(find.byIcon(Icons.minimize), findsOneWidget);
+    expect(find.text('最小化'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.minimize));
+    await tester.tap(find.text('最小化'));
     await tester.pumpAndSettle();
 
     expect(find.byIcon(Icons.bug_report_outlined), findsOneWidget);
@@ -106,7 +106,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byIcon(Icons.bug_report_outlined), findsNothing);
-    expect(find.byIcon(Icons.minimize), findsOneWidget);
+    expect(find.text('最小化'), findsOneWidget);
   });
 
   testWidgets('mobile overlay does not overflow when resized to minimum height', (

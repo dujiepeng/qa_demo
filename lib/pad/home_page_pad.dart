@@ -33,7 +33,7 @@ class _HomePagePadState extends State<HomePagePad> with TickerProviderStateMixin
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
   }
 
   @override
@@ -273,6 +273,13 @@ class _HomePagePadState extends State<HomePagePad> with TickerProviderStateMixin
         Tab(
           height: 50,
           child: Text(
+            '联系人',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+        ),
+        Tab(
+          height: 50,
+          child: Text(
             '群聊',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
@@ -281,6 +288,13 @@ class _HomePagePadState extends State<HomePagePad> with TickerProviderStateMixin
           height: 50,
           child: Text(
             '聊天室',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+        ),
+        Tab(
+          height: 50,
+          child: Text(
+            '黑名单',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
         ),

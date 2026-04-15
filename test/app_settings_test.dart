@@ -5,6 +5,26 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('cold start always resets persisted login flag to show login page', () async {
+    SharedPreferences.setMockInitialValues({'is_logged_in': true});
+    final settings = AppSettings();
+
+    await settings.loadSettings();
+
+    expect(settings.isLoggedIn, isFalse);
+  });
+
+  test('saveSettings no longer persists legacy login flag', () async {
+    SharedPreferences.setMockInitialValues({});
+    final settings = AppSettings();
+
+    settings.isLoggedIn = true;
+    await settings.saveSettings();
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.containsKey('is_logged_in'), isFalse);
+  });
+
   test('persists log overlay minimized state and bubble placement', () async {
     SharedPreferences.setMockInitialValues({});
     final settings = AppSettings();

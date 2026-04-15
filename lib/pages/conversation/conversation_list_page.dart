@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
-import 'package:qa_flutter/pages/single/single_chat_page.dart';
-import 'package:qa_flutter/pages/group/group_page.dart';
-import 'package:qa_flutter/pages/chatroom/room_page.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 import '../../common/widgets/common_gradient_background.dart';
 
 /// 会话列表页面
 class ConversationListPage extends StatefulWidget {
-  final Function(EMConversation conversation)? onItemTap;
-  const ConversationListPage({super.key, this.onItemTap});
+  const ConversationListPage({super.key});
 
   @override
   State<ConversationListPage> createState() => _ConversationListPageState();
@@ -448,31 +444,9 @@ class _ConversationListPageState extends State<ConversationListPage> {
             },
           ),
           trailing: Icon(
-            Icons.chevron_right,
+            Icons.more_horiz,
             color: AppColors.textSecondary(isDark),
           ),
-          onTap: () {
-            if (widget.onItemTap != null) {
-              widget.onItemTap!(conversation);
-            } else {
-              Widget page;
-              switch (conversation.type) {
-                case EMConversationType.Chat:
-                  page = SingleChatPage(userId: conversation.id);
-                  break;
-                case EMConversationType.GroupChat:
-                  page = GroupPage(groupId: conversation.id);
-                  break;
-                case EMConversationType.ChatRoom:
-                  page = RoomPage(roomId: conversation.id);
-                  break;
-              }
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => page),
-              );
-            }
-          },
         ),
       ),
     );

@@ -106,6 +106,7 @@ class AppSettings extends ChangeNotifier {
   static const String _keyLogOverlayMinimized = 'log_overlay_minimized';
   static const String _keyLogBubbleOnRightSide = 'log_bubble_on_right_side';
   static const String _keyLogBubbleVerticalRatio = 'log_bubble_vertical_ratio';
+  static const String _legacyKeyIsLoggedIn = 'is_logged_in';
 
   // 从本地加载存储的配置
   Future<void> loadSettings() async {
@@ -154,7 +155,9 @@ class AppSettings extends ChangeNotifier {
     // 同时也装载那些基础的黑白模式/选中状态
     // 强制使用深色模式
     // _isDarkMode = prefs.getBool('is_dark_mode') ?? true;
-    isLoggedIn = prefs.getBool('is_logged_in') ?? false;
+    // 冷启动时总是回到登录页，不复用上次进程保存的登录路由状态。
+    isLoggedIn = false;
+    await prefs.remove(_legacyKeyIsLoggedIn);
     _isMode = prefs.getBool('is_mode') ?? true;
     _isLogOverlayMinimized = prefs.getBool(_keyLogOverlayMinimized) ?? true;
     _logBubbleOnRightSide = prefs.getBool(_keyLogBubbleOnRightSide) ?? true;
@@ -196,7 +199,7 @@ class AppSettings extends ChangeNotifier {
     await prefs.setString(_keyCustomEnvs, jsonEncode(_customEnvDict));
 
     // 强制使用深色模式
-    await prefs.setBool('is_logged_in', isLoggedIn);
+    await prefs.remove(_legacyKeyIsLoggedIn);
     await prefs.setBool('is_mode', _isMode);
     await prefs.setBool(_keyLogOverlayMinimized, _isLogOverlayMinimized);
     await prefs.setBool(_keyLogBubbleOnRightSide, _logBubbleOnRightSide);
