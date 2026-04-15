@@ -44,6 +44,35 @@ void main() {
     expect(find.byIcon(Icons.minimize), findsNothing);
   });
 
+  testWidgets('mobile overlay defaults to minimized bubble on fresh settings', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final settings = AppSettings()
+      ..isLoggedIn = true
+      ..isInit = false;
+    await settings.loadSettings();
+    settings.isLoggedIn = true;
+    settings.isInit = false;
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: settings,
+        child: const MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(size: Size(390, 844)),
+            child: MobileLogOverlay(
+              child: Scaffold(body: Center(child: Text('content'))),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byIcon(Icons.bug_report_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.minimize), findsNothing);
+  });
+
   testWidgets('mobile overlay can minimize into bubble and restore', (
     tester,
   ) async {
@@ -78,5 +107,32 @@ void main() {
 
     expect(find.byIcon(Icons.bug_report_outlined), findsNothing);
     expect(find.byIcon(Icons.minimize), findsOneWidget);
+  });
+
+  testWidgets('mobile overlay does not overflow when resized to minimum height', (
+    tester,
+  ) async {
+    final settings = AppSettings()
+      ..isLoggedIn = true
+      ..isInit = true;
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: settings,
+        child: const MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(size: Size(390, 280)),
+            child: MobileLogOverlay(
+              child: Scaffold(body: Center(child: Text('content'))),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.drag(find.byType(GestureDetector).first, const Offset(0, 400));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
   });
 }

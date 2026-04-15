@@ -16,7 +16,7 @@ class _MobileLogOverlayState extends State<MobileLogOverlay> {
   static const double _bubbleSize = 56.0;
   static const double _bubbleEdgeMargin = 8.0;
   double _logPanelHeight = 200.0;
-  static const double _minLogHeight = 100.0;
+  static const double _minLogHeight = 120.0;
   double? _bubbleVerticalRatioOverride;
   bool? _bubbleOnRightSideOverride;
 

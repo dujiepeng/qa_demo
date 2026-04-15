@@ -58,7 +58,7 @@ class AppSettings extends ChangeNotifier {
     }
   }
 
-  bool _isLogOverlayMinimized = false;
+  bool _isLogOverlayMinimized = true;
   bool get isLogOverlayMinimized => _isLogOverlayMinimized;
 
   bool _logBubbleOnRightSide = true;
@@ -156,7 +156,7 @@ class AppSettings extends ChangeNotifier {
     // _isDarkMode = prefs.getBool('is_dark_mode') ?? true;
     isLoggedIn = prefs.getBool('is_logged_in') ?? false;
     _isMode = prefs.getBool('is_mode') ?? true;
-    _isLogOverlayMinimized = prefs.getBool(_keyLogOverlayMinimized) ?? false;
+    _isLogOverlayMinimized = prefs.getBool(_keyLogOverlayMinimized) ?? true;
     _logBubbleOnRightSide = prefs.getBool(_keyLogBubbleOnRightSide) ?? true;
     _logBubbleVerticalRatio = _clampBubbleRatio(
       prefs.getDouble(_keyLogBubbleVerticalRatio) ?? 0.7,

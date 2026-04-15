@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 import '../../common/widgets/log_view.dart';
+import '../../common/widgets/log_view_actions.dart';
 import '../../common/widgets/grid_action_menu.dart';
 import '../../common/widgets/common_input_row.dart';
 import '../../common/widgets/common_section_title.dart';
@@ -179,121 +179,128 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
   }
 
   Widget _buildLogPanel(bool isDark) {
-    // 包一层 GestureDetector，使点击日志区空白处也能收起键盘。
-    // LogView 内部只用了 onLongPressStart（长按菜单），与 onTap 手势类型不同，互不干扰。
     return LogView(
       controller: _logController,
       isDark: isDark,
       menuShowCallback: () {
         FocusScope.of(context).unfocus();
       },
-      menuBuilder: (entry) {
-        final items = <LogMenuItem>[];
-        // 复制按钮始终显示
-        items.add(
-          LogMenuItem(
-            title: '复制',
-            onTap: () async {
-              final text = '${entry.timestamp}: ${entry.content}';
-              await Clipboard.setData(ClipboardData(text: text));
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('已复制到剪贴板'),
-                    duration: Duration(milliseconds: 500),
-                  ),
-                );
-              }
-            },
-          ),
-        );
-
-        // 如果包含消息，增加功能按钮
-        final tag = entry.tag;
-        final attachment = entry.attachment;
-        if (tag == 'message' && attachment is EMMessage) {
-          final message = attachment;
-          items.add(
-            LogMenuItem(
-              title: '发送已读ACK',
-              onTap: () async {
-                try {
-                  await EMClient.getInstance.chatManager.sendMessageReadAck(
-                    message,
-                  );
-                } catch (e) {
-                  addAppErrLog('发送已读确认失败: $e');
-                }
-              },
-            ),
-          );
-          items.add(
-            LogMenuItem(
-              title: '从服务器删除',
-              onTap: () async {
-                try {
-                  await EMClient.getInstance.chatManager
-                      .deleteRemoteMessagesWithIds(
-                        conversationId: message.conversationId!,
-                        type: EMConversationType.values[message.chatType.index],
-                        msgIds: [message.msgId],
-                      );
-                  logController.changeEntities([
-                    entry,
-                  ], style: LogStyle.lineThrough);
-                  addSendLog('从服务器删除成功');
-                } catch (e) {
-                  addAppErrLog('删除失败: $e');
-                }
-              },
-            ),
-          );
-          items.add(
-            LogMenuItem(
-              title: '修改',
-              onTap: () async {
-                try {
-                  final msg = await EMClient.getInstance.chatManager
-                      .modifyMessage(
-                        messageId: message.msgId,
-                        msgBody: EMTextMessageBody(content: 'modify content'),
-                      );
-                  addSendLog(
-                    '${msg.from}: ${msg.toJson().toString()}',
-                    attachment: msg,
-                    tag: 'message',
-                    color: Colors.purple,
-                  );
-                } catch (e) {
-                  addAppErrLog('修改失败: $e');
-                }
-              },
-            ),
-          );
-          items.add(
-            LogMenuItem(
-              title: '撤回',
-              onTap: () async {
-                try {
-                  await EMClient.getInstance.chatManager.recallMessage(
-                    message.msgId,
-                  );
-                  logController.changeEntities(
-                    [entry],
-                    color: Colors.red,
-                    style: LogStyle.lineThrough,
-                  );
-                  addSendLog("撤回成功", color: Colors.green);
-                } catch (e) {
-                  addAppErrLog('撤回失败: $e');
-                }
-              },
-            ),
-          );
-        }
-        return items;
-      },
+      actionsBuilder: (entry) => _buildLogActions(entry),
     );
+  }
+
+  List<LogAction> _buildLogActions(LogEntry entry) {
+    final actions = <LogAction>[LogViewActions.copyEntry()];
+    final attachment = entry.attachment;
+    if (entry.tag == 'message' && attachment is EMMessage) {
+      final message = attachment;
+      actions.addAll([
+        LogAction(
+          id: 'send_read_ack',
+          title: '发送单聊已读ACK',
+          icon: Icons.mark_chat_read_outlined,
+          onSelected: (_) async {
+            try {
+              await EMClient.getInstance.chatManager.sendMessageReadAck(
+                message,
+              );
+              return const LogActionResult(
+                overlayLabel: 'ACK已发送',
+                overlayStyle: LogOverlayStyle.success,
+              );
+            } catch (e) {
+              return LogActionResult(
+                overlayLabel: 'ACK失败: $e',
+                overlayStyle: LogOverlayStyle.error,
+              );
+            }
+          },
+        ),
+        LogAction(
+          id: 'delete_remote',
+          title: '从服务器删除',
+          icon: Icons.delete_sweep_outlined,
+          isDestructive: true,
+          onSelected: (_) async {
+            try {
+              await EMClient.getInstance.chatManager
+                  .deleteRemoteMessagesWithIds(
+                    conversationId: message.conversationId!,
+                    type: EMConversationType.values[message.chatType.index],
+                    msgIds: [message.msgId],
+                  );
+              addSendLog('从服务器删除成功');
+              return LogActionResult(
+                overlayLabel: '已从服务器删除',
+                overlayStyle: LogOverlayStyle.warning,
+                style: LogStyle.lineThrough,
+              );
+            } catch (e) {
+              return LogActionResult(
+                overlayLabel: '删除失败: $e',
+                overlayStyle: LogOverlayStyle.error,
+              );
+            }
+          },
+        ),
+        LogAction(
+          id: 'modify',
+          title: '修改',
+          icon: Icons.edit_outlined,
+          foregroundColor: Colors.purple,
+          onSelected: (_) async {
+            try {
+              final msg = await EMClient.getInstance.chatManager.modifyMessage(
+                messageId: message.msgId,
+                msgBody: EMTextMessageBody(content: 'modify content'),
+              );
+              addSendLog(
+                '${msg.from}: ${msg.toJson().toString()}',
+                attachment: msg,
+                tag: 'message',
+                color: Colors.purple,
+              );
+              return const LogActionResult(
+                overlayLabel: '已修改',
+                overlayStyle: LogOverlayStyle.info,
+              );
+            } catch (e) {
+              return LogActionResult(
+                overlayLabel: '修改失败:$e',
+                overlayStyle: LogOverlayStyle.error,
+              );
+            }
+          },
+        ),
+        LogAction(
+          id: 'recall',
+          title: '撤回',
+          icon: Icons.undo_outlined,
+          isDestructive: true,
+          onSelected: (_) async {
+            try {
+              await EMClient.getInstance.chatManager.recallMessage(
+                message.msgId,
+              );
+              addSendLog('撤回成功', color: Colors.green);
+              return LogActionResult(
+                overlayLabel: '已撤回',
+                overlayStyle: LogOverlayStyle.warning,
+                color: Colors.red.withValues(alpha: 0.14),
+                style: LogStyle.lineThrough,
+              );
+            } catch (e) {
+              addAppErrLog('撤回失败: $e');
+              return LogActionResult(
+                overlayLabel: '撤回失败: $e',
+                overlayStyle: LogOverlayStyle.error,
+              );
+            }
+          },
+        ),
+      ]);
+    }
+    return actions;
   }
 
   Future<void> _sendTextMessage(String text) async {

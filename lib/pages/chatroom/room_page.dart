@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../../common/widgets/switch_alert.dart';
 import '../../theme/app_colors.dart';
@@ -11,6 +10,7 @@ import 'room_white_list_page.dart';
 import 'room_mute_list_page.dart';
 import 'room_change_owner_page.dart';
 import '../../common/widgets/log_view.dart';
+import '../../common/widgets/log_view_actions.dart';
 import '../../common/widgets/grid_action_menu.dart';
 import '../../common/widgets/common_input_row.dart';
 import '../../common/widgets/common_section_title.dart';
@@ -216,26 +216,7 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
     return LogView(
       controller: _logController,
       isDark: isDark,
-      menuBuilder: (entry) {
-        return [
-          LogMenuItem(
-            title: '复制',
-            onTap: () async {
-              final text = '${entry.timestamp}: ${entry.content}';
-              await Clipboard.setData(ClipboardData(text: text));
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('已复制到剪贴板'),
-                    duration: Duration(milliseconds: 500),
-                  ),
-                );
-              }
-              return;
-            },
-          ),
-        ];
-      },
+      actionsBuilder: (_) => [LogViewActions.copyEntry()],
     );
   }
 

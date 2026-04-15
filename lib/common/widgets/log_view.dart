@@ -8,6 +8,8 @@ enum LogStyle {
   lineThrough, // 划掉样式
 }
 
+enum LogOverlayStyle { info, success, warning, error }
+
 /// 日志条目模型
 /// [content] 和 [color] 为可变字段，支持外部通过 [LogController.updateEntry] 更新。
 class LogEntry {
@@ -17,6 +19,8 @@ class LogEntry {
   final Object? attachment;
   final String? tag;
   LogStyle style; // 可变：支持外部修改样式
+  String? overlayLabel;
+  LogOverlayStyle overlayStyle;
 
   LogEntry({
     required this.content,
@@ -25,6 +29,8 @@ class LogEntry {
     this.attachment,
     this.tag,
     this.style = LogStyle.none,
+    this.overlayLabel,
+    this.overlayStyle = LogOverlayStyle.info,
   });
 
   LogEntry copyWith({
@@ -34,6 +40,8 @@ class LogEntry {
     Object? attachment,
     String? tag,
     LogStyle? style,
+    String? overlayLabel,
+    LogOverlayStyle? overlayStyle,
   }) {
     return LogEntry(
       content: content ?? this.content,
@@ -42,6 +50,8 @@ class LogEntry {
       attachment: attachment ?? this.attachment,
       tag: tag ?? this.tag,
       style: style ?? this.style,
+      overlayLabel: overlayLabel ?? this.overlayLabel,
+      overlayStyle: overlayStyle ?? this.overlayStyle,
     );
   }
 }
@@ -51,6 +61,44 @@ class LogMenuItem {
   final String title;
   final VoidCallback onTap; // 修改为返回 Future<LogStyle?>
   LogMenuItem({required this.title, required this.onTap});
+}
+
+class LogActionResult {
+  final String? overlayLabel;
+  final LogOverlayStyle? overlayStyle;
+  final bool clearOverlay;
+  final String? content;
+  final Color? color;
+  final LogStyle? style;
+
+  const LogActionResult({
+    this.overlayLabel,
+    this.overlayStyle,
+    this.clearOverlay = false,
+    this.content,
+    this.color,
+    this.style,
+  });
+}
+
+class LogAction {
+  final String id;
+  final String title;
+  final IconData? icon;
+  final Color? foregroundColor;
+  final bool isDestructive;
+  final bool Function(LogEntry entry)? isVisible;
+  final Future<LogActionResult?> Function(LogEntry entry) onSelected;
+
+  const LogAction({
+    required this.id,
+    required this.title,
+    required this.onSelected,
+    this.icon,
+    this.foregroundColor,
+    this.isDestructive = false,
+    this.isVisible,
+  });
 }
 
 /// 日志控制器，用于管理日志数据的增加、清空和监听
@@ -100,12 +148,23 @@ class LogController extends ChangeNotifier {
     String? content,
     Color? color,
     LogStyle? style,
+    String? overlayLabel,
+    LogOverlayStyle? overlayStyle,
+    bool clearOverlay = false,
   }) {
     // 检查该条目是否仍存在于列表中
     if (!_logs.contains(entry)) return;
     if (content != null) entry.content = content;
     if (color != null) entry.color = color;
     if (style != null) entry.style = style;
+    if (clearOverlay) {
+      entry.overlayLabel = null;
+    } else if (overlayLabel != null) {
+      entry.overlayLabel = overlayLabel;
+      entry.overlayStyle = overlayStyle ?? entry.overlayStyle;
+    } else if (overlayStyle != null) {
+      entry.overlayStyle = overlayStyle;
+    }
     notifyListeners();
   }
 
@@ -128,6 +187,7 @@ class LogView extends StatelessWidget {
   final LogController controller;
   final bool isDark;
   final List<LogMenuItem> Function(LogEntry entry)? menuBuilder;
+  final List<LogAction> Function(LogEntry entry)? actionsBuilder;
   final VoidCallback? menuShowCallback;
 
   const LogView({
@@ -135,8 +195,79 @@ class LogView extends StatelessWidget {
     required this.controller,
     required this.isDark,
     this.menuBuilder,
+    this.actionsBuilder,
     this.menuShowCallback,
   });
+
+  List<LogAction> _buildActions(LogEntry entry) {
+    if (actionsBuilder != null) {
+      return actionsBuilder!(
+        entry,
+      ).where((action) => action.isVisible?.call(entry) ?? true).toList();
+    }
+    if (menuBuilder != null) {
+      return menuBuilder!(entry)
+          .map(
+            (item) => LogAction(
+              id: item.title,
+              title: item.title,
+              onSelected: (_) async {
+                item.onTap();
+                return null;
+              },
+            ),
+          )
+          .toList();
+    }
+    return const [];
+  }
+
+  Color _actionForegroundColor(LogAction action) {
+    if (action.foregroundColor != null) {
+      return action.foregroundColor!;
+    }
+    if (action.isDestructive) {
+      return Colors.red;
+    }
+    return Colors.black87;
+  }
+
+  Widget _buildActionMenuChild(LogAction action) {
+    final foregroundColor = _actionForegroundColor(action);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (action.icon != null) ...[
+          Icon(action.icon, size: 18, color: foregroundColor),
+          const SizedBox(width: 8),
+        ],
+        Text(action.title, style: TextStyle(color: foregroundColor)),
+      ],
+    );
+  }
+
+  void _dismissKeyboardAfterMenu() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      menuShowCallback?.call();
+    });
+  }
+
+  Future<void> _handleActionSelected(LogEntry entry, LogAction action) async {
+    final result = await action.onSelected(entry);
+    if (result == null) {
+      return;
+    }
+    controller.updateEntry(
+      entry,
+      content: result.content,
+      color: result.color,
+      style: result.style,
+      overlayLabel: result.overlayLabel,
+      overlayStyle: result.overlayStyle,
+      clearOverlay: result.clearOverlay,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -204,13 +335,12 @@ class LogView extends StatelessWidget {
                           final entry = controller.entities[index];
                           return GestureDetector(
                             onLongPressStart: (details) async {
-                              if (menuBuilder == null) return;
-                              final items = menuBuilder!(entry);
+                              final items = _buildActions(entry);
                               if (items.isEmpty) return;
                               menuShowCallback?.call();
                               final position = details.globalPosition;
-                              final LogMenuItem? selectedItem =
-                                  await showMenu<LogMenuItem>(
+                              final LogAction? selectedItem =
+                                  await showMenu<LogAction>(
                                     context: context,
                                     position: RelativeRect.fromLTRB(
                                       position.dx,
@@ -220,39 +350,24 @@ class LogView extends StatelessWidget {
                                     ),
                                     items: items
                                         .map(
-                                          (item) => PopupMenuItem<LogMenuItem>(
+                                          (item) => PopupMenuItem<LogAction>(
                                             value: item,
-                                            child: Text(item.title),
+                                            child: _buildActionMenuChild(item),
                                           ),
                                         )
                                         .toList(),
+                                    requestFocus: false,
                                   );
 
-                              selectedItem?.onTap();
+                              _dismissKeyboardAfterMenu();
+                              if (selectedItem != null) {
+                                await _handleActionSelected(
+                                  entry,
+                                  selectedItem,
+                                );
+                              }
                             },
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 2),
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 4,
-                                horizontal: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: entry.color ?? Colors.transparent,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                '${entry.timestamp}: ${entry.content}',
-                                style: TextStyle(
-                                  color: AppColors.textPrimary(isDark),
-                                  fontSize: 12,
-                                  fontFamily: 'monospace',
-                                  decoration:
-                                      entry.style == LogStyle.lineThrough
-                                      ? TextDecoration.lineThrough
-                                      : TextDecoration.none,
-                                ),
-                              ),
-                            ),
+                            child: _LogViewItem(entry: entry, isDark: isDark),
                           );
                         },
                       ),
@@ -261,6 +376,78 @@ class LogView extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _LogViewItem extends StatelessWidget {
+  final LogEntry entry;
+  final bool isDark;
+
+  const _LogViewItem({required this.entry, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 2),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+            decoration: BoxDecoration(
+              color: entry.color ?? Colors.transparent,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              '${entry.timestamp}: ${entry.content}',
+              style: TextStyle(
+                color: AppColors.textPrimary(isDark),
+                fontSize: 12,
+                fontFamily: 'monospace',
+                decoration: entry.style == LogStyle.lineThrough
+                    ? TextDecoration.lineThrough
+                    : TextDecoration.none,
+              ),
+            ),
+          ),
+          if (entry.overlayLabel != null && entry.overlayLabel!.isNotEmpty)
+            IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.96),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  child: Text(
+                    entry.overlayLabel!,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
