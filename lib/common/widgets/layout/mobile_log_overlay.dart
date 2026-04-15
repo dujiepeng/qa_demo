@@ -13,94 +13,193 @@ class MobileLogOverlay extends StatefulWidget {
 }
 
 class _MobileLogOverlayState extends State<MobileLogOverlay> {
-  // 日志高度
+  static const double _bubbleSize = 56.0;
+  static const double _bubbleEdgeMargin = 8.0;
   double _logPanelHeight = 200.0;
-  // 最小日志高度
   static const double _minLogHeight = 100.0;
+  double? _bubbleVerticalRatioOverride;
+  bool? _bubbleOnRightSideOverride;
 
   @override
   Widget build(BuildContext context) {
-    // 监听设置变化
     final settings = context.watch<AppSettings>();
     final isDark = settings.isDarkMode;
+    final isMinimized = settings.isLogOverlayMinimized;
 
-    // 重要：不要让主 Navigator (widget.child) 位于 OverlayEntry 中。
-    // 这样可以确保 Hot Reload 时 Navigator 的状态（路由栈）不会丢失或被错误重建。
-    // 我们将整个结构包裹在 Scaffold 中提供基础环境。
     return Scaffold(
-      backgroundColor: Colors.transparent, // 保持背景透传
-      resizeToAvoidBottomInset: false, // 避免键盘弹出时挤压逻辑
-      body: Column(
-        children: [
-          // 上半部分: 业务页面（Navigator 渲染的内容）
-          // 直接放在 Column 中，它是组件树的固定成员，Hot Reload 极其稳定。
-          Expanded(child: widget.child),
-
-          // 下半部分: 日志区域
-          if (settings.isLoggedIn)
-            _buildLogArea(isDark)
-          else
-            const SizedBox.shrink(),
-        ],
+      backgroundColor: Colors.transparent,
+      resizeToAvoidBottomInset: false,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return Stack(
+            children: [
+              Positioned.fill(child: widget.child),
+              if (settings.isLoggedIn && !isMinimized)
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: _buildLogArea(isDark),
+                ),
+              if (settings.isLoggedIn && isMinimized)
+                _buildFloatingBubble(context, isDark, settings, constraints),
+            ],
+          );
+        },
       ),
     );
   }
 
   Widget _buildLogArea(bool isDark) {
     final settings = context.watch<AppSettings>();
-    // 为日志面板专门提供一个 Overlay 环境，以支持其内部的 Tooltip 和 SnackBar。
-    // 这样它既不会干扰主 Navigator，又能满足自身的浮层需求。
-    return SizedBox(
-      height: _logPanelHeight,
-      child: Overlay(
-        initialEntries: [
-          OverlayEntry(
-            builder: (context) => Material(
-              color: Colors.transparent,
-              child: Column(
-                children: [
-                  // 可拖动的分割线
-                  GestureDetector(
-                    behavior: HitTestBehavior.translucent,
-                    onVerticalDragUpdate: (details) {
-                      setState(() {
-                        _logPanelHeight -= details.delta.dy;
-                        final maxHeight =
-                            MediaQuery.of(context).size.height * 0.7;
-                        if (_logPanelHeight < _minLogHeight) {
-                          _logPanelHeight = _minLogHeight;
-                        } else if (_logPanelHeight > maxHeight) {
-                          _logPanelHeight = maxHeight;
-                        }
-                      });
-                    },
-                    child: Container(
-                      height: 20,
-                      width: double.infinity,
-                      color: isDark ? Colors.black26 : Colors.grey[300],
-                      child: Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: AppColors.glassBorder(isDark),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
+    return SafeArea(
+      top: false,
+      child: SizedBox(
+        height: _logPanelHeight,
+        child: Overlay(
+          initialEntries: [
+            OverlayEntry(
+              builder: (context) => Material(
+                color: Colors.transparent,
+                child: Column(
+                  children: [
+                    GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onVerticalDragUpdate: (details) {
+                        setState(() {
+                          _logPanelHeight -= details.delta.dy;
+                          final maxHeight =
+                              MediaQuery.of(context).size.height * 0.7;
+                          if (_logPanelHeight < _minLogHeight) {
+                            _logPanelHeight = _minLogHeight;
+                          } else if (_logPanelHeight > maxHeight) {
+                            _logPanelHeight = maxHeight;
+                          }
+                        });
+                      },
+                      child: Container(
+                        height: 28,
+                        width: double.infinity,
+                        color: isDark ? Colors.black26 : Colors.grey[300],
+                        padding: const EdgeInsets.only(left: 12, right: 4),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Center(
+                                child: Container(
+                                  width: 40,
+                                  height: 4,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.glassBorder(isDark),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.minimize, size: 18),
+                              tooltip: '最小化日志',
+                              splashRadius: 18,
+                              onPressed: () {
+                                settings.setLogOverlayMinimized(true);
+                              },
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ),
-                  // 日志面板
-                  Expanded(
-                    child: settings.isInit
-                        ? LogPanel(isDark: isDark)
-                        : const SizedBox.shrink(),
-                  ),
-                ],
+                    Expanded(
+                      child: settings.isInit
+                          ? LogPanel(isDark: isDark)
+                          : const SizedBox.shrink(),
+                    ),
+                  ],
+                ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFloatingBubble(
+    BuildContext context,
+    bool isDark,
+    AppSettings settings,
+    BoxConstraints constraints,
+  ) {
+    final mediaQuery = MediaQuery.of(context);
+    final topPadding = mediaQuery.padding.top + _bubbleEdgeMargin;
+    final bottomPadding = mediaQuery.padding.bottom + _bubbleEdgeMargin;
+    final maxTop = constraints.maxHeight - bottomPadding - _bubbleSize;
+    final minTop = topPadding;
+    final usableHeight = (maxTop - minTop).clamp(0.0, double.infinity);
+    final verticalRatio =
+        _bubbleVerticalRatioOverride ?? settings.logBubbleVerticalRatio;
+    final bubbleTop = minTop + usableHeight * verticalRatio;
+    final snappedRight =
+        _bubbleOnRightSideOverride ?? settings.logBubbleOnRightSide;
+
+    return Positioned(
+      top: bubbleTop.clamp(minTop, maxTop),
+      left: snappedRight ? null : _bubbleEdgeMargin,
+      right: snappedRight ? _bubbleEdgeMargin : null,
+      child: GestureDetector(
+        onTap: () {
+          settings.setLogOverlayMinimized(false);
+        },
+        onLongPressMoveUpdate: (details) {
+          if (usableHeight <= 0) {
+            return;
+          }
+          final localPosition = details.localPosition;
+          final nextTop = (bubbleTop + localPosition.dy - (_bubbleSize / 2))
+              .clamp(minTop, maxTop);
+          final nextRatio = ((nextTop - minTop) / usableHeight).clamp(0.0, 1.0);
+          final nextOnRightSide =
+              details.globalPosition.dx > constraints.maxWidth / 2;
+          setState(() {
+            _bubbleVerticalRatioOverride = nextRatio;
+            _bubbleOnRightSideOverride = nextOnRightSide;
+          });
+        },
+        onLongPressEnd: (_) {
+          final nextRatio =
+              _bubbleVerticalRatioOverride ?? settings.logBubbleVerticalRatio;
+          final nextOnRightSide =
+              _bubbleOnRightSideOverride ?? settings.logBubbleOnRightSide;
+          settings.updateLogBubblePlacement(
+            onRightSide: nextOnRightSide,
+            verticalRatio: nextRatio,
+          );
+          setState(() {
+            _bubbleVerticalRatioOverride = null;
+            _bubbleOnRightSideOverride = null;
+          });
+        },
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: _bubbleSize,
+            height: _bubbleSize,
+            decoration: BoxDecoration(
+              color: isDark ? Colors.black87 : Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: AppColors.glassBorder(isDark)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.18),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Icon(
+              Icons.bug_report_outlined,
+              color: AppColors.primary(isDark),
+              size: 24,
+            ),
           ),
-        ],
+        ),
       ),
     );
   }

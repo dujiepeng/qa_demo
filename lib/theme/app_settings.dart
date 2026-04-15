@@ -58,6 +58,15 @@ class AppSettings extends ChangeNotifier {
     }
   }
 
+  bool _isLogOverlayMinimized = false;
+  bool get isLogOverlayMinimized => _isLogOverlayMinimized;
+
+  bool _logBubbleOnRightSide = true;
+  bool get logBubbleOnRightSide => _logBubbleOnRightSide;
+
+  double _logBubbleVerticalRatio = 0.7;
+  double get logBubbleVerticalRatio => _logBubbleVerticalRatio;
+
   bool isDirty = false;
 
   // 当前选中的集群名称，例如 TKE / NGI / 开发沙箱
@@ -94,6 +103,9 @@ class AppSettings extends ChangeNotifier {
   static const String _keyRestServer = 'rest_server';
   static const String _keyActiveEnvName = 'active_env_name';
   static const String _keyCustomEnvs = 'custom_envs';
+  static const String _keyLogOverlayMinimized = 'log_overlay_minimized';
+  static const String _keyLogBubbleOnRightSide = 'log_bubble_on_right_side';
+  static const String _keyLogBubbleVerticalRatio = 'log_bubble_vertical_ratio';
 
   // 从本地加载存储的配置
   Future<void> loadSettings() async {
@@ -144,6 +156,11 @@ class AppSettings extends ChangeNotifier {
     // _isDarkMode = prefs.getBool('is_dark_mode') ?? true;
     isLoggedIn = prefs.getBool('is_logged_in') ?? false;
     _isMode = prefs.getBool('is_mode') ?? true;
+    _isLogOverlayMinimized = prefs.getBool(_keyLogOverlayMinimized) ?? false;
+    _logBubbleOnRightSide = prefs.getBool(_keyLogBubbleOnRightSide) ?? true;
+    _logBubbleVerticalRatio = _clampBubbleRatio(
+      prefs.getDouble(_keyLogBubbleVerticalRatio) ?? 0.7,
+    );
 
     _updateSnapshot();
     isDirty = true;
@@ -181,9 +198,54 @@ class AppSettings extends ChangeNotifier {
     // 强制使用深色模式
     await prefs.setBool('is_logged_in', isLoggedIn);
     await prefs.setBool('is_mode', _isMode);
+    await prefs.setBool(_keyLogOverlayMinimized, _isLogOverlayMinimized);
+    await prefs.setBool(_keyLogBubbleOnRightSide, _logBubbleOnRightSide);
+    await prefs.setDouble(
+      _keyLogBubbleVerticalRatio,
+      _clampBubbleRatio(_logBubbleVerticalRatio),
+    );
 
     _updateSnapshot();
     isDirty = true;
+  }
+
+  Future<void> setLogOverlayMinimized(bool value) async {
+    if (_isLogOverlayMinimized == value) {
+      return;
+    }
+    _isLogOverlayMinimized = value;
+    notifyListeners();
+    await _saveLogOverlayState();
+  }
+
+  Future<void> updateLogBubblePlacement({
+    bool? onRightSide,
+    double? verticalRatio,
+  }) async {
+    final nextOnRightSide = onRightSide ?? _logBubbleOnRightSide;
+    final nextVerticalRatio = _clampBubbleRatio(
+      verticalRatio ?? _logBubbleVerticalRatio,
+    );
+    if (_logBubbleOnRightSide == nextOnRightSide &&
+        _logBubbleVerticalRatio == nextVerticalRatio) {
+      return;
+    }
+    _logBubbleOnRightSide = nextOnRightSide;
+    _logBubbleVerticalRatio = nextVerticalRatio;
+    notifyListeners();
+    await _saveLogOverlayState();
+  }
+
+  double _clampBubbleRatio(double value) => value.clamp(0.0, 1.0);
+
+  Future<void> _saveLogOverlayState() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyLogOverlayMinimized, _isLogOverlayMinimized);
+    await prefs.setBool(_keyLogBubbleOnRightSide, _logBubbleOnRightSide);
+    await prefs.setDouble(
+      _keyLogBubbleVerticalRatio,
+      _clampBubbleRatio(_logBubbleVerticalRatio),
+    );
   }
 
   // 检查当前内存状态是否与快照不一致
