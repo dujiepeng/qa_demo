@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.77.8+216] - 2026-04-16
+### CI/CD
+- Android Release workflow 的产物命名统一改为 `qa_demo_<version>.apk`。
+- GitHub Actions 新增企业微信机器人图文卡片通知：
+  - 使用 `WCHAT_HOOK` secret。
+  - 打 tag 构建成功后发送图文卡片消息。
+  - 卡片图片使用仓库 `assets/logo.png` 的 raw 链接。
+  - 卡片内容自动从当前版本 `changelog.md` 中提取“新增/修复”摘要，并附带 GitHub Release 下载链接。
+
+## [1.77.7+215] - 2026-04-16
+### CI/CD
+- Android Release workflow 的产物命名统一改为 `qa_demo_<version>.apk`。
+- GitHub Actions 新增企业微信机器人通知：
+  - 使用 `WCHAT_HOOK` secret。
+  - 打 tag 构建成功后发送图文卡片消息，而不是直接发送 APK 文件。
+  - 卡片图片使用仓库 `assets/logo.png` 的 raw 链接。
+  - 卡片内容自动从当前版本 `changelog.md` 中提取“新增/修复”摘要，并附带 GitHub Release 下载链接。
+
 ## [1.77.6+214] - 2026-04-16
 ### Feature
 - 会话列表新增顶部筛选 tabs：`全部`、`置顶`、`Mark1`、`Mark2`、`Mark3`。
