@@ -109,19 +109,53 @@ void main() {
     expect(find.text('最小化'), findsOneWidget);
   });
 
-  testWidgets('mobile overlay does not overflow when resized to minimum height', (
-    tester,
-  ) async {
+  testWidgets(
+    'mobile overlay does not overflow when resized to minimum height',
+    (tester) async {
+      final settings = AppSettings()
+        ..isLoggedIn = true
+        ..isInit = true;
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: settings,
+          child: const MaterialApp(
+            home: MediaQuery(
+              data: MediaQueryData(size: Size(390, 280)),
+              child: MobileLogOverlay(
+                child: Scaffold(body: Center(child: Text('content'))),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.drag(
+        find.byType(GestureDetector).first,
+        const Offset(0, 400),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('mobile overlay minimized bubble can be dragged', (tester) async {
     final settings = AppSettings()
       ..isLoggedIn = true
-      ..isInit = true;
+      ..isInit = false;
+    await settings.setLogOverlayMinimized(true);
+    await settings.updateLogBubblePlacement(
+      onRightSide: true,
+      verticalRatio: 0.2,
+    );
 
     await tester.pumpWidget(
       ChangeNotifierProvider.value(
         value: settings,
         child: const MaterialApp(
           home: MediaQuery(
-            data: MediaQueryData(size: Size(390, 280)),
+            data: MediaQueryData(size: Size(390, 844)),
             child: MobileLogOverlay(
               child: Scaffold(body: Center(child: Text('content'))),
             ),
@@ -130,9 +164,14 @@ void main() {
       ),
     );
 
-    await tester.drag(find.byType(GestureDetector).first, const Offset(0, 400));
+    final bubbleFinder = find.byIcon(Icons.bug_report_outlined);
+    final before = tester.getTopLeft(bubbleFinder);
+
+    await tester.drag(bubbleFinder, const Offset(-120, 180));
     await tester.pumpAndSettle();
 
-    expect(tester.takeException(), isNull);
+    final after = tester.getTopLeft(bubbleFinder);
+    expect(after.dy, greaterThan(before.dy));
+    expect(settings.logBubbleVerticalRatio, greaterThan(0.2));
   });
 }

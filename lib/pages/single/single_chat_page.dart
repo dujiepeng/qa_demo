@@ -10,6 +10,7 @@ import '../../common/widgets/common_section_title.dart';
 import '../../common/widgets/common_layout.dart';
 import '../../common/widgets/info_dialog.dart';
 import '../../common/mixins/base_mixin.dart';
+import 'single_chat_reaction.dart';
 
 class SingleChatPage extends StatefulWidget {
   const SingleChatPage({super.key, this.userId, this.showAppBar = true});
@@ -28,6 +29,7 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
   final _messageController = TextEditingController();
   final _logController = LogController();
   final _repeatCountController = TextEditingController(text: '1');
+  final Map<String, Map<String, int>> _reactionCountsByMessageId = {};
 
   @override
   LogController get logController => _logController;
@@ -121,6 +123,28 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
           );
           addSendLog('收到消息已读, 已读消息会变成黄色');
         },
+        onMessageReactionDidChange: (events) {
+          final currentConversationId = _userIdController.text
+              .trim()
+              .toLowerCase();
+          for (final event in events) {
+            final reactionCounts = _reactionCountsByMessageId.putIfAbsent(
+              event.messageId,
+              () => <String, int>{},
+            );
+            applySingleChatReactionEvent(reactionCounts, event);
+            final applied = applySingleChatReactionOverlay(
+              logController,
+              event.messageId,
+              reactionCounts,
+            );
+            if (!applied &&
+                currentConversationId.isNotEmpty &&
+                event.conversationId == currentConversationId) {
+              addReceiveLog(buildSingleChatReactionLabel(reactionCounts));
+            }
+          }
+        },
       ),
     );
   }
@@ -211,6 +235,36 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
             } catch (e) {
               return LogActionResult(
                 overlayLabel: 'ACK失败: $e',
+                overlayStyle: LogOverlayStyle.error,
+              );
+            }
+          },
+        ),
+        LogAction(
+          id: 'reaction',
+          title: 'Reaction',
+          icon: Icons.emoji_emotions_outlined,
+          onSelected: (_) async {
+            final selection = await showSingleChatReactionSheet(context);
+            if (selection == null) {
+              return null;
+            }
+            try {
+              if (selection.action == SingleChatReactionSheetAction.add) {
+                await EMClient.getInstance.chatManager.addReaction(
+                  messageId: message.msgId,
+                  reaction: selection.reaction,
+                );
+                return null;
+              }
+              await EMClient.getInstance.chatManager.removeReaction(
+                messageId: message.msgId,
+                reaction: selection.reaction,
+              );
+              return null;
+            } catch (e) {
+              return LogActionResult(
+                overlayLabel: 'Reaction失败: $e',
                 overlayStyle: LogOverlayStyle.error,
               );
             }

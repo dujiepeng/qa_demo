@@ -113,7 +113,9 @@ class _MobileLogOverlayState extends State<MobileLogOverlay> {
                                   backgroundColor: isDark
                                       ? Colors.black54
                                       : Colors.white.withValues(alpha: 0.92),
-                                  foregroundColor: AppColors.textPrimary(isDark),
+                                  foregroundColor: AppColors.textPrimary(
+                                    isDark,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
                                   ),
@@ -169,22 +171,26 @@ class _MobileLogOverlayState extends State<MobileLogOverlay> {
         onTap: () {
           settings.setLogOverlayMinimized(false);
         },
-        onLongPressMoveUpdate: (details) {
+        onPanUpdate: (details) {
           if (usableHeight <= 0) {
             return;
           }
-          final localPosition = details.localPosition;
-          final nextTop = (bubbleTop + localPosition.dy - (_bubbleSize / 2))
-              .clamp(minTop, maxTop);
+          final currentTop =
+              (_bubbleVerticalRatioOverride == null
+                      ? bubbleTop
+                      : minTop + usableHeight * _bubbleVerticalRatioOverride!)
+                  .clamp(minTop, maxTop);
+          final nextTop = (currentTop + details.delta.dy).clamp(minTop, maxTop);
           final nextRatio = ((nextTop - minTop) / usableHeight).clamp(0.0, 1.0);
           final nextOnRightSide =
-              details.globalPosition.dx > constraints.maxWidth / 2;
+              (details.globalPosition.dx + details.delta.dx) >
+              constraints.maxWidth / 2;
           setState(() {
             _bubbleVerticalRatioOverride = nextRatio;
             _bubbleOnRightSideOverride = nextOnRightSide;
           });
         },
-        onLongPressEnd: (_) {
+        onPanEnd: (_) {
           final nextRatio =
               _bubbleVerticalRatioOverride ?? settings.logBubbleVerticalRatio;
           final nextOnRightSide =

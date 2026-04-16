@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qa_flutter/common/widgets/log_view.dart';
+import 'package:qa_flutter/pages/single/single_chat_reaction.dart';
 
 void main() {
   testWidgets('shows only visible log actions on long press', (tester) async {
@@ -143,51 +144,52 @@ void main() {
     expect(actionLabel.style?.color, Colors.red);
   });
 
-  testWidgets('menu selection keeps text field unfocused after callback unfocus', (
-    tester,
-  ) async {
-    final controller = LogController()..addLog('hello');
-    final focusNode = FocusNode();
-    addTearDown(focusNode.dispose);
+  testWidgets(
+    'menu selection keeps text field unfocused after callback unfocus',
+    (tester) async {
+      final controller = LogController()..addLog('hello');
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Column(
-            children: [
-              TextField(focusNode: focusNode),
-              SizedBox(
-                height: 240,
-                child: LogView(
-                  controller: controller,
-                  isDark: true,
-                  menuShowCallback: focusNode.unfocus,
-                  actionsBuilder: (entry) => [
-                    const LogAction(
-                      id: 'act',
-                      title: '动作',
-                      onSelected: _noopResult,
-                    ),
-                  ],
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                TextField(focusNode: focusNode),
+                SizedBox(
+                  height: 240,
+                  child: LogView(
+                    controller: controller,
+                    isDark: true,
+                    menuShowCallback: focusNode.unfocus,
+                    actionsBuilder: (entry) => [
+                      const LogAction(
+                        id: 'act',
+                        title: '动作',
+                        onSelected: _noopResult,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.tap(find.byType(TextField));
-    await tester.pumpAndSettle();
-    expect(focusNode.hasFocus, isTrue);
+      await tester.tap(find.byType(TextField));
+      await tester.pumpAndSettle();
+      expect(focusNode.hasFocus, isTrue);
 
-    await tester.longPress(find.textContaining('hello'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('动作'));
-    await tester.pumpAndSettle();
+      await tester.longPress(find.textContaining('hello'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('动作'));
+      await tester.pumpAndSettle();
 
-    expect(focusNode.hasFocus, isFalse);
-  });
+      expect(focusNode.hasFocus, isFalse);
+    },
+  );
 
   testWidgets('menu dismissal keeps text field unfocused', (tester) async {
     final controller = LogController()..addLog('hello');
@@ -231,6 +233,52 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(focusNode.hasFocus, isFalse);
+  });
+
+  testWidgets('reaction action closes menu before showing bottom sheet', (
+    tester,
+  ) async {
+    final controller = LogController()..addLog('hello', tag: 'message');
+    BuildContext? hostContext;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              hostContext = context;
+              return SizedBox(
+                height: 240,
+                child: LogView(
+                  controller: controller,
+                  isDark: true,
+                  actionsBuilder: (entry) => [
+                    LogAction(
+                      id: 'reaction',
+                      title: 'Reaction…',
+                      onSelected: (_) async {
+                        await showSingleChatReactionSheet(hostContext!);
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.longPress(find.textContaining('hello'));
+    await tester.pumpAndSettle();
+    expect(find.text('Reaction…'), findsOneWidget);
+
+    await tester.tap(find.text('Reaction…'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reaction…'), findsNothing);
+    expect(find.text('Reaction'), findsOneWidget);
   });
 }
 

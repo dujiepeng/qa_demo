@@ -506,12 +506,6 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
                                               userId,
                                             ),
                                           ),
-                                          trailing: Icon(
-                                            Icons.more_horiz,
-                                            color: AppColors.textSecondary(
-                                              isDark,
-                                            ),
-                                          ),
                                         ),
                                       ),
                                     );

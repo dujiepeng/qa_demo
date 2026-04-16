@@ -7,7 +7,21 @@ import '../../common/widgets/common_gradient_background.dart';
 
 /// 会话列表页面
 class ConversationListPage extends StatefulWidget {
-  const ConversationListPage({super.key});
+  const ConversationListPage({
+    super.key,
+    this.loadConversationsPage,
+    this.unreadCountBuilder,
+    this.latestMessageBuilder,
+  });
+
+  final Future<EMCursorResult<EMConversation>> Function({
+    String? cursor,
+    int pageSize,
+  })?
+  loadConversationsPage;
+  final Future<int> Function(EMConversation conversation)? unreadCountBuilder;
+  final Future<EMMessage?> Function(EMConversation conversation)?
+  latestMessageBuilder;
 
   @override
   State<ConversationListPage> createState() => _ConversationListPageState();
@@ -59,10 +73,7 @@ class _ConversationListPageState extends State<ConversationListPage> {
     }
 
     try {
-      final result = await EMClient.getInstance.chatManager
-          .fetchConversationsByOptions(
-            options: ConversationFetchOptions(pageSize: 30),
-          );
+      final result = await _loadConversationsPage(pageSize: 30);
       if (mounted) {
         setState(() {
           _conversations = result.data;
@@ -94,10 +105,10 @@ class _ConversationListPageState extends State<ConversationListPage> {
     });
 
     try {
-      final result = await EMClient.getInstance.chatManager
-          .fetchConversationsByOptions(
-            options: ConversationFetchOptions(pageSize: 30, cursor: _cursor),
-          );
+      final result = await _loadConversationsPage(
+        pageSize: 30,
+        cursor: _cursor,
+      );
       if (mounted) {
         setState(() {
           _conversations.addAll(result.data);
@@ -138,6 +149,35 @@ class _ConversationListPageState extends State<ConversationListPage> {
         ),
       );
     }
+  }
+
+  Future<EMCursorResult<EMConversation>> _loadConversationsPage({
+    String? cursor,
+    int pageSize = 30,
+  }) {
+    final loadConversationsPage = widget.loadConversationsPage;
+    if (loadConversationsPage != null) {
+      return loadConversationsPage(cursor: cursor, pageSize: pageSize);
+    }
+    return EMClient.getInstance.chatManager.fetchConversationsByOptions(
+      options: ConversationFetchOptions(pageSize: pageSize, cursor: cursor),
+    );
+  }
+
+  Future<int> _getUnreadCount(EMConversation conversation) {
+    final unreadCountBuilder = widget.unreadCountBuilder;
+    if (unreadCountBuilder != null) {
+      return unreadCountBuilder(conversation);
+    }
+    return conversation.unreadCount();
+  }
+
+  Future<EMMessage?> _getLatestMessage(EMConversation conversation) {
+    final latestMessageBuilder = widget.latestMessageBuilder;
+    if (latestMessageBuilder != null) {
+      return latestMessageBuilder(conversation);
+    }
+    return conversation.latestMessage();
   }
 
   /// 切换置顶状态
@@ -252,19 +292,22 @@ class _ConversationListPageState extends State<ConversationListPage> {
                               ),
                             ],
                           )
-                        : ListView.builder(
+                        : ListView(
                             physics: const AlwaysScrollableScrollPhysics(),
                             controller: _scrollController,
-                            itemCount:
+                            children: [
+                              _buildInteractionHint(isDark),
+                              ...List.generate(
                                 _conversations.length + (_hasMore ? 1 : 0),
-                            itemBuilder: (context, index) {
-                              if (index < _conversations.length) {
-                                final conv = _conversations[index];
-                                return _buildConversationItem(conv, isDark);
-                              } else {
-                                return _buildLoadingIndicator(isDark);
-                              }
-                            },
+                                (index) {
+                                  if (index < _conversations.length) {
+                                    final conv = _conversations[index];
+                                    return _buildConversationItem(conv, isDark);
+                                  }
+                                  return _buildLoadingIndicator(isDark);
+                                },
+                              ),
+                            ],
                           ),
                   ),
           ),
@@ -366,7 +409,7 @@ class _ConversationListPageState extends State<ConversationListPage> {
                 child: Icon(icon, color: AppColors.primary(isDark)),
               ),
               FutureBuilder<int>(
-                future: conversation.unreadCount(),
+                future: _getUnreadCount(conversation),
                 builder: (context, snapshot) {
                   if (snapshot.hasData && snapshot.data! > 0) {
                     return Positioned(
@@ -424,7 +467,7 @@ class _ConversationListPageState extends State<ConversationListPage> {
             ],
           ),
           subtitle: FutureBuilder<EMMessage?>(
-            future: conversation.latestMessage(),
+            future: _getLatestMessage(conversation),
             builder: (context, snapshot) {
               String lastMsgStr = '暂无消息';
               if (snapshot.hasData && snapshot.data != null) {
@@ -443,10 +486,27 @@ class _ConversationListPageState extends State<ConversationListPage> {
               );
             },
           ),
-          trailing: Icon(
-            Icons.more_horiz,
-            color: AppColors.textSecondary(isDark),
-          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInteractionHint(bool isDark) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.primary(isDark).withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.glassBorder(isDark)),
+      ),
+      child: Text(
+        '长按会话可复制 ID、置顶、设为已读或删除',
+        style: TextStyle(
+          color: AppColors.textSecondary(isDark),
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );
