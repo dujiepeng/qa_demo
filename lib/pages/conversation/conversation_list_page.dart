@@ -5,6 +5,8 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 import '../../common/widgets/common_gradient_background.dart';
 
+enum ConversationListFilter { all, pinned, mark1, mark2, mark3 }
+
 /// 会话列表页面
 class ConversationListPage extends StatefulWidget {
   const ConversationListPage({
@@ -12,16 +14,23 @@ class ConversationListPage extends StatefulWidget {
     this.loadConversationsPage,
     this.unreadCountBuilder,
     this.latestMessageBuilder,
+    this.addConversationMark,
+    this.removeConversationMark,
   });
 
   final Future<EMCursorResult<EMConversation>> Function({
     String? cursor,
     int pageSize,
+    ConversationListFilter filter,
   })?
   loadConversationsPage;
   final Future<int> Function(EMConversation conversation)? unreadCountBuilder;
   final Future<EMMessage?> Function(EMConversation conversation)?
   latestMessageBuilder;
+  final Future<void> Function(String conversationId, ConversationMarkType mark)?
+  addConversationMark;
+  final Future<void> Function(String conversationId, ConversationMarkType mark)?
+  removeConversationMark;
 
   @override
   State<ConversationListPage> createState() => _ConversationListPageState();
@@ -31,6 +40,7 @@ class _ConversationListPageState extends State<ConversationListPage> {
   final _settings = AppSettings();
   final ScrollController _scrollController = ScrollController();
   List<EMConversation> _conversations = [];
+  ConversationListFilter _currentFilter = ConversationListFilter.all;
   bool _isLoading = false;
   String? _cursor;
   bool _hasMore = true;
@@ -157,11 +167,113 @@ class _ConversationListPageState extends State<ConversationListPage> {
   }) {
     final loadConversationsPage = widget.loadConversationsPage;
     if (loadConversationsPage != null) {
-      return loadConversationsPage(cursor: cursor, pageSize: pageSize);
+      return loadConversationsPage(
+        cursor: cursor,
+        pageSize: pageSize,
+        filter: _currentFilter,
+      );
     }
     return EMClient.getInstance.chatManager.fetchConversationsByOptions(
-      options: ConversationFetchOptions(pageSize: pageSize, cursor: cursor),
+      options: _buildFetchOptions(cursor: cursor, pageSize: pageSize),
     );
+  }
+
+  ConversationFetchOptions _buildFetchOptions({
+    String? cursor,
+    required int pageSize,
+  }) {
+    switch (_currentFilter) {
+      case ConversationListFilter.all:
+        return ConversationFetchOptions(pageSize: pageSize, cursor: cursor);
+      case ConversationListFilter.pinned:
+        return ConversationFetchOptions.pinned(
+          pageSize: pageSize,
+          cursor: cursor,
+        );
+      case ConversationListFilter.mark1:
+        return ConversationFetchOptions.mark(
+          ConversationMarkType.Type1,
+          pageSize: pageSize.clamp(1, 10),
+          cursor: cursor,
+        );
+      case ConversationListFilter.mark2:
+        return ConversationFetchOptions.mark(
+          ConversationMarkType.Type2,
+          pageSize: pageSize.clamp(1, 10),
+          cursor: cursor,
+        );
+      case ConversationListFilter.mark3:
+        return ConversationFetchOptions.mark(
+          ConversationMarkType.Type3,
+          pageSize: pageSize.clamp(1, 10),
+          cursor: cursor,
+        );
+    }
+  }
+
+  bool _hasMark(EMConversation conversation, ConversationMarkType mark) {
+    return conversation.marks?.contains(mark) ?? false;
+  }
+
+  Future<void> _setConversationMark(
+    EMConversation conversation,
+    ConversationMarkType mark,
+  ) async {
+    try {
+      final addConversationMark = widget.addConversationMark;
+      if (addConversationMark != null) {
+        await addConversationMark(conversation.id, mark);
+      } else {
+        await EMClient.getInstance.chatManager
+            .addRemoteAndLocalConversationsMark(
+              conversationIds: [conversation.id],
+              mark: mark,
+            );
+      }
+      _fetchConversations(silent: true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('标记失败: $e')));
+      }
+    }
+  }
+
+  Future<void> _removeConversationMark(
+    EMConversation conversation,
+    ConversationMarkType mark,
+  ) async {
+    try {
+      final removeConversationMark = widget.removeConversationMark;
+      if (removeConversationMark != null) {
+        await removeConversationMark(conversation.id, mark);
+      } else {
+        await EMClient.getInstance.chatManager
+            .deleteRemoteAndLocalConversationsMark(
+              conversationIds: [conversation.id],
+              mark: mark,
+            );
+      }
+      _fetchConversations(silent: true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('取消标记失败: $e')));
+      }
+    }
+  }
+
+  void _selectFilter(ConversationListFilter filter) {
+    if (_currentFilter == filter) return;
+    setState(() {
+      _currentFilter = filter;
+      _cursor = null;
+      _hasMore = true;
+      _conversations = [];
+    });
+    _fetchConversations();
   }
 
   Future<int> _getUnreadCount(EMConversation conversation) {
@@ -267,49 +379,74 @@ class _ConversationListPageState extends State<ConversationListPage> {
               backgroundColor: Colors.transparent,
               elevation: 0,
               iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  tooltip: '从服务器重新获取',
+                  onPressed: _fetchConversations,
+                ),
+              ],
             ),
-            body: (_isLoading && _conversations.isEmpty)
-                ? Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.primary(isDark),
-                    ),
-                  )
-                : RefreshIndicator(
-                    onRefresh: () => _fetchConversations(silent: true),
-                    child: _conversations.isEmpty
-                        ? CustomScrollView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            slivers: [
-                              SliverFillRemaining(
-                                child: Center(
-                                  child: Text(
-                                    '暂无会话',
-                                    style: TextStyle(
-                                      color: AppColors.textSecondary(isDark),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )
-                        : ListView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            controller: _scrollController,
-                            children: [
-                              _buildInteractionHint(isDark),
-                              ...List.generate(
-                                _conversations.length + (_hasMore ? 1 : 0),
-                                (index) {
-                                  if (index < _conversations.length) {
-                                    final conv = _conversations[index];
-                                    return _buildConversationItem(conv, isDark);
-                                  }
-                                  return _buildLoadingIndicator(isDark);
-                                },
-                              ),
-                            ],
+            body: Column(
+              children: [
+                _buildFilterTabs(isDark),
+                Expanded(
+                  child: (_isLoading && _conversations.isEmpty)
+                      ? Center(
+                          child: CircularProgressIndicator(
+                            color: AppColors.primary(isDark),
                           ),
-                  ),
+                        )
+                      : RefreshIndicator(
+                          onRefresh: () => _fetchConversations(silent: true),
+                          child: _conversations.isEmpty
+                              ? CustomScrollView(
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  slivers: [
+                                    SliverToBoxAdapter(
+                                      child: _buildInteractionHint(isDark),
+                                    ),
+                                    SliverFillRemaining(
+                                      child: Center(
+                                        child: Text(
+                                          '暂无会话',
+                                          style: TextStyle(
+                                            color: AppColors.textSecondary(
+                                              isDark,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : ListView(
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  controller: _scrollController,
+                                  children: [
+                                    _buildInteractionHint(isDark),
+                                    ...List.generate(
+                                      _conversations.length +
+                                          (_hasMore ? 1 : 0),
+                                      (index) {
+                                        if (index < _conversations.length) {
+                                          final conv = _conversations[index];
+                                          return _buildConversationItem(
+                                            conv,
+                                            isDark,
+                                          );
+                                        }
+                                        return _buildLoadingIndicator(isDark);
+                                      },
+                                    ),
+                                  ],
+                                ),
+                        ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -352,6 +489,36 @@ class _ConversationListPageState extends State<ConversationListPage> {
               child: Text(conversation.isPinned ? '取消置顶' : '会话置顶'),
             ),
             PopupMenuItem(
+              value: _hasMark(conversation, ConversationMarkType.Type1)
+                  ? 'unmark_1'
+                  : 'mark_1',
+              child: Text(
+                _hasMark(conversation, ConversationMarkType.Type1)
+                    ? '取消 Mark1'
+                    : '标记 Mark1',
+              ),
+            ),
+            PopupMenuItem(
+              value: _hasMark(conversation, ConversationMarkType.Type2)
+                  ? 'unmark_2'
+                  : 'mark_2',
+              child: Text(
+                _hasMark(conversation, ConversationMarkType.Type2)
+                    ? '取消 Mark2'
+                    : '标记 Mark2',
+              ),
+            ),
+            PopupMenuItem(
+              value: _hasMark(conversation, ConversationMarkType.Type3)
+                  ? 'unmark_3'
+                  : 'mark_3',
+              child: Text(
+                _hasMark(conversation, ConversationMarkType.Type3)
+                    ? '取消 Mark3'
+                    : '标记 Mark3',
+              ),
+            ),
+            PopupMenuItem(
               value: 'mark_as_read',
               child: FutureBuilder<int>(
                 future: conversation.unreadCount(),
@@ -376,6 +543,18 @@ class _ConversationListPageState extends State<ConversationListPage> {
           _copyToClipboard(conversation.id);
         } else if (value == 'toggle_pin') {
           _togglePin(conversation);
+        } else if (value == 'mark_1') {
+          _setConversationMark(conversation, ConversationMarkType.Type1);
+        } else if (value == 'unmark_1') {
+          _removeConversationMark(conversation, ConversationMarkType.Type1);
+        } else if (value == 'mark_2') {
+          _setConversationMark(conversation, ConversationMarkType.Type2);
+        } else if (value == 'unmark_2') {
+          _removeConversationMark(conversation, ConversationMarkType.Type2);
+        } else if (value == 'mark_3') {
+          _setConversationMark(conversation, ConversationMarkType.Type3);
+        } else if (value == 'unmark_3') {
+          _removeConversationMark(conversation, ConversationMarkType.Type3);
         } else if (value == 'mark_as_read') {
           _markAsRead(conversation);
         } else if (value == 'delete') {
@@ -464,6 +643,7 @@ class _ConversationListPageState extends State<ConversationListPage> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              ..._buildMarkBadges(conversation, isDark),
             ],
           ),
           subtitle: FutureBuilder<EMMessage?>(
@@ -502,7 +682,7 @@ class _ConversationListPageState extends State<ConversationListPage> {
         border: Border.all(color: AppColors.glassBorder(isDark)),
       ),
       child: Text(
-        '长按会话可复制 ID、置顶、设为已读或删除',
+        '长按会话可复制 ID、置顶、标记、设为已读或删除',
         style: TextStyle(
           color: AppColors.textSecondary(isDark),
           fontSize: 12,
@@ -510,6 +690,102 @@ class _ConversationListPageState extends State<ConversationListPage> {
         ),
       ),
     );
+  }
+
+  Widget _buildFilterTabs(bool isDark) {
+    final filterColors = <ConversationListFilter, Color>{
+      ConversationListFilter.all: const Color(0xFF23406B),
+      ConversationListFilter.pinned: const Color(0xFF6B3F1E),
+      ConversationListFilter.mark1: const Color(0xFF3C2F66),
+      ConversationListFilter.mark2: const Color(0xFF1F5A4C),
+      ConversationListFilter.mark3: const Color(0xFF6A2339),
+    };
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Row(
+        children: ConversationListFilter.values.map((filter) {
+          final selected = filter == _currentFilter;
+          final backgroundColor = selected
+              ? filterColors[filter]!
+              : filterColors[filter]!.withValues(alpha: 0.74);
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ChoiceChip(
+              label: Text(_filterLabel(filter)),
+              selected: selected,
+              onSelected: (_) => _selectFilter(filter),
+              showCheckmark: false,
+              labelStyle: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+              selectedColor: backgroundColor,
+              backgroundColor: backgroundColor,
+              side: BorderSide(
+                color: selected
+                    ? Colors.white.withValues(alpha: 0.38)
+                    : backgroundColor.withValues(alpha: 0.9),
+                width: selected ? 2.2 : 1.0,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(999),
+              ),
+              elevation: selected ? 2 : 0,
+              pressElevation: 0,
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  String _filterLabel(ConversationListFilter filter) {
+    switch (filter) {
+      case ConversationListFilter.all:
+        return '全部';
+      case ConversationListFilter.pinned:
+        return '置顶';
+      case ConversationListFilter.mark1:
+        return 'Mark1';
+      case ConversationListFilter.mark2:
+        return 'Mark2';
+      case ConversationListFilter.mark3:
+        return 'Mark3';
+    }
+  }
+
+  List<Widget> _buildMarkBadges(EMConversation conversation, bool isDark) {
+    final badges = <Widget>[];
+    final marks = conversation.marks ?? const <ConversationMarkType>[];
+    final candidates = <(ConversationMarkType, String)>[
+      (ConversationMarkType.Type1, 'Mark1'),
+      (ConversationMarkType.Type2, 'Mark2'),
+      (ConversationMarkType.Type3, 'Mark3'),
+    ];
+    for (final candidate in candidates) {
+      if (!marks.contains(candidate.$1)) continue;
+      badges.add(
+        Container(
+          margin: const EdgeInsets.only(left: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: AppColors.primary(isDark).withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            candidate.$2,
+            style: TextStyle(
+              color: AppColors.primary(isDark),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      );
+    }
+    return badges;
   }
 
   Widget _buildLoadingIndicator(bool isDark) {
