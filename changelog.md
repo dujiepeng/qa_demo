@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.77.9+217] - 2026-04-16
+### CI/CD
+- 企业微信机器人图文卡片图片从仓库 `assets/logo.png` 切换为 `assets/wechat_icon.png` 的 raw 链接，用于 release 通知展示。
+
 ## [1.77.8+216] - 2026-04-16
 ### CI/CD
 - Android Release workflow 的产物命名统一改为 `qa_demo_<version>.apk`。
