@@ -86,11 +86,6 @@ jobs:
               f"https://github.com/{repository}/releases/download/"
               f"{release_tag}/{apk_name}"
           )
-          image_url = (
-              "https://raw.githubusercontent.com/dujiepeng/"
-              "qa_demo/dev/assets/wechat_icon.jpg"
-          )
-
           changelog = Path("changelog.md").read_text(encoding="utf-8")
           section_pattern = re.compile(
               rf"^## \[{re.escape(release_tag.lstrip('v'))}\].*?(?=^## |\Z)",
@@ -123,44 +118,22 @@ jobs:
                   return "无"
               return "\n".join(f"- {item}" for item in items[:4])
 
+          update_items = feature_items + bugfix_items
+          update_desc = to_desc(update_items)
+          markdown_lines = [
+              "# qa_demo 更新",
+              f"> 版本号：{release_tag}",
+              "",
+              "**更新内容**",
+              update_desc,
+              "",
+              "**下载地址**",
+              f"[点击下载]({download_url})",
+          ]
           payload = {
-              "msgtype": "template_card",
-              "template_card": {
-                  "card_type": "news_notice",
-                  "source": {
-                      "icon_url": image_url,
-                      "desc": "qa_demo",
-                      "desc_color": 0,
-                  },
-                  "main_title": {
-                      "title": "qa_demo Android 安装包",
-                      "desc": apk_name,
-                  },
-                  "card_image": {
-                      "url": image_url,
-                      "aspect_ratio": 1.3,
-                  },
-                  "vertical_content_list": [
-                      {
-                          "title": "新增",
-                          "desc": to_desc(feature_items),
-                      },
-                      {
-                          "title": "修复",
-                          "desc": to_desc(bugfix_items),
-                      },
-                  ],
-                  "jump_list": [
-                      {
-                          "type": 1,
-                          "title": "下载 APK",
-                          "url": download_url,
-                      }
-                  ],
-                  "card_action": {
-                      "type": 1,
-                      "url": download_url,
-                  },
+              "msgtype": "markdown_v2",
+              "markdown_v2": {
+                  "content": "\n".join(markdown_lines),
               },
           }
 
