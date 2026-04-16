@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.77.9+218] - 2026-04-16
+### Bug Fix
+- 补充发布规则约束，明确 `changelog.md` 的版本头、`Feature` / `UI/UX` / `Bug Fix` 标题和一级 `- ` 列表格式要求，避免企业微信 release 卡片解析失败。
+- 补充发布校验规则：当全局 Flutter / Dart 版本不满足项目 SDK 要求时，发布流程应改用本地 `fvm` / Flutter 工具链执行。
+
 ## [1.77.9+217] - 2026-04-16
 ### CI/CD
 - 企业微信机器人图文卡片图片从仓库 `assets/logo.png` 切换为 `assets/wechat_icon.png` 的 raw 链接，用于 release 通知展示。
