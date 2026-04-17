@@ -81,6 +81,11 @@ class _PageMobileState extends State<PageMobile> {
           );
         },
       ),
+      GridItem(
+        title: '我的',
+        icon: Icons.account_circle_outlined,
+        onTap: () => Navigator.pushNamed(context, '/my_page'),
+      ),
     ];
   }
 
@@ -103,7 +108,8 @@ class _PageMobileState extends State<PageMobile> {
           actions: [
             IconButton(
               icon: const Icon(Icons.info_outline),
-              onPressed: () => CommonDialogs.showUserInfoDialog(context, isDark),
+              onPressed: () =>
+                  CommonDialogs.showUserInfoDialog(context, isDark),
             ),
             IconButton(
               icon: const Icon(Icons.settings_outlined),

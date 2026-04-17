@@ -24,9 +24,27 @@ void main() {
     expect(find.text('alice'), findsOneWidget);
     expect(find.text('bob'), findsOneWidget);
     expect(find.text('Presence 已订阅'), findsOneWidget);
-    expect(find.text('长按联系人可订阅、取消订阅或查询 Presence'), findsOneWidget);
+    expect(find.text('长按联系人可设置备注、订阅、取消订阅或查询 Presence'), findsOneWidget);
     expect(find.text('Presence 通知'), findsNothing);
     expect(find.text('未获取 Presence 状态'), findsAtLeastNWidgets(1));
+  });
+
+  testWidgets('contact presence page shows remark as title when available', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ContactPresencePage(
+          loadContacts: () async => [
+            EMContact.fromJson({'userId': 'alice', 'remark': 'Alice备注'}),
+          ],
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('alice(Alice备注)'), findsOneWidget);
   });
 
   testWidgets('contact presence page subscribes presence from menu', (
@@ -61,7 +79,9 @@ void main() {
     expect(find.text('离线'), findsNothing);
   });
 
-  testWidgets('contact presence page does not open chat on tap', (tester) async {
+  testWidgets('contact presence page does not open chat on tap', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ContactPresencePage(
@@ -137,7 +157,9 @@ void main() {
     expect(find.text('Presence 已订阅'), findsNothing);
   });
 
-  testWidgets('contact presence page queries presence from menu', (tester) async {
+  testWidgets('contact presence page queries presence from menu', (
+    tester,
+  ) async {
     final queriedUsers = <String>[];
 
     await tester.pumpWidget(
@@ -167,34 +189,35 @@ void main() {
     expect(find.text('away'), findsOneWidget);
   });
 
-  testWidgets('contact presence page updates cell subtitle when presence changes', (
-    tester,
-  ) async {
-    final controller = StreamController<List<EMPresence>>();
+  testWidgets(
+    'contact presence page updates cell subtitle when presence changes',
+    (tester) async {
+      final controller = StreamController<List<EMPresence>>();
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ContactPresencePage(
-          loadContacts: () async => [
-            EMContact.fromJson({'userId': 'alice', 'remark': ''}),
-          ],
-          presenceUpdates: controller.stream,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ContactPresencePage(
+            loadContacts: () async => [
+              EMContact.fromJson({'userId': 'alice', 'remark': ''}),
+            ],
+            presenceUpdates: controller.stream,
+          ),
         ),
-      ),
-    );
+      );
 
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-    controller.add([
-      EMPresence('alice', 'busy', {'ios': 0}, 1710000000, 1710003600),
-    ]);
-    await tester.pumpAndSettle();
+      controller.add([
+        EMPresence('alice', 'busy', {'ios': 0}, 1710000000, 1710003600),
+      ]);
+      await tester.pumpAndSettle();
 
-    expect(find.text('离线'), findsOneWidget);
-    expect(find.text('busy'), findsAtLeastNWidgets(1));
-    expect(find.text('alice'), findsOneWidget);
-    expect(find.text('busy'), findsOneWidget);
+      expect(find.text('离线'), findsOneWidget);
+      expect(find.text('busy'), findsAtLeastNWidgets(1));
+      expect(find.text('alice'), findsOneWidget);
+      expect(find.text('busy'), findsOneWidget);
 
-    await controller.close();
-  });
+      await controller.close();
+    },
+  );
 }

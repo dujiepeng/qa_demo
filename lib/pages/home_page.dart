@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 import '../common/mixins/login_logic_mixin.dart';
 import '../common/utils/connection_status_overlay_controller.dart';
 import '../common/utils/offline_message_counter.dart';
+import '../common/utils/other_logged_in_devices_controller.dart';
 import '../common/utils/version_manager.dart';
 import '../common/widgets/update_dialog.dart';
+import 'single/contact_api.dart';
 import '../common/widgets/responsive_layout.dart';
 import '../mobile/home_page_mobile.dart';
 import '../pad/home_page_pad.dart';
@@ -77,6 +79,9 @@ class _HomePageState extends State<HomePage> {
       return;
     }
     final overlayController = context.read<ConnectionStatusOverlayController>();
+    final otherDevicesController = context
+        .read<OtherLoggedInDevicesController>();
+    final settings = context.read<AppSettings>();
     EMClient.getInstance.addConnectionEventHandler(
       _connectionHandlerId,
       EMConnectionEventHandler(
@@ -87,12 +92,17 @@ class _HomePageState extends State<HomePage> {
           overlayController.showMessage('连接状态：已断开');
         },
         onUserDidLoginFromOtherDevice: (info) {
-          final deviceName = info.deviceName?.trim();
-          overlayController.showMessage(
-            deviceName == null || deviceName.isEmpty
-                ? '连接状态：当前账号在其他设备登录'
-                : '连接状态：当前账号在其他设备登录 ($deviceName)',
-          );
+          final deviceName = info.deviceName.trim();
+          otherDevicesController.recordDeviceLogin(deviceName);
+          final userId = settings.lastLoginUserId.trim();
+          final password = settings.lastLoginPassword.trim();
+          if (userId.isNotEmpty && password.isNotEmpty) {
+            otherDevicesController.refreshFromServer(
+              loadDevices: () =>
+                  fetchLoggedInDevices(userId: userId, password: password),
+            );
+          }
+          overlayController.showMessage('连接状态：当前账号在其他设备登录 ($deviceName)');
         },
         onUserDidRemoveFromServer: () {
           overlayController.showMessage('连接状态：账号已被服务器移除');

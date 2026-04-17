@@ -68,6 +68,17 @@ class AppSettings extends ChangeNotifier {
   double get logBubbleVerticalRatio => _logBubbleVerticalRatio;
 
   bool isDirty = false;
+  String _lastLoginUserId = '';
+  String get lastLoginUserId => _lastLoginUserId;
+  set lastLoginUserId(String value) {
+    _lastLoginUserId = value;
+  }
+
+  String _lastLoginPassword = '';
+  String get lastLoginPassword => _lastLoginPassword;
+  set lastLoginPassword(String value) {
+    _lastLoginPassword = value;
+  }
 
   // 当前选中的集群名称，例如 TKE / NGI / 开发沙箱
   String activeEnvName = 'TKE';
@@ -107,6 +118,8 @@ class AppSettings extends ChangeNotifier {
   static const String _keyLogBubbleOnRightSide = 'log_bubble_on_right_side';
   static const String _keyLogBubbleVerticalRatio = 'log_bubble_vertical_ratio';
   static const String _legacyKeyIsLoggedIn = 'is_logged_in';
+  static const String _keyLastLoginUserId = 'last_login_user_id';
+  static const String _keyLastLoginPassword = 'last_login_password';
 
   // 从本地加载存储的配置
   Future<void> loadSettings() async {
@@ -164,6 +177,8 @@ class AppSettings extends ChangeNotifier {
     _logBubbleVerticalRatio = _clampBubbleRatio(
       prefs.getDouble(_keyLogBubbleVerticalRatio) ?? 0.7,
     );
+    _lastLoginUserId = prefs.getString(_keyLastLoginUserId) ?? '';
+    _lastLoginPassword = prefs.getString(_keyLastLoginPassword) ?? '';
 
     _updateSnapshot();
     isDirty = true;
@@ -207,6 +222,8 @@ class AppSettings extends ChangeNotifier {
       _keyLogBubbleVerticalRatio,
       _clampBubbleRatio(_logBubbleVerticalRatio),
     );
+    await prefs.setString(_keyLastLoginUserId, _lastLoginUserId);
+    await prefs.setString(_keyLastLoginPassword, _lastLoginPassword);
 
     _updateSnapshot();
     isDirty = true;

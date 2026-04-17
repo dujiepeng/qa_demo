@@ -5,14 +5,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('cold start always resets persisted login flag to show login page', () async {
-    SharedPreferences.setMockInitialValues({'is_logged_in': true});
-    final settings = AppSettings();
+  test(
+    'cold start always resets persisted login flag to show login page',
+    () async {
+      SharedPreferences.setMockInitialValues({'is_logged_in': true});
+      final settings = AppSettings();
 
-    await settings.loadSettings();
+      await settings.loadSettings();
 
-    expect(settings.isLoggedIn, isFalse);
-  });
+      expect(settings.isLoggedIn, isFalse);
+    },
+  );
 
   test('saveSettings no longer persists legacy login flag', () async {
     SharedPreferences.setMockInitialValues({});
@@ -46,5 +49,20 @@ void main() {
     expect(settings.isLogOverlayMinimized, isFalse);
     expect(settings.logBubbleOnRightSide, isTrue);
     expect(settings.logBubbleVerticalRatio, 0.8);
+  });
+
+  test('persists last login credentials for device refresh', () async {
+    SharedPreferences.setMockInitialValues({});
+    final settings = AppSettings();
+
+    settings.lastLoginUserId = 'qa_user';
+    settings.lastLoginPassword = 'secret';
+    await settings.saveSettings();
+
+    final restored = AppSettings();
+    await restored.loadSettings();
+
+    expect(restored.lastLoginUserId, 'qa_user');
+    expect(restored.lastLoginPassword, 'secret');
   });
 }

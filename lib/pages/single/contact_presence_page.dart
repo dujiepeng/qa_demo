@@ -5,13 +5,17 @@ import 'package:flutter/services.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import 'package:qa_flutter/pages/single/contact_api.dart';
 
+import '../../common/widgets/input_dialog.dart';
 import '../../common/widgets/common_gradient_background.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 
-typedef PresenceActionCallback = Future<List<EMPresence>> Function(String userId);
+typedef PresenceActionCallback =
+    Future<List<EMPresence>> Function(String userId);
 typedef PresenceCancelCallback = Future<void> Function(String userId);
 typedef ContactActionCallback = Future<void> Function(String userId);
+typedef ContactRemarkActionCallback =
+    Future<void> Function(String userId, String remark);
 
 class ContactPresencePage extends StatefulWidget {
   final Future<List<EMContact>> Function()? loadContacts;
@@ -20,6 +24,7 @@ class ContactPresencePage extends StatefulWidget {
   final PresenceCancelCallback? unsubscribePresence;
   final PresenceActionCallback? queryPresence;
   final ContactActionCallback? addUserToBlockList;
+  final ContactRemarkActionCallback? setContactRemark;
   final Stream<List<EMPresence>>? presenceUpdates;
 
   const ContactPresencePage({
@@ -30,6 +35,7 @@ class ContactPresencePage extends StatefulWidget {
     this.unsubscribePresence,
     this.queryPresence,
     this.addUserToBlockList,
+    this.setContactRemark,
     this.presenceUpdates,
   });
 
@@ -60,7 +66,9 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
   void dispose() {
     _presenceSubscription?.cancel();
     if (widget.presenceUpdates == null) {
-      EMClient.getInstance.presenceManager.removeEventHandler(_presenceHandlerId);
+      EMClient.getInstance.presenceManager.removeEventHandler(
+        _presenceHandlerId,
+      );
     }
     _scrollController.dispose();
     super.dispose();
@@ -68,7 +76,9 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
 
   void _attachPresenceUpdates() {
     if (widget.presenceUpdates != null) {
-      _presenceSubscription = widget.presenceUpdates!.listen(_applyPresenceList);
+      _presenceSubscription = widget.presenceUpdates!.listen(
+        _applyPresenceList,
+      );
       return;
     }
 
@@ -79,10 +89,7 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
   }
 
   Future<void> _initializePage() async {
-    await Future.wait([
-      _fetchContacts(),
-      _fetchSubscribedMembers(),
-    ]);
+    await Future.wait([_fetchContacts(), _fetchSubscribedMembers()]);
   }
 
   Future<void> _fetchContacts() async {
@@ -116,9 +123,9 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
 
   Future<void> _fetchSubscribedMembers() async {
     try {
-      final result = await (widget.loadSubscribedMembers ??
-              fetchSubscribedMembersFromSdk)
-          .call();
+      final result =
+          await (widget.loadSubscribedMembers ?? fetchSubscribedMembersFromSdk)
+              .call();
       if (!mounted) {
         return;
       }
@@ -145,7 +152,8 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
   _PresenceDisplay _buildPresenceDisplay(EMPresence presence) {
     final details = presence.statusDetails;
     final hasOnlineDevice = details != null && details.isNotEmpty;
-    final isOnline = hasOnlineDevice && details.values.any((status) => status > 0);
+    final isOnline =
+        hasOnlineDevice && details.values.any((status) => status > 0);
     final customStatus = presence.statusDescription.trim();
     return _PresenceDisplay(
       onlineLabel: isOnline ? '在线' : '离线',
@@ -271,8 +279,9 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
 
   Future<void> _queryPresence(String userId) async {
     try {
-      final result =
-          await (widget.queryPresence ?? queryPresenceFromSdk).call(userId);
+      final result = await (widget.queryPresence ?? queryPresenceFromSdk).call(
+        userId,
+      );
       if (!mounted) {
         return;
       }
@@ -309,6 +318,45 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
         context,
       ).showSnackBar(SnackBar(content: Text('加入黑名单失败: $e')));
     }
+  }
+
+  Future<void> _setRemark(EMContact contact) async {
+    final result = await showInputDialog(
+      context: context,
+      title: '设置备注',
+      fields: [
+        InputFieldData(title: '备注', placeholder: '请输入备注', text: contact.remark),
+      ],
+    );
+    if (!mounted || result == null || result.isEmpty) {
+      return;
+    }
+
+    final remark = result.first.text.trim();
+    try {
+      await (widget.setContactRemark ?? _setContactRemarkFromSdk)(
+        contact.userId,
+        remark,
+      );
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('设置备注成功')));
+      await _fetchContacts();
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('设置备注失败: $e')));
+    }
+  }
+
+  Future<void> _setContactRemarkFromSdk(String userId, String remark) {
+    return setContactRemarkFromSdk(userId: userId, remark: remark);
   }
 
   @override
@@ -397,6 +445,10 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
                                               child: Text('复制 ID'),
                                             ),
                                             const PopupMenuItem(
+                                              value: 'set_remark',
+                                              child: Text('设置备注'),
+                                            ),
+                                            const PopupMenuItem(
                                               value: 'subscribe',
                                               child: Text('订阅 Presence'),
                                             ),
@@ -417,6 +469,8 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
 
                                         if (value == 'copy_id') {
                                           _copyToClipboard(userId);
+                                        } else if (value == 'set_remark') {
+                                          _setRemark(contact);
                                         } else if (value == 'subscribe') {
                                           _subscribe(userId);
                                         } else if (value == 'unsubscribe') {
@@ -437,9 +491,13 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
                                           color: AppColors.inputBackground(
                                             isDark,
                                           ),
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                           border: Border.all(
-                                            color: AppColors.glassBorder(isDark),
+                                            color: AppColors.glassBorder(
+                                              isDark,
+                                            ),
                                           ),
                                         ),
                                         child: ListTile(
@@ -461,10 +519,14 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
                                             children: [
                                               Expanded(
                                                 child: Text(
-                                                  userId,
+                                                  contact.remark.trim().isEmpty
+                                                      ? userId
+                                                      : '$userId(${contact.remark.trim()})',
                                                   style: TextStyle(
-                                                    color: AppColors
-                                                        .textPrimary(isDark),
+                                                    color:
+                                                        AppColors.textPrimary(
+                                                          isDark,
+                                                        ),
                                                     fontWeight: FontWeight.bold,
                                                   ),
                                                 ),
@@ -500,10 +562,18 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
                                             ],
                                           ),
                                           subtitle: Padding(
-                                            padding: const EdgeInsets.only(top: 6),
-                                            child: _buildPresenceSubtitle(
-                                              isDark,
-                                              userId,
+                                            padding: const EdgeInsets.only(
+                                              top: 6,
+                                            ),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                _buildPresenceSubtitle(
+                                                  isDark,
+                                                  userId,
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ),
@@ -532,7 +602,7 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
         border: Border.all(color: AppColors.glassBorder(isDark)),
       ),
       child: Text(
-        '长按联系人可订阅、取消订阅或查询 Presence',
+        '长按联系人可设置备注、订阅、取消订阅或查询 Presence',
         style: TextStyle(
           color: AppColors.textSecondary(isDark),
           fontSize: 12,

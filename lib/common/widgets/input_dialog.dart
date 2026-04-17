@@ -105,75 +105,118 @@ class _InputDialogState extends State<_InputDialog> {
   @override
   Widget build(BuildContext context) {
     final isDark = _settings.isDarkMode;
+    final mediaQuery = MediaQuery.of(context);
+    const dialogInsetPadding = EdgeInsets.symmetric(
+      horizontal: 24,
+      vertical: 24,
+    );
+    final availableHeight =
+        mediaQuery.size.height -
+        mediaQuery.viewInsets.bottom -
+        dialogInsetPadding.vertical;
+    final maxDialogHeight = availableHeight.clamp(0.0, 560.0);
 
-    return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    return Dialog(
+      insetPadding: dialogInsetPadding,
       backgroundColor: isDark ? const Color(0xFF2C2C2E) : Colors.white,
-      title: Text(
-        widget.title,
-        style: TextStyle(color: AppColors.textPrimary(isDark)),
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(_fieldsCopy.length, (index) {
-            final field = _fieldsCopy[index];
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: index < _fieldsCopy.length - 1 ? 16 : 0,
-              ),
-              child: TextField(
-                controller: _controllers[index],
-                style: TextStyle(color: AppColors.textPrimary(isDark)),
-                minLines: 1,
-                maxLines: field.multiline ? 3 : 1,
-                decoration: InputDecoration(
-                  labelText: field.title,
-                  hintText: field.placeholder,
-                  labelStyle: TextStyle(color: AppColors.textSecondary(isDark)),
-                  hintStyle: TextStyle(
-                    color: AppColors.textSecondary(
-                      isDark,
-                    ).withValues(alpha: 0.5),
-                  ),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(
-                      color: AppColors.glassBorder(isDark),
-                    ),
-                  ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.primary(isDark)),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxDialogHeight),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                widget.title,
+                style: TextStyle(
+                  color: AppColors.textPrimary(isDark),
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-            );
-          }),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () {
-            // 点击取消，返回 null
-            Navigator.pop(context);
-          },
-          child: Text(
-            '取消',
-            style: TextStyle(color: AppColors.textSecondary(isDark)),
+              const SizedBox(height: 16),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(_fieldsCopy.length, (index) {
+                      final field = _fieldsCopy[index];
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          bottom: index < _fieldsCopy.length - 1 ? 16 : 0,
+                        ),
+                        child: TextField(
+                          controller: _controllers[index],
+                          style: TextStyle(
+                            color: AppColors.textPrimary(isDark),
+                          ),
+                          minLines: 1,
+                          maxLines: field.multiline ? 3 : 1,
+                          decoration: InputDecoration(
+                            labelText: field.title,
+                            hintText: field.placeholder,
+                            labelStyle: TextStyle(
+                              color: AppColors.textSecondary(isDark),
+                            ),
+                            hintStyle: TextStyle(
+                              color: AppColors.textSecondary(
+                                isDark,
+                              ).withValues(alpha: 0.5),
+                            ),
+                            enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                color: AppColors.glassBorder(isDark),
+                              ),
+                            ),
+                            focusedBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                color: AppColors.primary(isDark),
+                              ),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 8,
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    child: Text(
+                      '取消',
+                      style: TextStyle(color: AppColors.textSecondary(isDark)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: () {
+                      for (int i = 0; i < _fieldsCopy.length; i++) {
+                        _fieldsCopy[i].text = _controllers[i].text.trim();
+                      }
+                      Navigator.pop(context, _fieldsCopy);
+                    },
+                    child: Text(
+                      '确定',
+                      style: TextStyle(color: AppColors.primary(isDark)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-        TextButton(
-          onPressed: () {
-            // 更新字段数据
-            for (int i = 0; i < _fieldsCopy.length; i++) {
-              _fieldsCopy[i].text = _controllers[i].text.trim();
-            }
-            // 返回更新后的字段数据
-            Navigator.pop(context, _fieldsCopy);
-          },
-          child: Text('确定', style: TextStyle(color: AppColors.primary(isDark))),
-        ),
-      ],
+      ),
     );
   }
 }

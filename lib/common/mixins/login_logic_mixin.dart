@@ -116,6 +116,8 @@ mixin LoginLogicMixin<T extends StatefulWidget> on State<T> {
 
       // 登录成功，更新系统状态
       settings.isLoggedIn = true;
+      settings.lastLoginUserId = uid;
+      settings.lastLoginPassword = pwd;
       await settings.saveSettings();
 
       if (!mounted) return;

@@ -177,6 +177,8 @@ class MePageContent extends StatelessWidget {
               await EMClient.getInstance.logout();
             } catch (_) {}
             settings.isLoggedIn = false;
+            settings.lastLoginUserId = '';
+            settings.lastLoginPassword = '';
             await settings.saveSettings();
             if (context.mounted) {
               Navigator.of(

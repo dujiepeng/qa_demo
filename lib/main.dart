@@ -15,12 +15,15 @@ import 'pages/single/single_chat_list_page.dart';
 import 'pages/single/single_chat_page.dart';
 import 'pages/conversation/conversation_list_page.dart';
 import 'common/utils/connection_status_overlay_controller.dart';
+import 'common/utils/other_logged_in_devices_controller.dart';
 import 'common/utils/log_service.dart';
 import 'common/utils/offline_message_counter.dart';
 import 'common/utils/app_route_observer.dart';
 import 'common/utils/version_manager.dart';
 import 'common/widgets/connection_status_overlay.dart';
+import 'common/widgets/common_gradient_background.dart';
 import 'mobile/me_page_mobile.dart';
+import 'mobile/my_page_mobile.dart';
 import 'common/widgets/layout/mobile_log_overlay.dart';
 import 'common/widgets/responsive_layout.dart';
 
@@ -46,6 +49,7 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) => ConnectionStatusOverlayController(),
         ),
+        ChangeNotifierProvider(create: (_) => OtherLoggedInDevicesController()),
       ],
       child: const MyApp(),
     ),
@@ -92,17 +96,23 @@ class _MyAppState extends State<MyApp> {
 
         // 使用 ResponsiveLayout 判断是否在移动端显示全局日志遮罩
         return ResponsiveLayout(
-          mobile: Stack(
-            children: [
-              MobileLogOverlay(child: child),
-              const Positioned.fill(child: ConnectionStatusOverlay()),
-            ],
+          mobile: CommonGradientBackground(
+            isDark: settings.isDarkMode,
+            child: Stack(
+              children: [
+                MobileLogOverlay(child: child),
+                const Positioned.fill(child: ConnectionStatusOverlay()),
+              ],
+            ),
           ),
-          tablet: Stack(
-            children: [
-              child,
-              const Positioned.fill(child: ConnectionStatusOverlay()),
-            ],
+          tablet: CommonGradientBackground(
+            isDark: settings.isDarkMode,
+            child: Stack(
+              children: [
+                child,
+                const Positioned.fill(child: ConnectionStatusOverlay()),
+              ],
+            ),
           ),
         );
       },
@@ -121,6 +131,7 @@ class _MyAppState extends State<MyApp> {
         '/black_list': (context) => const BlackListPage(),
         '/conversation_list': (context) => const ConversationListPage(),
         '/me_page': (context) => const MePageMobile(),
+        '/my_page': (context) => const MyPageMobile(),
       },
     );
   }

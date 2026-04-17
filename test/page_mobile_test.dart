@@ -15,7 +15,18 @@ void main() {
     expect(find.text('黑名单'), findsOneWidget);
   });
 
-  testWidgets('mobile feature list shows offline message count', (tester) async {
+  testWidgets('mobile feature list shows my entry', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: PageMobile()));
+
+    await tester.drag(find.byType(GridView), const Offset(0, -300));
+    await tester.pumpAndSettle();
+
+    expect(find.text('我的'), findsOneWidget);
+  });
+
+  testWidgets('mobile feature list shows offline message count', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(home: PageMobile(offlineMessageCount: 3)),
     );
