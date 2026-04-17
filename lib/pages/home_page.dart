@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import 'package:provider/provider.dart';
 import '../common/mixins/login_logic_mixin.dart';
+import '../common/utils/connection_status_overlay_controller.dart';
+import '../common/utils/offline_message_counter.dart';
 import '../common/utils/version_manager.dart';
 import '../common/widgets/update_dialog.dart';
 import '../common/widgets/responsive_layout.dart';
@@ -16,6 +19,11 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  static const _connectionHandlerId = 'home_page_connection_status_overlay';
+  static const _offlineMessageHandlerId = 'home_page_offline_message_counter';
+  bool _connectionHandlerAttached = false;
+  bool _offlineMessageHandlerAttached = false;
+
   @override
   void initState() {
     super.initState();
@@ -27,13 +35,92 @@ class _HomePageState extends State<HomePage> {
       if (!mounted) return;
       final settings = context.read<AppSettings>();
       await ensureSdkInit(settings);
+      if (!mounted) return;
+      _attachConnectionStatusHandler();
+      _attachOfflineMessageCounter();
     });
   }
 
   @override
   void dispose() {
+    if (_connectionHandlerAttached) {
+      EMClient.getInstance.removeConnectionEventHandler(_connectionHandlerId);
+    }
+    if (_offlineMessageHandlerAttached) {
+      EMClient.getInstance.chatManager.removeEventHandler(
+        _offlineMessageHandlerId,
+      );
+    }
     VersionManager().removeListener(_checkAndShowUpdateDialog);
     super.dispose();
+  }
+
+  void _attachOfflineMessageCounter() {
+    if (_offlineMessageHandlerAttached) {
+      return;
+    }
+    final counter = context.read<OfflineMessageCounter>();
+    EMClient.getInstance.chatManager.addEventHandler(
+      _offlineMessageHandlerId,
+      EMChatEventHandler(
+        onMessagesReceived: (messages) {
+          debugPrint('onMessagesReceived: ${messages.length}');
+          counter.recordMessages(messages);
+        },
+      ),
+    );
+    _offlineMessageHandlerAttached = true;
+  }
+
+  void _attachConnectionStatusHandler() {
+    if (_connectionHandlerAttached) {
+      return;
+    }
+    final overlayController = context.read<ConnectionStatusOverlayController>();
+    EMClient.getInstance.addConnectionEventHandler(
+      _connectionHandlerId,
+      EMConnectionEventHandler(
+        onConnected: () {
+          overlayController.showMessage('连接状态：已连接');
+        },
+        onDisconnected: () {
+          overlayController.showMessage('连接状态：已断开');
+        },
+        onUserDidLoginFromOtherDevice: (info) {
+          final deviceName = info.deviceName?.trim();
+          overlayController.showMessage(
+            deviceName == null || deviceName.isEmpty
+                ? '连接状态：当前账号在其他设备登录'
+                : '连接状态：当前账号在其他设备登录 ($deviceName)',
+          );
+        },
+        onUserDidRemoveFromServer: () {
+          overlayController.showMessage('连接状态：账号已被服务器移除');
+        },
+        onUserDidForbidByServer: () {
+          overlayController.showMessage('连接状态：账号已被服务器禁止连接');
+        },
+        onUserKickedByOtherDevice: () {
+          overlayController.showMessage('连接状态：当前账号被其他设备踢下线');
+        },
+        onTokenWillExpire: () {
+          overlayController.showMessage('连接状态：Token 即将过期');
+        },
+        onTokenDidExpire: () {
+          overlayController.showMessage('连接状态：Token 已过期');
+        },
+        onAppActiveNumberReachLimit: () {
+          overlayController.showMessage('连接状态：应用活跃用户数已达上限');
+        },
+        onOfflineMessageSyncStart: () {
+          overlayController.showMessage('连接状态：开始同步离线消息');
+        },
+        onOfflineMessageSyncFinish: () {
+          overlayController.showMessage('连接状态：离线消息同步完成');
+        },
+      ),
+    );
+    _connectionHandlerAttached = true;
   }
 
   bool _hasShownUpdateDialog = false;

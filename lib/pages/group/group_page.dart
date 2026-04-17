@@ -36,6 +36,7 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
   final _messageController = TextEditingController();
   final _logController = LogController();
   final _repeatCountController = TextEditingController(text: '1');
+  bool _deliverOnlineOnly = false;
   String _groupId = '';
 
   @override
@@ -166,12 +167,35 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
   Widget _buildControlPanel(bool isDark, bool isWide) {
     return Column(
       children: [
-        CommonInputRow(
-          controller: _groupIdController,
-          hintText: '输入群组 ID',
-          buttonText: _groupId.isNotEmpty ? 'Leave' : 'Join',
-          onPressed: _handleJoinLeaveGroup,
-          isDark: isDark,
+        Row(
+          children: [
+            Expanded(
+              child: CommonInputRow(
+                controller: _groupIdController,
+                hintText: '输入群组 ID',
+                buttonText: _groupId.isNotEmpty ? 'Leave' : 'Join',
+                onPressed: _handleJoinLeaveGroup,
+                isDark: isDark,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Checkbox(
+              value: _deliverOnlineOnly,
+              onChanged: (value) {
+                setState(() {
+                  _deliverOnlineOnly = value ?? false;
+                });
+              },
+            ),
+            Text(
+              '只发在线',
+              style: TextStyle(
+                color: AppColors.textPrimary(isDark),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 20),
         CommonInputRow(
@@ -256,6 +280,7 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
       return;
     }
     try {
+      msg.deliverOnlineOnly = _deliverOnlineOnly;
       msg.attributes = {
         'extKey1': 'extValue1',
         'date': DateTime.now().toString(),

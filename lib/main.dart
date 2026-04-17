@@ -14,9 +14,12 @@ import 'pages/single/contact_presence_page.dart';
 import 'pages/single/single_chat_list_page.dart';
 import 'pages/single/single_chat_page.dart';
 import 'pages/conversation/conversation_list_page.dart';
+import 'common/utils/connection_status_overlay_controller.dart';
 import 'common/utils/log_service.dart';
+import 'common/utils/offline_message_counter.dart';
 import 'common/utils/app_route_observer.dart';
 import 'common/utils/version_manager.dart';
+import 'common/widgets/connection_status_overlay.dart';
 import 'mobile/me_page_mobile.dart';
 import 'common/widgets/layout/mobile_log_overlay.dart';
 import 'common/widgets/responsive_layout.dart';
@@ -39,6 +42,10 @@ void main() async {
         ChangeNotifierProvider.value(value: AppSettings()),
         ChangeNotifierProvider.value(value: VersionManager()),
         ChangeNotifierProvider(create: (_) => LogService()),
+        ChangeNotifierProvider(create: (_) => OfflineMessageCounter()),
+        ChangeNotifierProvider(
+          create: (_) => ConnectionStatusOverlayController(),
+        ),
       ],
       child: const MyApp(),
     ),
@@ -85,8 +92,18 @@ class _MyAppState extends State<MyApp> {
 
         // 使用 ResponsiveLayout 判断是否在移动端显示全局日志遮罩
         return ResponsiveLayout(
-          mobile: MobileLogOverlay(child: child),
-          tablet: child,
+          mobile: Stack(
+            children: [
+              MobileLogOverlay(child: child),
+              const Positioned.fill(child: ConnectionStatusOverlay()),
+            ],
+          ),
+          tablet: Stack(
+            children: [
+              child,
+              const Positioned.fill(child: ConnectionStatusOverlay()),
+            ],
+          ),
         );
       },
       // 根据登录状态动态决定起始页面

@@ -179,7 +179,7 @@ class VersionManager extends ChangeNotifier {
     try {
       final changelogResponse = await http.get(
         Uri.parse(
-          'https://raw.githubusercontent.com/dujiepeng/qa_demo/main/changelog.md',
+          'https://raw.githubusercontent.com/dujiepeng/qa_demo/dev/changelog.md',
         ),
       );
       if (changelogResponse.statusCode == 200) {

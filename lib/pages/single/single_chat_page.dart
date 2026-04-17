@@ -30,6 +30,7 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
   final _logController = LogController();
   final _repeatCountController = TextEditingController(text: '1');
   final Map<String, Map<String, int>> _reactionCountsByMessageId = {};
+  bool _deliverOnlineOnly = false;
 
   @override
   LogController get logController => _logController;
@@ -174,10 +175,33 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
   Widget _buildControlPanel(bool isDark, bool isWide) {
     return Column(
       children: [
-        CommonInputRow(
-          controller: _userIdController,
-          hintText: '输入对方 ID',
-          isDark: isDark,
+        Row(
+          children: [
+            Expanded(
+              child: CommonInputRow(
+                controller: _userIdController,
+                hintText: '输入对方 ID',
+                isDark: isDark,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Checkbox(
+              value: _deliverOnlineOnly,
+              onChanged: (value) {
+                setState(() {
+                  _deliverOnlineOnly = value ?? false;
+                });
+              },
+            ),
+            Text(
+              '只发在线',
+              style: TextStyle(
+                color: AppColors.textPrimary(isDark),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 20),
         CommonInputRow(
@@ -382,6 +406,7 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
       return;
     }
     try {
+      msg.deliverOnlineOnly = _deliverOnlineOnly;
       msg.attributes = {
         'extKey1': 'extValue1',
         'date': DateTime.now().toString(),

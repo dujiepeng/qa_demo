@@ -22,7 +22,12 @@ class GridItem {
 
 class PageMobile extends StatefulWidget {
   final bool isDark;
-  const PageMobile({super.key, this.isDark = true});
+  final int offlineMessageCount;
+  const PageMobile({
+    super.key,
+    this.isDark = true,
+    this.offlineMessageCount = 0,
+  });
 
   @override
   State<PageMobile> createState() => _PageMobileState();
@@ -108,15 +113,43 @@ class _PageMobileState extends State<PageMobile> {
         ),
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: GridView.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 1.0,
-            ),
-            itemCount: _testItems.length,
-            itemBuilder: (context, index) => _buildGridItem(_testItems[index], isDark),
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.inputBackground(isDark),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.glassBorder(isDark)),
+                ),
+                child: Text(
+                  '离线消息: ${widget.offlineMessageCount}',
+                  style: TextStyle(
+                    color: AppColors.textPrimary(isDark),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 1.0,
+                  ),
+                  itemCount: _testItems.length,
+                  itemBuilder: (context, index) =>
+                      _buildGridItem(_testItems[index], isDark),
+                ),
+              ),
+            ],
           ),
         ),
       ),

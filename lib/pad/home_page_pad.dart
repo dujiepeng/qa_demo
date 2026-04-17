@@ -1,6 +1,7 @@
 import 'package:chat_uikit_theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../common/utils/offline_message_counter.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
 import '../common/widgets/common_dialogs.dart';
@@ -61,6 +62,7 @@ class _HomePagePadState extends State<HomePagePad> with TickerProviderStateMixin
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<AppSettings>();
+    final offlineMessageCount = context.watch<OfflineMessageCounter>().count;
     final isDark = settings.isDarkMode;
 
     return Scaffold(
@@ -154,7 +156,7 @@ class _HomePagePadState extends State<HomePagePad> with TickerProviderStateMixin
           // 右侧内容区域
           Expanded(
             child: _navIndex == 0
-                ? _buildDashboard(isDark)
+                ? _buildDashboard(isDark, offlineMessageCount)
                 : MePagePad(isDark: isDark),
           ),
         ],
@@ -163,11 +165,11 @@ class _HomePagePadState extends State<HomePagePad> with TickerProviderStateMixin
   }
 
   // 构建测试面板 (主逻辑)
-  Widget _buildDashboard(bool isDark) {
+  Widget _buildDashboard(bool isDark, int offlineMessageCount) {
     return Column(
       children: [
         // 顶层工具栏 (Master AppBar)
-        _buildMasterAppBar(isDark),
+        _buildMasterAppBar(isDark, offlineMessageCount),
         // 上半部分内容 (列表或详情)
         Expanded(
           child:
@@ -222,14 +224,14 @@ class _HomePagePadState extends State<HomePagePad> with TickerProviderStateMixin
   }
 
   // 构建顶层统一工具栏 (仅用于测试面板)
-  Widget _buildMasterAppBar(bool isDark) {
+  Widget _buildMasterAppBar(bool isDark, int offlineMessageCount) {
     return Material(
       color: isDark
           ? ChatUIKitTheme.instance.color.neutralColor1
           : ChatUIKitTheme.instance.color.neutralColor98,
       child: Container(
-        height: 70,
-        padding: const EdgeInsets.only(top: 20),
+        height: 96,
+        padding: const EdgeInsets.only(top: 20, left: 16, right: 16),
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
@@ -238,9 +240,31 @@ class _HomePagePadState extends State<HomePagePad> with TickerProviderStateMixin
             ),
           ),
         ),
-        child: _detailPage != null
-            ? _buildDetailHeader(isDark)
-            : _buildTabHeader(isDark),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildOfflineMessageSummary(isDark, offlineMessageCount),
+            Expanded(
+              child: _detailPage != null
+                  ? _buildDetailHeader(isDark)
+                  : _buildTabHeader(isDark),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOfflineMessageSummary(bool isDark, int offlineMessageCount) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text(
+        '离线消息: $offlineMessageCount',
+        style: TextStyle(
+          color: AppColors.textPrimary(isDark),
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -255,6 +279,8 @@ class _HomePagePadState extends State<HomePagePad> with TickerProviderStateMixin
       indicatorSize: TabBarIndicatorSize.label,
       indicatorWeight: 3,
       dividerColor: Colors.transparent,
+      tabAlignment: TabAlignment.start,
+      isScrollable: true,
       tabs: const [
         Tab(
           height: 50,
@@ -306,7 +332,6 @@ class _HomePagePadState extends State<HomePagePad> with TickerProviderStateMixin
   Widget _buildDetailHeader(bool isDark) {
     return Row(
       children: [
-        const SizedBox(width: 8),
         IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 18),
           onPressed: _hideDetail,

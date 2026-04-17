@@ -14,4 +14,12 @@ void main() {
 
     expect(find.text('黑名单'), findsOneWidget);
   });
+
+  testWidgets('mobile feature list shows offline message count', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: PageMobile(offlineMessageCount: 3)),
+    );
+
+    expect(find.text('离线消息: 3'), findsOneWidget);
+  });
 }

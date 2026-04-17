@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:qa_flutter/common/utils/offline_message_counter.dart';
 import 'page_mobile.dart';
 
 class HomePageMobile extends StatelessWidget {
@@ -6,6 +8,7 @@ class HomePageMobile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const PageMobile();
+    final offlineMessageCount = context.watch<OfflineMessageCounter>().count;
+    return PageMobile(offlineMessageCount: offlineMessageCount);
   }
 }
