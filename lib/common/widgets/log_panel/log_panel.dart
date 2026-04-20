@@ -31,9 +31,12 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
   late final LogPanelController _controller;
   late final LogPanelVisibilityObserver _visibilityObserver;
   final ScrollController _logScrollController = ScrollController();
+  final TextEditingController _filterController = TextEditingController();
 
   bool _autoScroll = true;
   bool _hasPendingNewLogs = false;
+  bool _showFilterField = false;
+  String _filterKeyword = '';
 
   @override
   void initState() {
@@ -84,6 +87,19 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
     }
   }
 
+  String get _visibleContent {
+    final rawContent = _controller.content;
+    final keyword = _filterKeyword.trim().toLowerCase();
+    if (keyword.isEmpty) {
+      return rawContent;
+    }
+
+    return rawContent
+        .split('\n')
+        .where((line) => line.toLowerCase().contains(keyword))
+        .join('\n');
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_logScrollController.hasClients) {
@@ -100,12 +116,15 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
     _controller.dispose();
     _blinkController.dispose();
     _logScrollController.dispose();
+    _filterController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = widget.isDark;
+    final visibleContent = _visibleContent;
+    final hasFilter = _filterKeyword.trim().isNotEmpty;
 
     return Container(
       color: isDark ? Colors.black87 : Colors.grey[100],
@@ -179,15 +198,33 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
                     },
                   ),
                   IconButton(
+                    icon: Icon(
+                      _showFilterField
+                          ? Icons.filter_alt_off_outlined
+                          : Icons.filter_alt_outlined,
+                      size: 18,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _showFilterField = !_showFilterField;
+                      });
+                    },
+                    tooltip: _showFilterField ? '收起过滤' : '过滤日志',
+                  ),
+                  IconButton(
                     icon: const Icon(Icons.copy_all, size: 18),
                     onPressed: () async {
-                      if (_controller.content.isNotEmpty) {
+                      if (visibleContent.isNotEmpty) {
                         await Clipboard.setData(
-                          ClipboardData(text: _controller.content),
+                          ClipboardData(text: visibleContent),
                         );
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('SDK日志已复制')),
+                            SnackBar(
+                              content: Text(
+                                hasFilter ? '过滤日志已复制' : 'SDK日志已复制',
+                              ),
+                            ),
                           );
                         }
                       }
@@ -210,6 +247,48 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
               ),
             ],
           ),
+          if (_showFilterField) ...[
+            const SizedBox(height: 8),
+            TextField(
+              controller: _filterController,
+              onChanged: (value) {
+                setState(() {
+                  _filterKeyword = value;
+                });
+              },
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: '过滤关键字',
+                hintStyle: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? Colors.white54 : Colors.black45,
+                ),
+                prefixIcon: const Icon(Icons.search, size: 18),
+                suffixIcon: _filterKeyword.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        onPressed: () {
+                          _filterController.clear();
+                          setState(() {
+                            _filterKeyword = '';
+                          });
+                        },
+                      ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ],
           const Divider(),
           Expanded(
             child: NotificationListener<ScrollNotification>(
@@ -228,15 +307,23 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
               child: SingleChildScrollView(
                 controller: _logScrollController,
                 padding: const EdgeInsets.symmetric(vertical: 8),
-                child: SelectableText(
-                  _controller.content,
-                  style: TextStyle(
-                    fontFamily: 'Courier',
-                    fontSize: 12,
-                    color: isDark ? Colors.greenAccent : Colors.black87,
-                    height: 1.5,
-                  ),
-                ),
+                child: visibleContent.isEmpty && hasFilter
+                    ? Text(
+                        '无匹配日志',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.white60 : Colors.black54,
+                        ),
+                      )
+                    : SelectableText(
+                        visibleContent,
+                        style: TextStyle(
+                          fontFamily: 'Courier',
+                          fontSize: 12,
+                          color: isDark ? Colors.greenAccent : Colors.black87,
+                          height: 1.5,
+                        ),
+                      ),
               ),
             ),
           ),

@@ -1,11 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:qa_flutter/common/utils/log_file_helper.dart';
+import 'package:qa_flutter/common/utils/log_panel_sync.dart';
+import 'package:qa_flutter/common/widgets/log_panel/log_panel.dart';
 import 'package:qa_flutter/common/widgets/layout/mobile_log_overlay.dart';
 import 'package:qa_flutter/theme/app_settings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     final settings = AppSettings();
@@ -173,5 +181,159 @@ void main() {
     final after = tester.getTopLeft(bubbleFinder);
     expect(after.dy, greaterThan(before.dy));
     expect(settings.logBubbleVerticalRatio, greaterThan(0.2));
+  });
+
+  testWidgets('log panel filters visible lines by keyword', (tester) async {
+    var content = 'alpha line\nbeta target\ncharlie target';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 300,
+            child: LogPanel(
+              isDark: true,
+              prepareLogFile: () async => const LogFileOpenResult(
+                status: LogFileOpenStatus.ready,
+                logPath: '/tmp/mock.log',
+              ),
+              readLogState: (logPath, {previous, maxRetainedCharacters = 120000}) async {
+                return LogPanelFileState(
+                  content: content,
+                  fileLength: content.length,
+                  unchangedCount: 0,
+                  nextPollInterval: const Duration(seconds: 1),
+                );
+              },
+              enableFallbackPolling: false,
+              logUpdateStreamFactory: (_) => const Stream<Object?>.empty(),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.filter_alt_outlined));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'target');
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('beta target'), findsOneWidget);
+    expect(find.textContaining('charlie target'), findsOneWidget);
+    expect(find.textContaining('alpha line'), findsNothing);
+  });
+
+  testWidgets('log panel updates filtered results when new matching logs arrive', (
+    tester,
+  ) async {
+    final controller = StreamController<Object?>();
+    var content = 'alpha line';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 300,
+            child: LogPanel(
+              isDark: true,
+              prepareLogFile: () async => const LogFileOpenResult(
+                status: LogFileOpenStatus.ready,
+                logPath: '/tmp/mock.log',
+              ),
+              readLogState: (logPath, {previous, maxRetainedCharacters = 120000}) async {
+                return LogPanelFileState(
+                  content: content,
+                  fileLength: content.length,
+                  unchangedCount: 0,
+                  nextPollInterval: const Duration(seconds: 1),
+                );
+              },
+              enableFallbackPolling: false,
+              logUpdateStreamFactory: (_) => controller.stream,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.filter_alt_outlined));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'target');
+    await tester.pumpAndSettle();
+
+    expect(find.text('无匹配日志'), findsOneWidget);
+
+    content = 'alpha line\nnew target line';
+    controller.add(null);
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('new target line'), findsOneWidget);
+    expect(find.text('无匹配日志'), findsNothing);
+
+    await controller.close();
+  });
+
+  testWidgets('log panel copies filtered visible content', (tester) async {
+    const content = 'alpha line\nbeta target\ncharlie target';
+    String? copiedText;
+    final messenger = TestDefaultBinaryMessengerBinding
+        .instance
+        .defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') {
+        copiedText = (call.arguments as Map)['text'] as String?;
+      }
+      if (call.method == 'Clipboard.getData') {
+        return <String, dynamic>{'text': copiedText};
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 300,
+            child: LogPanel(
+              isDark: true,
+              prepareLogFile: () async => const LogFileOpenResult(
+                status: LogFileOpenStatus.ready,
+                logPath: '/tmp/mock.log',
+              ),
+              readLogState: (logPath, {previous, maxRetainedCharacters = 120000}) async {
+                return const LogPanelFileState(
+                  content: content,
+                  fileLength: content.length,
+                  unchangedCount: 0,
+                  nextPollInterval: Duration(seconds: 1),
+                );
+              },
+              enableFallbackPolling: false,
+              logUpdateStreamFactory: (_) => const Stream<Object?>.empty(),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.filter_alt_outlined));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'target');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.copy_all));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(copiedText, 'beta target\ncharlie target');
+
+    messenger.setMockMethodCallHandler(SystemChannels.platform, null);
   });
 }
