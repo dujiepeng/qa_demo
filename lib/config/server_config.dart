@@ -23,7 +23,7 @@ class ServerEnvironment {
   static const ServerEnvironment tke = ServerEnvironment(
     name: 'TKE',
     appKey: 'easemob-demo#tke-sdb', // 替换为真实的 TKE AppKey
-    restServer: 'http://tke-sdb-a1.easemob.com:80', // 替换为真实的 TKE REST
+    restServer: 'https://tke-sdb-a1.easemob.com', // 替换为真实的 TKE REST
     msyncServer: 'tke-sdb-msync-im1.easemob.com', // 替换为真实的 TKE msync
     msyncPort: 6717,
     wsServer: 'tke-sdb-im-api-wechat.easemob.com', // 替换为真实的 TKE websocket
