@@ -85,6 +85,41 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
             }
           }
         },
+
+        onMessagePinChanged:
+            (messageId, conversationId, pinOperation, pinInfo) {
+              logController.entities
+                  .where((element) => element.attachment is EMMessage)
+                  .forEach((element) {
+                    final message = element.attachment as EMMessage;
+                    if (messageId == message.msgId) {
+                      logController.updateEntry(
+                        element,
+                        style: LogStyle.none,
+                        overlayLabel: pinOperation == MessagePinOperation.Pin
+                            ? '已置顶'
+                            : '取消置顶',
+                        overlayStyle: LogOverlayStyle.success,
+                      );
+                    }
+                  });
+            },
+        onMessagesDelivered: (messages) {
+          final recalledMessages = messages.map((e) => e.msgId).toSet();
+          logController.entities
+              .where((element) => element.attachment is EMMessage)
+              .forEach((element) {
+                final message = element.attachment as EMMessage;
+                if (recalledMessages.contains(message.msgId)) {
+                  logController.updateEntry(
+                    element,
+                    style: LogStyle.none,
+                    overlayLabel: '消息已送达',
+                    overlayStyle: LogOverlayStyle.success,
+                  );
+                }
+              });
+        },
         onMessageContentChanged: (msg, operator, operationTime) {
           addReceiveLog(
             '${msg.from}: ${msg.toJson().toString()}',
@@ -108,21 +143,19 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
         },
         onMessagesRead: (messages) {
           final recalledMessages = messages.map((e) => e.msgId).toSet();
-          List<LogEntry> list = [];
           logController.entities
               .where((element) => element.attachment is EMMessage)
               .forEach((element) {
                 final message = element.attachment as EMMessage;
                 if (recalledMessages.contains(message.msgId)) {
-                  list.add(element);
+                  logController.updateEntry(
+                    element,
+                    style: LogStyle.none,
+                    overlayLabel: '消息对方已读',
+                    overlayStyle: LogOverlayStyle.success,
+                  );
                 }
               });
-          logController.changeEntities(
-            list,
-            style: LogStyle.none,
-            color: Colors.yellow,
-          );
-          addSendLog('收到消息已读, 已读消息会变成黄色');
         },
         onMessageReactionDidChange: (events) {
           final currentConversationId = _userIdController.text
@@ -233,20 +266,26 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
       menuShowCallback: () {
         FocusScope.of(context).unfocus();
       },
-      actionsBuilder: (entry) => _buildLogActions(entry),
+      asyncActionsBuilder: (entry) => _buildLogActions(entry),
     );
   }
 
-  List<LogAction> _buildLogActions(LogEntry entry) {
+  Future<List<LogAction>> _buildLogActions(LogEntry entry) async {
     final actions = <LogAction>[LogViewActions.copyEntry()];
+
     final attachment = entry.attachment;
     if (entry.tag == 'message' && attachment is EMMessage) {
       final message = attachment;
+      final latestMessage =
+          await EMClient.getInstance.chatManager.loadMessage(message.msgId) ??
+          message;
+      final isPinned = await latestMessage.pinInfo() != null;
       actions.addAll([
         LogAction(
           id: 'send_read_ack',
           title: '发送单聊已读ACK',
           icon: Icons.mark_chat_read_outlined,
+          isVisible: (_) => message.direction == MessageDirection.RECEIVE,
           onSelected: (_) async {
             try {
               await EMClient.getInstance.chatManager.sendMessageReadAck(
@@ -295,6 +334,50 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
           },
         ),
         LogAction(
+          id: 'pin_message',
+          title: '消息置顶',
+          icon: Icons.push_pin_outlined,
+          isVisible: (_) => !isPinned,
+          onSelected: (_) async {
+            try {
+              await EMClient.getInstance.chatManager.pinMessage(
+                messageId: message.msgId,
+              );
+              return const LogActionResult(
+                overlayLabel: '已置顶',
+                overlayStyle: LogOverlayStyle.success,
+              );
+            } catch (e) {
+              return LogActionResult(
+                overlayLabel: '置顶失败: $e',
+                overlayStyle: LogOverlayStyle.error,
+              );
+            }
+          },
+        ),
+        LogAction(
+          id: 'unpin_message',
+          title: '取消置顶',
+          icon: Icons.push_pin,
+          isVisible: (_) => isPinned,
+          onSelected: (_) async {
+            try {
+              await EMClient.getInstance.chatManager.unpinMessage(
+                messageId: message.msgId,
+              );
+              return const LogActionResult(
+                overlayLabel: '已取消置顶',
+                overlayStyle: LogOverlayStyle.success,
+              );
+            } catch (e) {
+              return LogActionResult(
+                overlayLabel: '取消置顶失败: $e',
+                overlayStyle: LogOverlayStyle.error,
+              );
+            }
+          },
+        ),
+        LogAction(
           id: 'delete_remote',
           title: '从服务器删除',
           icon: Icons.delete_sweep_outlined,
@@ -307,7 +390,6 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
                     type: EMConversationType.values[message.chatType.index],
                     msgIds: [message.msgId],
                   );
-              addSendLog('从服务器删除成功');
               return LogActionResult(
                 overlayLabel: '已从服务器删除',
                 overlayStyle: LogOverlayStyle.warning,
@@ -581,21 +663,25 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
         icon: Icons.article_outlined,
         label: '拉消息1',
         onTap: () async {
-          EMCursorResult result = await EMClient.getInstance.chatManager
-              .fetchHistoryMessagesByOption(
-                _userIdController.text,
-                EMConversationType.Chat,
-                cursor: _cursor,
-                pageSize: _pageSize,
+          try {
+            EMCursorResult result = await EMClient.getInstance.chatManager
+                .fetchHistoryMessagesByOption(
+                  _userIdController.text,
+                  EMConversationType.Chat,
+                  cursor: _cursor,
+                  pageSize: _pageSize,
+                );
+            _cursor = result.cursor;
+            if (result.data.length < _pageSize) {
+              addSendLog(
+                'rest拉取消息成功: ${result.data.length}/$_pageSize, 已无更多,再点将重新拉取',
+                color: Colors.red,
               );
-          _cursor = result.cursor;
-          if (result.data.length < _pageSize) {
-            addSendLog(
-              '1拉取消息成功: ${result.data.length}/$_pageSize, 已无更多,再点将重新拉取',
-              color: Colors.red,
-            );
-          } else {
-            addSendLog('拉取消息成功: ${result.data.length}/$_pageSize, 还有更多');
+            } else {
+              addSendLog('rest拉取消息成功: ${result.data.length}/$_pageSize, 还有更多');
+            }
+          } catch (e) {
+            addSendLog('rest拉取消息失败: $e');
           }
         },
       ),
@@ -603,22 +689,143 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
         icon: Icons.article_outlined,
         label: '拉消息2',
         onTap: () async {
-          EMCursorResult result = await EMClient.getInstance.chatManager
-              // ignore: deprecated_member_use
-              .fetchHistoryMessages(
-                conversationId: _userIdController.text,
-                type: EMConversationType.Chat,
-                startMsgId: _cursor ?? "",
-                pageSize: _pageSize,
+          try {
+            EMCursorResult result = await EMClient.getInstance.chatManager
+                // ignore: deprecated_member_use
+                .fetchHistoryMessages(
+                  conversationId: _userIdController.text,
+                  type: EMConversationType.Chat,
+                  startMsgId: _cursor ?? "",
+                  pageSize: _pageSize,
+                );
+            _cursor = result.cursor;
+            if (result.data.length < _pageSize) {
+              addSendLog(
+                'msync拉取消息成功: ${result.data.length}/$_pageSize, 已无更多,再点将重新拉取',
+                color: Colors.red,
               );
-          _cursor = result.cursor;
-          if (result.data.length < _pageSize) {
-            addSendLog(
-              '2拉取消息成功: ${result.data.length}/$_pageSize, 已无更多,再点将重新拉取',
-              color: Colors.red,
+            } else {
+              addSendLog('msync拉取消息成功: ${result.data.length}/$_pageSize, 还有更多');
+            }
+          } catch (e) {
+            addSendLog('msync拉取消息失败: $e');
+          }
+        },
+      ),
+      GridActionItem(
+        icon: Icons.article_outlined,
+        label: '置顶列表',
+        onTap: () async {
+          try {
+            List<EMMessage> list = await EMClient.getInstance.chatManager
+                .fetchPinnedMessages(conversationId: _userIdController.text);
+            if (!mounted) return;
+            await showDialog<void>(
+              context: context,
+              builder: (context) {
+                final pinnedMessages = List<EMMessage>.from(list);
+                return StatefulBuilder(
+                  builder: (context, setDialogState) => AlertDialog(
+                    title: Text('置顶消息 (${pinnedMessages.length})'),
+                    content: SizedBox(
+                      width: double.maxFinite,
+                      child: pinnedMessages.isEmpty
+                          ? const Text('暂无置顶消息')
+                          : ListView.separated(
+                              shrinkWrap: true,
+                              itemCount: pinnedMessages.length,
+                              separatorBuilder: (_, _) =>
+                                  const Divider(height: 1),
+                              itemBuilder: (context, index) {
+                                final pinnedMessage = pinnedMessages[index];
+                                return Row(
+                                  children: [
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 8,
+                                        ),
+                                        child: SelectableText(
+                                          pinnedMessage.msgId,
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.delete_outline,
+                                        color: Colors.red,
+                                      ),
+                                      tooltip: '取消置顶',
+                                      onPressed: () async {
+                                        try {
+                                          await EMClient.getInstance.chatManager
+                                              .unpinMessage(
+                                                messageId: pinnedMessage.msgId,
+                                              );
+                                          logController.entities
+                                              .where(
+                                                (element) =>
+                                                    element.attachment
+                                                        is EMMessage,
+                                              )
+                                              .forEach((element) {
+                                                final message =
+                                                    element.attachment
+                                                        as EMMessage;
+                                                if (message.msgId ==
+                                                    pinnedMessage.msgId) {
+                                                  logController.updateEntry(
+                                                    element,
+                                                    style: LogStyle.none,
+                                                    overlayLabel: '已取消置顶',
+                                                    overlayStyle:
+                                                        LogOverlayStyle.success,
+                                                  );
+                                                }
+                                              });
+                                          if (!context.mounted) return;
+                                          setDialogState(() {
+                                            pinnedMessages.removeAt(index);
+                                          });
+                                        } catch (e) {
+                                          addSendLog('取消置顶失败: $e');
+                                          if (!context.mounted) return;
+                                          await showDialog<void>(
+                                            context: context,
+                                            builder: (context) => AlertDialog(
+                                              title: const Text('取消置顶失败'),
+                                              content: Text('$e'),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.of(
+                                                        context,
+                                                      ).pop(),
+                                                  child: const Text('关闭'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        }
+                                      },
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('关闭'),
+                      ),
+                    ],
+                  ),
+                );
+              },
             );
-          } else {
-            addSendLog('拉取消息成功: ${result.data.length}/$_pageSize, 还有更多');
+          } catch (e) {
+            addSendLog('拉取置顶失败: $e');
           }
         },
       ),

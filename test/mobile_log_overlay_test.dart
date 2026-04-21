@@ -148,6 +148,41 @@ void main() {
     },
   );
 
+  testWidgets(
+    'mobile overlay does not overflow with search and filter expanded at minimum height',
+    (tester) async {
+      final settings = AppSettings()
+        ..isLoggedIn = true
+        ..isInit = true;
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: settings,
+          child: const MaterialApp(
+            home: MediaQuery(
+              data: MediaQueryData(size: Size(390, 280)),
+              child: MobileLogOverlay(
+                child: Scaffold(body: Center(child: Text('content'))),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byIcon(Icons.search_outlined));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.filter_alt_outlined));
+      await tester.pumpAndSettle();
+      await tester.drag(
+        find.byType(GestureDetector).first,
+        const Offset(0, 400),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('mobile overlay minimized bubble can be dragged', (tester) async {
     final settings = AppSettings()
       ..isLoggedIn = true
@@ -335,5 +370,107 @@ void main() {
     expect(copiedText, 'beta target\ncharlie target');
 
     messenger.setMockMethodCallHandler(SystemChannels.platform, null);
+  });
+
+  testWidgets('log panel search shows match count and navigates results', (
+    tester,
+  ) async {
+    const content = 'alpha\nbeta target\ngamma\ndelta target';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 300,
+            child: LogPanel(
+              isDark: true,
+              prepareLogFile: () async => const LogFileOpenResult(
+                status: LogFileOpenStatus.ready,
+                logPath: '/tmp/mock.log',
+              ),
+              readLogState: (logPath, {previous, maxRetainedCharacters = 120000}) async {
+                return const LogPanelFileState(
+                  content: content,
+                  fileLength: content.length,
+                  unchangedCount: 0,
+                  nextPollInterval: Duration(seconds: 1),
+                );
+              },
+              enableFallbackPolling: false,
+              logUpdateStreamFactory: (_) => const Stream<Object?>.empty(),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.search_outlined));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'target');
+    await tester.pumpAndSettle();
+
+    expect(find.text('1/2'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.keyboard_arrow_down));
+    await tester.pumpAndSettle();
+    expect(find.text('2/2'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.keyboard_arrow_up));
+    await tester.pumpAndSettle();
+    expect(find.text('1/2'), findsOneWidget);
+  });
+
+  testWidgets('log panel search updates when new matching logs arrive', (
+    tester,
+  ) async {
+    final controller = StreamController<Object?>();
+    var content = 'alpha\nbeta';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 300,
+            child: LogPanel(
+              isDark: true,
+              prepareLogFile: () async => const LogFileOpenResult(
+                status: LogFileOpenStatus.ready,
+                logPath: '/tmp/mock.log',
+              ),
+              readLogState: (logPath, {previous, maxRetainedCharacters = 120000}) async {
+                return LogPanelFileState(
+                  content: content,
+                  fileLength: content.length,
+                  unchangedCount: 0,
+                  nextPollInterval: const Duration(seconds: 1),
+                );
+              },
+              enableFallbackPolling: false,
+              logUpdateStreamFactory: (_) => controller.stream,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.search_outlined));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'target');
+    await tester.pumpAndSettle();
+
+    expect(find.text('0/0'), findsOneWidget);
+
+    content = 'alpha\nbeta\nnew target';
+    controller.add(null);
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.text('1/1'), findsOneWidget);
+
+    await controller.close();
   });
 }

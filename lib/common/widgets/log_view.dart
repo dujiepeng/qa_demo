@@ -81,6 +81,35 @@ class LogActionResult {
   });
 }
 
+class LogEntryPatch {
+  final String? content;
+  final Color? color;
+  final LogStyle? style;
+  final String? overlayLabel;
+  final LogOverlayStyle? overlayStyle;
+  final bool clearOverlay;
+
+  const LogEntryPatch({
+    this.content,
+    this.color,
+    this.style,
+    this.overlayLabel,
+    this.overlayStyle,
+    this.clearOverlay = false,
+  });
+
+  factory LogEntryPatch.fromActionResult(LogActionResult result) {
+    return LogEntryPatch(
+      content: result.content,
+      color: result.color,
+      style: result.style,
+      overlayLabel: result.overlayLabel,
+      overlayStyle: result.overlayStyle,
+      clearOverlay: result.clearOverlay,
+    );
+  }
+}
+
 class LogAction {
   final String id;
   final String title;
@@ -112,11 +141,20 @@ class LogController extends ChangeNotifier {
     String? content,
     Color? color,
     LogStyle? style,
+    String? overlayLabel,
+    LogOverlayStyle? overlayStyle,
+    bool clearOverlay = false,
   }) {
+    final patch = LogEntryPatch(
+      content: content,
+      color: color,
+      style: style,
+      overlayLabel: overlayLabel,
+      overlayStyle: overlayStyle,
+      clearOverlay: clearOverlay,
+    );
     for (var element in entries) {
-      if (content != null) element.content = content;
-      if (color != null) element.color = color;
-      if (style != null) element.style = style;
+      _applyPatchToEntry(element, patch);
     }
     notifyListeners();
   }
@@ -152,20 +190,36 @@ class LogController extends ChangeNotifier {
     LogOverlayStyle? overlayStyle,
     bool clearOverlay = false,
   }) {
+    final patch = LogEntryPatch(
+      content: content,
+      color: color,
+      style: style,
+      overlayLabel: overlayLabel,
+      overlayStyle: overlayStyle,
+      clearOverlay: clearOverlay,
+    );
+    applyPatch(entry, patch);
+  }
+
+  void applyPatch(LogEntry entry, LogEntryPatch patch) {
     // 检查该条目是否仍存在于列表中
     if (!_logs.contains(entry)) return;
-    if (content != null) entry.content = content;
-    if (color != null) entry.color = color;
-    if (style != null) entry.style = style;
-    if (clearOverlay) {
-      entry.overlayLabel = null;
-    } else if (overlayLabel != null) {
-      entry.overlayLabel = overlayLabel;
-      entry.overlayStyle = overlayStyle ?? entry.overlayStyle;
-    } else if (overlayStyle != null) {
-      entry.overlayStyle = overlayStyle;
-    }
+    _applyPatchToEntry(entry, patch);
     notifyListeners();
+  }
+
+  void _applyPatchToEntry(LogEntry entry, LogEntryPatch patch) {
+    if (patch.content != null) entry.content = patch.content!;
+    if (patch.color != null) entry.color = patch.color;
+    if (patch.style != null) entry.style = patch.style!;
+    if (patch.clearOverlay) {
+      entry.overlayLabel = null;
+    } else if (patch.overlayLabel != null) {
+      entry.overlayLabel = patch.overlayLabel;
+      entry.overlayStyle = patch.overlayStyle ?? entry.overlayStyle;
+    } else if (patch.overlayStyle != null) {
+      entry.overlayStyle = patch.overlayStyle!;
+    }
   }
 
   /// 从日志列表中删除指定的 [LogEntry]，并通知视图刷新。
@@ -188,6 +242,7 @@ class LogView extends StatelessWidget {
   final bool isDark;
   final List<LogMenuItem> Function(LogEntry entry)? menuBuilder;
   final List<LogAction> Function(LogEntry entry)? actionsBuilder;
+  final Future<List<LogAction>> Function(LogEntry entry)? asyncActionsBuilder;
   final VoidCallback? menuShowCallback;
 
   const LogView({
@@ -196,10 +251,16 @@ class LogView extends StatelessWidget {
     required this.isDark,
     this.menuBuilder,
     this.actionsBuilder,
+    this.asyncActionsBuilder,
     this.menuShowCallback,
   });
 
-  List<LogAction> _buildActions(LogEntry entry) {
+  Future<List<LogAction>> _buildActions(LogEntry entry) async {
+    if (asyncActionsBuilder != null) {
+      return (await asyncActionsBuilder!(
+        entry,
+      )).where((action) => action.isVisible?.call(entry) ?? true).toList();
+    }
     if (actionsBuilder != null) {
       return actionsBuilder!(
         entry,
@@ -258,15 +319,7 @@ class LogView extends StatelessWidget {
     if (result == null) {
       return;
     }
-    controller.updateEntry(
-      entry,
-      content: result.content,
-      color: result.color,
-      style: result.style,
-      overlayLabel: result.overlayLabel,
-      overlayStyle: result.overlayStyle,
-      clearOverlay: result.clearOverlay,
-    );
+    controller.applyPatch(entry, LogEntryPatch.fromActionResult(result));
   }
 
   @override
@@ -335,8 +388,9 @@ class LogView extends StatelessWidget {
                           final entry = controller.entities[index];
                           return GestureDetector(
                             onLongPressStart: (details) async {
-                              final items = _buildActions(entry);
+                              final items = await _buildActions(entry);
                               if (items.isEmpty) return;
+                              if (!context.mounted) return;
                               menuShowCallback?.call();
                               final position = details.globalPosition;
                               final LogAction? selectedItem =
