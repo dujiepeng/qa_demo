@@ -36,6 +36,7 @@ Future<void> ensureSdkInit(AppSettings settings) async {
         webSocketPort: serverPort,
         webSocketServer: serverHost,
         enableTLS: true,
+        requireDeliveryAck: true,
       );
     } else {
       options = EMOptions.withAppKey(
@@ -48,6 +49,7 @@ Future<void> ensureSdkInit(AppSettings settings) async {
         enableDNSConfig: false,
         usingHttpsOnly: false,
         enableTLS: false,
+        requireDeliveryAck: true,
       );
     }
 
@@ -60,6 +62,7 @@ Future<void> ensureSdkInit(AppSettings settings) async {
       settings.appKey,
       autoLogin: false,
       debugMode: true,
+      requireDeliveryAck: true,
     );
     debugPrint('ensureSdkInit: Initializing with ONLINE (ebs) environment');
   }
