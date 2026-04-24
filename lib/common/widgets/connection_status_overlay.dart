@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
+import '../session_scope.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 import '../utils/connection_status_overlay_controller.dart';
@@ -10,12 +10,14 @@ class ConnectionStatusOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = context.watch<ConnectionStatusOverlayController>();
-    if (!controller.isVisible) {
+    final controller = maybeReadProvider<ConnectionStatusOverlayController>(
+      context,
+    );
+    if (controller == null || !controller.isVisible) {
       return const SizedBox.shrink();
     }
 
-    final isDark = context.watch<AppSettings>().isDarkMode;
+    final isDark = maybeReadProvider<AppSettings>(context)?.isDarkMode ?? true;
     return IgnorePointer(
       child: Center(
         child: Container(

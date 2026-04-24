@@ -114,7 +114,9 @@ mixin LoginLogicMixin<T extends StatefulWidget> on State<T> {
       // 复用 ensureSdkInit 工具函数，避免重复的初始化逻辑。
       await ensureSdkInit(settings);
 
-      await EMClient.getInstance.logout();
+      try {
+        await EMClient.getInstance.logout();
+      } catch (_) {}
       await EMClient.getInstance.loginWithPassword(uid, pwd);
 
       // 登录成功，更新系统状态

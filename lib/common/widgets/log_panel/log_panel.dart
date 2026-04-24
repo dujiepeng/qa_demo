@@ -11,6 +11,7 @@ class LogPanel extends StatefulWidget {
   final PrepareLogFileForPanelCallback? prepareLogFile;
   final ReadLogPanelStateCallback? readLogState;
   final LogUpdateStreamFactory? logUpdateStreamFactory;
+  final int maxRetainedCharacters;
   final bool enableFallbackPolling;
   const LogPanel({
     super.key,
@@ -18,6 +19,7 @@ class LogPanel extends StatefulWidget {
     this.prepareLogFile,
     this.readLogState,
     this.logUpdateStreamFactory,
+    this.maxRetainedCharacters = maxRetainedLogPanelCharacters,
     this.enableFallbackPolling = true,
   });
 
@@ -26,6 +28,8 @@ class LogPanel extends StatefulWidget {
 }
 
 class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
+  static const double _controlsMaxHeight = 180;
+  static const double _controlsMaxHeightRatio = 0.4;
   late AnimationController _blinkController;
   late Animation<double> _blinkAnimation;
   late final LogPanelController _controller;
@@ -40,6 +44,9 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
   bool _showSearchField = false;
   String _filterKeyword = '';
   String _searchKeyword = '';
+  String _lastRawContent = '';
+  String _lastFilterKeyword = '';
+  List<String> _visibleLinesCache = const [];
   List<int> _searchMatchIndices = const [];
   int _currentSearchMatchIndex = -1;
 
@@ -57,6 +64,7 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
       prepareLogFile: widget.prepareLogFile,
       readLogState: widget.readLogState,
       logUpdateStreamFactory: widget.logUpdateStreamFactory,
+      maxRetainedCharacters: widget.maxRetainedCharacters,
       enableFallbackPolling: widget.enableFallbackPolling,
       onStateChanged: _handleControllerStateChanged,
     );
@@ -83,6 +91,7 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
     }
 
     setState(() {
+      _rebuildVisibleLinesCache();
       _refreshSearchMatches();
       if (!_autoScroll) {
         _hasPendingNewLogs = true;
@@ -90,25 +99,39 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
     });
     if (_autoScroll) {
       _scrollToBottom();
-    } else if (_currentSearchMatchIndex != -1) {
-      _scrollToSearchMatch();
     }
   }
 
-  String get _visibleContent {
+  String get _visibleContent => _visibleLinesCache.join('\n');
+
+  List<String> get _visibleLines => _visibleLinesCache;
+
+  void _rebuildVisibleLinesCache() {
     final rawContent = _controller.content;
-    final keyword = _filterKeyword.trim().toLowerCase();
-    if (keyword.isEmpty) {
-      return rawContent;
+    final normalizedKeyword = _filterKeyword.trim().toLowerCase();
+    if (rawContent == _lastRawContent &&
+        normalizedKeyword == _lastFilterKeyword) {
+      return;
     }
 
-    return rawContent
-        .split('\n')
-        .where((line) => line.toLowerCase().contains(keyword))
-        .join('\n');
-  }
+    _lastRawContent = rawContent;
+    _lastFilterKeyword = normalizedKeyword;
 
-  List<String> get _visibleLines => _visibleContent.split('\n');
+    if (rawContent.isEmpty) {
+      _visibleLinesCache = const [];
+      return;
+    }
+
+    final allLines = rawContent.split('\n');
+    if (normalizedKeyword.isEmpty) {
+      _visibleLinesCache = List.unmodifiable(allLines);
+      return;
+    }
+
+    _visibleLinesCache = List.unmodifiable(
+      allLines.where((line) => line.toLowerCase().contains(normalizedKeyword)),
+    );
+  }
 
   void _refreshSearchMatches() {
     final keyword = _searchKeyword.trim().toLowerCase();
@@ -133,6 +156,9 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
     if (_currentSearchMatchIndex < 0 ||
         _currentSearchMatchIndex >= matches.length) {
       _currentSearchMatchIndex = 0;
+    }
+    if (!_autoScroll) {
+      return;
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollToSearchMatch();
@@ -176,13 +202,15 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
 
   Widget _buildSearchableContent(bool isDark) {
     final lines = _visibleLines;
-    if (_visibleContent.isEmpty) {
+    if (lines.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: List.generate(lines.length, (index) {
+    return ListView.builder(
+      controller: _logScrollController,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: lines.length,
+      itemBuilder: (context, index) {
         final isCurrentMatch =
             _currentSearchMatchIndex != -1 &&
             _searchMatchIndices[_currentSearchMatchIndex] == index;
@@ -205,7 +233,7 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
             ),
           ),
         );
-      }),
+      },
     );
   }
 
@@ -233,6 +261,7 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final isDark = widget.isDark;
+    _rebuildVisibleLinesCache();
     final visibleContent = _visibleContent;
     final hasFilter = _filterKeyword.trim().isNotEmpty;
     final searchCount = _searchMatchIndices.length;
@@ -240,16 +269,23 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
         ? '0/0'
         : '${_currentSearchMatchIndex + 1}/$searchCount';
 
-    return Container(
-      color: isDark ? Colors.black87 : Colors.grey[100],
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Flexible(
-            child: SingleChildScrollView(
-              primary: false,
-              child: Column(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final controlsMaxHeight = (constraints.maxHeight *
+                _controlsMaxHeightRatio)
+            .clamp(0.0, _controlsMaxHeight);
+
+        return Container(
+          color: isDark ? Colors.black87 : Colors.grey[100],
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: controlsMaxHeight),
+                child: SingleChildScrollView(
+                  primary: false,
+                  child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -311,8 +347,6 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
                                           _autoScroll = !_autoScroll;
                                           if (_autoScroll) {
                                             _hasPendingNewLogs = false;
-                                          }
-                                          if (_autoScroll) {
                                             _scrollToBottom();
                                           }
                                         });
@@ -402,6 +436,8 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
                       onChanged: (value) {
                         setState(() {
                           _filterKeyword = value;
+                          _rebuildVisibleLinesCache();
+                          _refreshSearchMatches();
                         });
                       },
                       style: TextStyle(
@@ -424,6 +460,8 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
                                   _filterController.clear();
                                   setState(() {
                                     _filterKeyword = '';
+                                    _rebuildVisibleLinesCache();
+                                    _refreshSearchMatches();
                                   });
                                 },
                               ),
@@ -514,41 +552,45 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
                     ),
                   ],
                 ],
+                  ),
+                ),
               ),
-            ),
-          ),
-          const Divider(),
-          Expanded(
-            child: NotificationListener<ScrollNotification>(
-              onNotification: (notification) {
-                if (notification is ScrollUpdateNotification &&
-                    notification.scrollDelta != null &&
-                    notification.scrollDelta! < 0) {
-                  if (_autoScroll) {
-                    setState(() {
-                      _autoScroll = false;
-                    });
-                  }
-                }
-                return false;
-              },
-              child: SingleChildScrollView(
-                controller: _logScrollController,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: visibleContent.isEmpty && hasFilter
-                    ? Text(
-                        '无匹配日志',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? Colors.white60 : Colors.black54,
-                        ),
-                      )
-                    : _buildSearchableContent(isDark),
+              const Divider(),
+              Expanded(
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: (notification) {
+                    if (notification is ScrollUpdateNotification &&
+                        notification.dragDetails != null &&
+                        notification.scrollDelta != null &&
+                        notification.scrollDelta! < 0) {
+                      if (_autoScroll) {
+                        setState(() {
+                          _autoScroll = false;
+                        });
+                      }
+                    }
+                    return false;
+                  },
+                  child: visibleContent.isEmpty && hasFilter
+                      ? Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            '无匹配日志',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark ? Colors.white60 : Colors.black54,
+                            ),
+                          ),
+                        )
+                      : visibleContent.isEmpty
+                      ? const SizedBox.shrink()
+                      : _buildSearchableContent(isDark),
+                ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

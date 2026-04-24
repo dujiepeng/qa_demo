@@ -3,12 +3,10 @@ import 'package:intl/intl.dart';
 
 /// 日志管理服务，用于在 UI 上实时展示日志内容
 class LogService extends ChangeNotifier {
-  static final LogService _instance = LogService._internal();
-  factory LogService() => _instance;
-  LogService._internal();
+  LogService();
 
   final List<String> _logs = [];
-  
+
   /// 获取所有日志内容
   List<String> get logs => List.unmodifiable(_logs);
 

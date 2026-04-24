@@ -1,10 +1,12 @@
 import 'package:chat_uikit_theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../common/session_scope.dart';
 import '../common/utils/offline_message_counter.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_settings.dart';
 import '../common/widgets/common_dialogs.dart';
+import '../common/widgets/connection_status_light.dart';
 import '../common/widgets/log_panel/log_panel.dart';
 import 'me_page_pad.dart';
 import 'page_pad.dart';
@@ -62,7 +64,8 @@ class _HomePagePadState extends State<HomePagePad> with TickerProviderStateMixin
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<AppSettings>();
-    final offlineMessageCount = context.watch<OfflineMessageCounter>().count;
+    final counter = maybeReadProvider<OfflineMessageCounter>(context);
+    final offlineMessageCount = counter?.count ?? 0;
     final isDark = settings.isDarkMode;
 
     return Scaffold(
@@ -349,6 +352,7 @@ class _HomePagePadState extends State<HomePagePad> with TickerProviderStateMixin
             overflow: TextOverflow.ellipsis,
           ),
         ),
+        const ConnectionStatusLight(),
         // 统一提取功能按钮
         IconButton(
           icon: const Icon(Icons.info_outline, size: 22),

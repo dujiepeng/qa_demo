@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:qa_flutter/pages/chatroom/room_list_page.dart';
 import 'package:qa_flutter/theme/app_colors.dart';
 import 'package:qa_flutter/theme/app_settings.dart';
+import 'common/session_scope.dart';
 import 'config/app_config.dart';
 import 'pages/home_page.dart';
 import 'pages/login_page.dart';
@@ -14,17 +15,13 @@ import 'pages/single/contact_presence_page.dart';
 import 'pages/single/single_chat_list_page.dart';
 import 'pages/single/single_chat_page.dart';
 import 'pages/conversation/conversation_list_page.dart';
-import 'common/utils/connection_status_overlay_controller.dart';
-import 'common/utils/other_logged_in_devices_controller.dart';
-import 'common/utils/log_service.dart';
-import 'common/utils/offline_message_counter.dart';
 import 'common/utils/app_route_observer.dart';
 import 'common/utils/version_manager.dart';
 import 'common/widgets/connection_status_overlay.dart';
 import 'common/widgets/common_gradient_background.dart';
+import 'common/widgets/layout/mobile_log_overlay.dart';
 import 'mobile/me_page_mobile.dart';
 import 'mobile/my_page_mobile.dart';
-import 'common/widgets/layout/mobile_log_overlay.dart';
 import 'common/widgets/responsive_layout.dart';
 
 void main() async {
@@ -44,12 +41,6 @@ void main() async {
       providers: [
         ChangeNotifierProvider.value(value: AppSettings()),
         ChangeNotifierProvider.value(value: VersionManager()),
-        ChangeNotifierProvider(create: (_) => LogService()),
-        ChangeNotifierProvider(create: (_) => OfflineMessageCounter()),
-        ChangeNotifierProvider(
-          create: (_) => ConnectionStatusOverlayController(),
-        ),
-        ChangeNotifierProvider(create: (_) => OtherLoggedInDevicesController()),
       ],
       child: const MyApp(),
     ),
@@ -93,25 +84,36 @@ class _MyAppState extends State<MyApp> {
       ),
       builder: (context, child) {
         if (child == null) return const SizedBox.shrink();
+        final routeName = ModalRoute.of(context)?.settings.name;
+        final isLoggedIn = settings.isLoggedIn;
+        final shouldShowGlobalMobileLogOverlay =
+            isLoggedIn && routeName != '/login';
 
-        // 使用 ResponsiveLayout 判断是否在移动端显示全局日志遮罩
-        return ResponsiveLayout(
-          mobile: CommonGradientBackground(
-            isDark: settings.isDarkMode,
-            child: Stack(
-              children: [
-                MobileLogOverlay(child: child),
-                const Positioned.fill(child: ConnectionStatusOverlay()),
-              ],
+        return QaSessionScope(
+          child: ResponsiveLayout(
+            mobile: CommonGradientBackground(
+              isDark: settings.isDarkMode,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: shouldShowGlobalMobileLogOverlay
+                        ? MobileLogOverlay(child: child)
+                        : child,
+                  ),
+                  if (isLoggedIn)
+                    const Positioned.fill(child: ConnectionStatusOverlay()),
+                ],
+              ),
             ),
-          ),
-          tablet: CommonGradientBackground(
-            isDark: settings.isDarkMode,
-            child: Stack(
-              children: [
-                child,
-                const Positioned.fill(child: ConnectionStatusOverlay()),
-              ],
+            tablet: CommonGradientBackground(
+              isDark: settings.isDarkMode,
+              child: Stack(
+                children: [
+                  child,
+                  if (isLoggedIn)
+                    const Positioned.fill(child: ConnectionStatusOverlay()),
+                ],
+              ),
             ),
           ),
         );

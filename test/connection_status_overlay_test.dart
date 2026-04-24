@@ -29,4 +29,20 @@ void main() {
     controller.hide();
     await tester.pump();
   });
+
+  testWidgets('overlay stays hidden when controller provider is absent', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [ChangeNotifierProvider.value(value: AppSettings())],
+        child: const MaterialApp(
+          home: Scaffold(body: ConnectionStatusOverlay()),
+        ),
+      ),
+    );
+
+    expect(find.byType(SizedBox), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

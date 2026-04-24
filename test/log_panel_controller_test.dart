@@ -95,4 +95,100 @@ void main() {
       ),
     );
   });
+
+  test('coalesces burst log update events into a single file sync', () async {
+    final updates = StreamController<Object?>.broadcast();
+    addTearDown(() => updates.close());
+
+    var content = 'line1';
+    var readCalls = 0;
+
+    final controller = LogPanelController(
+      prepareLogFile: () async => const LogFileOpenResult(
+        status: LogFileOpenStatus.ready,
+        logPath: '/tmp/mock.log',
+      ),
+      readLogState: (
+        logPath, {
+        previous,
+        maxRetainedCharacters = 120000,
+      }) async {
+        readCalls += 1;
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+        return LogPanelFileState(
+          content: content,
+          fileLength: content.length,
+          unchangedCount: 0,
+          nextPollInterval: const Duration(seconds: 1),
+        );
+      },
+      logUpdateStreamFactory: (_) => updates.stream,
+      enableFallbackPolling: false,
+    );
+    addTearDown(controller.dispose);
+
+    await controller.initialize();
+    expect(readCalls, 1);
+
+    content = 'line1\nline2';
+    updates.add(null);
+    updates.add(null);
+    updates.add(null);
+
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+
+    expect(controller.content, 'line1\nline2');
+    expect(readCalls, 2);
+  });
+
+  test('reports sync stats for debug observation', () async {
+    final updates = StreamController<Object?>.broadcast();
+    addTearDown(() => updates.close());
+
+    LogPanelSyncStats? latestStats;
+    var content = 'line1';
+
+    final controller = LogPanelController(
+      prepareLogFile: () async => const LogFileOpenResult(
+        status: LogFileOpenStatus.ready,
+        logPath: '/tmp/mock.log',
+      ),
+      readLogState: (
+        logPath, {
+        previous,
+        maxRetainedCharacters = 120000,
+      }) async {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        return LogPanelFileState(
+          content: content,
+          fileLength: content.length,
+          unchangedCount: 0,
+          nextPollInterval: const Duration(seconds: 1),
+        );
+      },
+      logUpdateStreamFactory: (_) => updates.stream,
+      enableFallbackPolling: false,
+      onStatsChanged: (stats) {
+        latestStats = stats;
+      },
+    );
+    addTearDown(controller.dispose);
+
+    await controller.initialize();
+    expect(latestStats, isNotNull);
+    expect(latestStats!.syncCount, 1);
+    expect(latestStats!.lastContentLength, content.length);
+    expect(latestStats!.lastLineCount, 1);
+
+    content = 'line1\nline2';
+    updates.add(null);
+    updates.add(null);
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+
+    expect(latestStats!.syncCount, 2);
+    expect(latestStats!.eventSyncCount, 1);
+    expect(latestStats!.debouncedEventBurstCount, 1);
+    expect(latestStats!.lastLineCount, 2);
+    expect(latestStats!.lastSyncDuration, greaterThan(Duration.zero));
+  });
 }

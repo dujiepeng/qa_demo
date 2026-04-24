@@ -17,4 +17,14 @@ void main() {
       expect(controller.isVisible, isFalse);
     });
   });
+
+  test('refreshConnectionLight updates connected state', () async {
+    final controller = ConnectionStatusOverlayController();
+
+    await controller.refreshConnectionLight(() async => true);
+    expect(controller.isConnected, isTrue);
+
+    await controller.refreshConnectionLight(() async => false);
+    expect(controller.isConnected, isFalse);
+  });
 }

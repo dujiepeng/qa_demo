@@ -17,21 +17,32 @@ import '../../common/widgets/common_section_title.dart';
 import '../../common/widgets/common_layout.dart';
 import '../../common/mixins/base_mixin.dart';
 import '../../common/widgets/log_page_launcher.dart';
+import '../../common/widgets/info_dialog.dart';
 
 /// 聊天室信息编辑类型
 enum RoomInfoEditType { name, description, announcement }
 
 class RoomPage extends StatefulWidget {
-  const RoomPage({super.key, this.roomId, this.showAppBar = true});
+  const RoomPage({
+    super.key,
+    this.roomId,
+    this.showAppBar = true,
+    this.userInfoLoader,
+    this.roomInfoLoader,
+    this.settingsOverride,
+  });
   final String? roomId;
   final bool showAppBar;
+  final RoomInfoDialogUserInfoLoader? userInfoLoader;
+  final RoomInfoDialogChatRoomLoader? roomInfoLoader;
+  final AppSettings? settingsOverride;
   @override
   State<RoomPage> createState() => _RoomPageState();
 }
 
 class _RoomPageState extends State<RoomPage> with BaseMixin {
   final _eventKey = 'room_test';
-  final _settings = AppSettings();
+  late final AppSettings _settings;
   final _roomIdController = TextEditingController();
   final _messageController = TextEditingController();
   final _logController = LogController();
@@ -44,6 +55,7 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
 
   @override
   void initState() {
+    _settings = widget.settingsOverride ?? AppSettings();
     _roomId = widget.roomId ?? '';
     _roomIdController.text = _roomId;
     super.initState();
@@ -150,6 +162,28 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
           room.roomId,
           'onSpecificationChanged: name: ${room.name}',
         ),
+        onMemberJoinedFromChatRoom: (roomId, participant, ext) => _handleRoomEvent(
+          roomId,
+          'onMemberJoinedFromChatRoom: roomId: $roomId, participant: $participant, ext: $ext',
+        ),
+        onMemberExitedFromChatRoom: (roomId, roomName, participant) =>
+            _handleRoomEvent(
+              roomId,
+              'onMemberExitedFromChatRoom: roomName: $roomName, participant: $participant',
+            ),
+        onMuteListAddedFromChatRoom: (roomId, mutes) => _handleRoomEvent(
+          roomId,
+          'onMuteListAddedFromChatRoom: name: ${mutes.toString()}',
+        ),
+        onMuteListRemovedFromChatRoom: (roomId, mutes) => _handleRoomEvent(
+          roomId,
+          'onMuteListRemovedFromChatRoom: name: ${mutes.toString()}',
+        ),
+        onOwnerChangedFromChatRoom: (roomId, newOwner, oldOwner) =>
+            _handleRoomEvent(
+              roomId,
+              'onOwnerChangedFromChatRoom: newOwner: $newOwner, newOwner: $oldOwner',
+            ),
       ),
     );
   }
@@ -170,8 +204,15 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
       centerTitle: true,
       actions: [
         IconButton(
-          icon: const Icon(Icons.info),
-          onPressed: () => Navigator.of(context).pushNamed('/server_config'),
+          icon: const Icon(Icons.info_outline),
+          tooltip: '信息',
+          onPressed: () => InfoDialog.show(
+            context,
+            _settings,
+            roomId: _roomId,
+            userInfoLoader: widget.userInfoLoader,
+            roomInfoLoader: widget.roomInfoLoader,
+          ),
         ),
       ],
     );

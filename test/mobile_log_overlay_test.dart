@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:qa_flutter/common/utils/log_file_helper.dart';
 import 'package:qa_flutter/common/utils/log_panel_sync.dart';
+import 'package:qa_flutter/common/utils/app_route_observer.dart';
 import 'package:qa_flutter/common/widgets/log_panel/log_panel.dart';
 import 'package:qa_flutter/common/widgets/layout/mobile_log_overlay.dart';
 import 'package:qa_flutter/theme/app_settings.dart';
@@ -17,7 +18,7 @@ void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     final settings = AppSettings();
-    await settings.setLogOverlayMinimized(false);
+    await settings.setLogOverlayMinimized(true);
     await settings.updateLogBubblePlacement(
       onRightSide: true,
       verticalRatio: 0.7,
@@ -87,6 +88,7 @@ void main() {
     final settings = AppSettings()
       ..isLoggedIn = true
       ..isInit = false;
+    await settings.setLogOverlayMinimized(false);
 
     await tester.pumpWidget(
       ChangeNotifierProvider.value(
@@ -117,12 +119,121 @@ void main() {
     expect(find.text('最小化'), findsOneWidget);
   });
 
+  testWidgets('mobile overlay forces minimized on first build', (tester) async {
+    final settings = AppSettings()
+      ..isLoggedIn = true
+      ..isInit = false;
+    await settings.setLogOverlayMinimized(false);
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: settings,
+        child: const MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(size: Size(390, 844)),
+            child: MobileLogOverlay(
+              child: Scaffold(body: Center(child: Text('content'))),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.bug_report_outlined), findsOneWidget);
+    expect(find.text('最小化'), findsNothing);
+    expect(settings.isLogOverlayMinimized, isTrue);
+  });
+
+  testWidgets('mobile overlay minimizes when app goes to background', (
+    tester,
+  ) async {
+    final settings = AppSettings()
+      ..isLoggedIn = true
+      ..isInit = false;
+    await settings.setLogOverlayMinimized(false);
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: settings,
+        child: const MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(size: Size(390, 844)),
+            child: MobileLogOverlay(
+              child: Scaffold(body: Center(child: Text('content'))),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('最小化'), findsNothing);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.bug_report_outlined), findsOneWidget);
+    expect(find.text('最小化'), findsNothing);
+    expect(settings.isLogOverlayMinimized, isTrue);
+  });
+
+  testWidgets('mobile overlay minimizes when route changes away', (
+    tester,
+  ) async {
+    final settings = AppSettings()
+      ..isLoggedIn = true
+      ..isInit = false;
+    await settings.setLogOverlayMinimized(true);
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: settings,
+        child: MaterialApp(
+          navigatorObservers: [appRouteObserver],
+          home: MediaQuery(
+            data: const MediaQueryData(size: Size(390, 844)),
+            child: MobileLogOverlay(
+              child: Scaffold(
+                body: Center(
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.of(tester.element(find.text('next'))).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              const Scaffold(body: Center(child: Text('second'))),
+                        ),
+                      );
+                    },
+                    child: const Text('next'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.bug_report_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text('最小化'), findsOneWidget);
+
+    await tester.tap(find.text('next'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('second'), findsOneWidget);
+    expect(settings.isLogOverlayMinimized, isTrue);
+  });
+
   testWidgets(
     'mobile overlay does not overflow when resized to minimum height',
     (tester) async {
       final settings = AppSettings()
         ..isLoggedIn = true
         ..isInit = true;
+      await settings.setLogOverlayMinimized(false);
 
       await tester.pumpWidget(
         ChangeNotifierProvider.value(
@@ -137,6 +248,9 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.bug_report_outlined));
+      await tester.pumpAndSettle();
 
       await tester.drag(
         find.byType(GestureDetector).first,
@@ -154,6 +268,7 @@ void main() {
       final settings = AppSettings()
         ..isLoggedIn = true
         ..isInit = true;
+      await settings.setLogOverlayMinimized(false);
 
       await tester.pumpWidget(
         ChangeNotifierProvider.value(
@@ -168,6 +283,9 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.bug_report_outlined));
+      await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.search_outlined));
       await tester.pumpAndSettle();
@@ -472,5 +590,372 @@ void main() {
     expect(find.text('1/1'), findsOneWidget);
 
     await controller.close();
+  });
+
+  testWidgets('log panel keeps scroll position when paused and new logs arrive', (
+    tester,
+  ) async {
+    final controller = StreamController<Object?>();
+    addTearDown(controller.close);
+    var content = List.generate(120, (index) => 'line $index').join('\n');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 300,
+            child: LogPanel(
+              isDark: true,
+              prepareLogFile: () async => const LogFileOpenResult(
+                status: LogFileOpenStatus.ready,
+                logPath: '/tmp/mock.log',
+              ),
+              readLogState: (
+                logPath, {
+                previous,
+                maxRetainedCharacters = 120000,
+              }) async {
+                return LogPanelFileState(
+                  content: content,
+                  fileLength: content.length,
+                  unchangedCount: 0,
+                  nextPollInterval: const Duration(seconds: 1),
+                );
+              },
+              enableFallbackPolling: false,
+              logUpdateStreamFactory: (_) => controller.stream,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final listView = tester.widget<ListView>(find.byType(ListView));
+    final listController = listView.controller!;
+    listController.jumpTo(120);
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('暂停滚动'));
+    await tester.pump();
+
+    expect(find.byTooltip('继续滚动'), findsOneWidget);
+
+    final beforeOffset = listController.offset;
+
+    content = '$content\nnew log line';
+    controller.add(null);
+    await tester.pump(const Duration(milliseconds: 80));
+
+    final afterOffset = listController.offset;
+    expect(afterOffset, beforeOffset);
+    expect(find.text('新日志'), findsOneWidget);
+  });
+
+  testWidgets(
+    'log panel keeps scroll position when paused and matching search logs arrive',
+    (tester) async {
+      final controller = StreamController<Object?>();
+      addTearDown(controller.close);
+      var content = List.generate(
+        120,
+        (index) => index == 20 ? 'line $index target' : 'line $index',
+      ).join('\n');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              height: 300,
+              child: LogPanel(
+                isDark: true,
+                prepareLogFile: () async => const LogFileOpenResult(
+                  status: LogFileOpenStatus.ready,
+                  logPath: '/tmp/mock.log',
+                ),
+                readLogState: (
+                  logPath, {
+                  previous,
+                  maxRetainedCharacters = 120000,
+                }) async {
+                  return LogPanelFileState(
+                    content: content,
+                    fileLength: content.length,
+                    unchangedCount: 0,
+                    nextPollInterval: const Duration(seconds: 1),
+                  );
+                },
+                enableFallbackPolling: false,
+                logUpdateStreamFactory: (_) => controller.stream,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      final listController =
+          tester.widget<ListView>(find.byType(ListView)).controller!;
+      listController.jumpTo(listController.position.maxScrollExtent);
+      await tester.pump();
+
+      await tester.tap(find.byTooltip('暂停滚动'));
+      await tester.pump();
+      expect(find.byTooltip('继续滚动'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.search_outlined));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField).last, 'target');
+      await tester.pump();
+
+      final beforeOffset = listController.offset;
+
+      content = '$content\nnew target';
+      controller.add(null);
+      await tester.pump(const Duration(milliseconds: 80));
+
+      expect(listController.offset, beforeOffset);
+      expect(find.text('1/2'), findsOneWidget);
+      expect(find.text('新日志'), findsOneWidget);
+    },
+  );
+
+  testWidgets('log panel resumes by jumping to latest logs', (tester) async {
+    final controller = StreamController<Object?>();
+    addTearDown(controller.close);
+    var content = List.generate(120, (index) => 'line $index').join('\n');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 300,
+            child: LogPanel(
+              isDark: true,
+              prepareLogFile: () async => const LogFileOpenResult(
+                status: LogFileOpenStatus.ready,
+                logPath: '/tmp/mock.log',
+              ),
+              readLogState: (
+                logPath, {
+                previous,
+                maxRetainedCharacters = 120000,
+              }) async {
+                return LogPanelFileState(
+                  content: content,
+                  fileLength: content.length,
+                  unchangedCount: 0,
+                  nextPollInterval: const Duration(seconds: 1),
+                );
+              },
+              enableFallbackPolling: false,
+              logUpdateStreamFactory: (_) => controller.stream,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    final listController =
+        tester.widget<ListView>(find.byType(ListView)).controller!;
+    listController.jumpTo(120);
+    await tester.pump();
+
+    await tester.drag(find.byType(ListView), const Offset(0, 120));
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('继续滚动'));
+    await tester.pump();
+    expect(find.byTooltip('暂停滚动'), findsOneWidget);
+
+    content = '$content\nnew log line';
+    controller.add(null);
+    await tester.pump(const Duration(milliseconds: 80));
+
+    expect(listController.offset, listController.position.maxScrollExtent);
+  });
+
+  testWidgets('log panel keeps auto scroll enabled when new logs arrive', (
+    tester,
+  ) async {
+    final controller = StreamController<Object?>();
+    addTearDown(controller.close);
+    var content = List.generate(120, (index) => 'line $index').join('\n');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 300,
+            child: LogPanel(
+              isDark: true,
+              prepareLogFile: () async => const LogFileOpenResult(
+                status: LogFileOpenStatus.ready,
+                logPath: '/tmp/mock.log',
+              ),
+              readLogState: (
+                logPath, {
+                previous,
+                maxRetainedCharacters = 120000,
+              }) async {
+                return LogPanelFileState(
+                  content: content,
+                  fileLength: content.length,
+                  unchangedCount: 0,
+                  nextPollInterval: const Duration(seconds: 1),
+                );
+              },
+              enableFallbackPolling: false,
+              logUpdateStreamFactory: (_) => controller.stream,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    content = '$content\nnew log line';
+    controller.add(null);
+    await tester.pump(const Duration(milliseconds: 80));
+
+    expect(find.byTooltip('暂停滚动'), findsOneWidget);
+    expect(find.byTooltip('继续滚动'), findsNothing);
+  });
+
+  testWidgets('log panel lazily builds long filtered content', (tester) async {
+    final lines = List.generate(200, (index) => 'line $index target');
+    final content = lines.join('\n');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 300,
+            child: LogPanel(
+              isDark: true,
+              prepareLogFile: () async => const LogFileOpenResult(
+                status: LogFileOpenStatus.ready,
+                logPath: '/tmp/mock.log',
+              ),
+              readLogState: (
+                logPath, {
+                previous,
+                maxRetainedCharacters = 120000,
+              }) async {
+                return LogPanelFileState(
+                  content: content,
+                  fileLength: content.length,
+                  unchangedCount: 0,
+                  nextPollInterval: const Duration(seconds: 1),
+                );
+              },
+              enableFallbackPolling: false,
+              logUpdateStreamFactory: (_) => const Stream<Object?>.empty(),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.filter_alt_outlined));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'target');
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ListView), findsOneWidget);
+    expect(find.byType(SelectableText), findsWidgets);
+    expect(find.byType(SelectableText), isNot(findsNWidgets(200)));
+  });
+
+  testWidgets('log panel supports custom retained character limit', (
+    tester,
+  ) async {
+    const content = '1234567890';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 300,
+            child: LogPanel(
+              isDark: true,
+              maxRetainedCharacters: 5,
+              prepareLogFile: () async => const LogFileOpenResult(
+                status: LogFileOpenStatus.ready,
+                logPath: '/tmp/mock.log',
+              ),
+              readLogState: (
+                logPath, {
+                previous,
+                maxRetainedCharacters = 120000,
+              }) async {
+                return LogPanelFileState(
+                  content: content.substring(content.length - maxRetainedCharacters),
+                  fileLength: content.length,
+                  unchangedCount: 0,
+                  nextPollInterval: const Duration(seconds: 1),
+                );
+              },
+              enableFallbackPolling: false,
+              logUpdateStreamFactory: (_) => const Stream<Object?>.empty(),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('67890'), findsOneWidget);
+    expect(find.textContaining('1234567890'), findsNothing);
+  });
+
+  testWidgets('log panel shows more visible log area when height increases', (
+    tester,
+  ) async {
+    Widget buildPanel(double height) {
+      final content = List.generate(120, (index) => 'line $index').join('\n');
+      return MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: height,
+            child: LogPanel(
+              isDark: true,
+              prepareLogFile: () async => const LogFileOpenResult(
+                status: LogFileOpenStatus.ready,
+                logPath: '/tmp/mock.log',
+              ),
+              readLogState: (
+                logPath, {
+                previous,
+                maxRetainedCharacters = 120000,
+              }) async {
+                return LogPanelFileState(
+                  content: content,
+                  fileLength: content.length,
+                  unchangedCount: 0,
+                  nextPollInterval: const Duration(seconds: 1),
+                );
+              },
+              enableFallbackPolling: false,
+              logUpdateStreamFactory: (_) => const Stream<Object?>.empty(),
+            ),
+          ),
+        ),
+      );
+    }
+
+    await tester.pumpWidget(buildPanel(300));
+    await tester.pumpAndSettle();
+    final shortHeight = tester.getSize(find.byType(ListView)).height;
+
+    await tester.pumpWidget(buildPanel(500));
+    await tester.pumpAndSettle();
+    final tallHeight = tester.getSize(find.byType(ListView)).height;
+
+    expect(tallHeight - shortHeight, greaterThan(120));
   });
 }

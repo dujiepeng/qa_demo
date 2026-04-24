@@ -6,6 +6,7 @@ import '../../common/widgets/log_view.dart';
 import '../../common/widgets/log_view_actions.dart';
 import '../../common/widgets/grid_action_menu.dart';
 import '../../common/widgets/common_input_row.dart';
+import '../../common/widgets/connection_status_light.dart';
 import '../../common/widgets/common_section_title.dart';
 import '../../common/widgets/common_layout.dart';
 import '../../common/widgets/info_dialog.dart';
@@ -194,6 +195,7 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
       ),
       centerTitle: true,
       actions: [
+        const ConnectionStatusLight(),
         // 信息按钮：显示当前用户、设备及服务器配置信息
         IconButton(
           icon: const Icon(Icons.info_outline),

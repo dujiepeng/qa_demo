@@ -82,14 +82,21 @@ class _HomePageState extends State<HomePage> {
     final otherDevicesController = context
         .read<OtherLoggedInDevicesController>();
     final settings = context.read<AppSettings>();
+    Future<void> refreshConnectionLight() {
+      return overlayController.refreshConnectionLight(
+        () => EMClient.getInstance.isConnected(),
+      );
+    }
     EMClient.getInstance.addConnectionEventHandler(
       _connectionHandlerId,
       EMConnectionEventHandler(
         onConnected: () {
           overlayController.showMessage('连接状态：已连接');
+          refreshConnectionLight();
         },
         onDisconnected: () {
           overlayController.showMessage('连接状态：已断开');
+          refreshConnectionLight();
         },
         onUserDidLoginFromOtherDevice: (info) {
           final deviceName = info.deviceName.trim();
@@ -103,33 +110,55 @@ class _HomePageState extends State<HomePage> {
             );
           }
           overlayController.showMessage('连接状态：当前账号在其他设备登录 ($deviceName)');
+          refreshConnectionLight();
         },
         onUserDidRemoveFromServer: () {
           overlayController.showMessage('连接状态：账号已被服务器移除');
+          refreshConnectionLight();
         },
         onUserDidForbidByServer: () {
           overlayController.showMessage('连接状态：账号已被服务器禁止连接');
+          refreshConnectionLight();
+        },
+        onUserDidChangePassword: () {
+          overlayController.showMessage('连接状态：密码已变更');
+          refreshConnectionLight();
+        },
+        onUserDidLoginTooManyDevice: () {
+          overlayController.showMessage('连接状态：登录设备数超限');
+          refreshConnectionLight();
         },
         onUserKickedByOtherDevice: () {
           overlayController.showMessage('连接状态：当前账号被其他设备踢下线');
+          refreshConnectionLight();
+        },
+        onUserAuthenticationFailed: () {
+          overlayController.showMessage('连接状态：鉴权失败');
+          refreshConnectionLight();
         },
         onTokenWillExpire: () {
           overlayController.showMessage('连接状态：Token 即将过期');
+          refreshConnectionLight();
         },
         onTokenDidExpire: () {
           overlayController.showMessage('连接状态：Token 已过期');
+          refreshConnectionLight();
         },
         onAppActiveNumberReachLimit: () {
           overlayController.showMessage('连接状态：应用活跃用户数已达上限');
+          refreshConnectionLight();
         },
         onOfflineMessageSyncStart: () {
           overlayController.showMessage('连接状态：开始同步离线消息');
+          refreshConnectionLight();
         },
         onOfflineMessageSyncFinish: () {
           overlayController.showMessage('连接状态：离线消息同步完成');
+          refreshConnectionLight();
         },
       ),
     );
+    refreshConnectionLight();
     _connectionHandlerAttached = true;
   }
 

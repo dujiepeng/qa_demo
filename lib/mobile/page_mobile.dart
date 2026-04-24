@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:qa_flutter/common/widgets/connection_status_light.dart';
 import 'package:qa_flutter/pages/single/black_list_page.dart';
 import 'package:qa_flutter/pages/single/contact_presence_page.dart';
 import '../common/widgets/common_gradient_background.dart';
@@ -106,6 +107,7 @@ class _PageMobileState extends State<PageMobile> {
           ),
           centerTitle: true,
           actions: [
+            const ConnectionStatusLight(),
             IconButton(
               icon: const Icon(Icons.info_outline),
               onPressed: () =>

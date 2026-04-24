@@ -30,6 +30,6 @@ class OfflineMessageCounter extends ChangeNotifier {
   }
 
   void recordMessages(Iterable<EMMessage> messages) {
-    recordOnlineStates(messages.map((message) => !message.onlineState));
+    recordOnlineStates(messages.map((message) => message.onlineState));
   }
 }

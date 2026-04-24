@@ -75,4 +75,31 @@ void main() {
       expect(find.text('当前已是最新版本'), findsOneWidget);
     },
   );
+
+  testWidgets('logout action does not throw when session providers are absent', (
+    tester,
+  ) async {
+    final settings = AppSettings()..isLoggedIn = false;
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: settings),
+          ChangeNotifierProvider.value(value: VersionManager()),
+        ],
+        child: MaterialApp(
+          routes: {
+            '/login': (_) => const Scaffold(body: Text('login-page')),
+          },
+          home: const MePageContent(showAppBar: true),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('退出登录'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(settings.isLoggedIn, isFalse);
+  });
 }

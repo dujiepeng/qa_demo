@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../utils/app_route_observer.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_settings.dart';
 import '../log_panel/log_panel.dart';
+import '../log_panel/log_panel_controller.dart';
 
 class MobileLogOverlay extends StatefulWidget {
   final Widget child;
@@ -12,39 +14,118 @@ class MobileLogOverlay extends StatefulWidget {
   State<MobileLogOverlay> createState() => _MobileLogOverlayState();
 }
 
-class _MobileLogOverlayState extends State<MobileLogOverlay> {
+class _MobileLogOverlayState extends State<MobileLogOverlay>
+    with WidgetsBindingObserver, RouteAware {
   static const double _bubbleSize = 56.0;
   static const double _bubbleEdgeMargin = 8.0;
   double _logPanelHeight = 200.0;
   static const double _minLogHeight = 128.0;
   double? _bubbleVerticalRatioOverride;
   bool? _bubbleOnRightSideOverride;
+  ModalRoute<dynamic>? _subscribedRoute;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _ensureMinimized();
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    if (_subscribedRoute != null) {
+      appRouteObserver.unsubscribe(this);
+      _subscribedRoute = null;
+    }
+    super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route == null || identical(route, _subscribedRoute)) {
+      return;
+    }
+    if (_subscribedRoute != null) {
+      appRouteObserver.unsubscribe(this);
+    }
+    _subscribedRoute = route;
+    if (route is PageRoute) {
+      appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) {
+      _ensureMinimized();
+    }
+  }
+
+  @override
+  void didPushNext() {
+    _ensureMinimized();
+  }
+
+  @override
+  void didPop() {
+    _ensureMinimized();
+  }
+
+  void _ensureMinimized() {
+    if (!mounted) {
+      return;
+    }
+    final settings = context.read<AppSettings>();
+    if (!settings.isLoggedIn || settings.isLogOverlayMinimized) {
+      return;
+    }
+    settings.setLogOverlayMinimized(true);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<AppSettings>();
-    final isDark = settings.isDarkMode;
-    final isMinimized = settings.isLogOverlayMinimized;
+    return Overlay(
+      initialEntries: [
+        OverlayEntry(
+          builder: (context) => Consumer<AppSettings>(
+            builder: (context, settings, _) {
+              final isDark = settings.isDarkMode;
+              final isMinimized = settings.isLogOverlayMinimized;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      resizeToAvoidBottomInset: false,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return Stack(
-            children: [
-              Positioned.fill(child: widget.child),
-              if (settings.isLoggedIn && !isMinimized)
-                Align(
-                  alignment: Alignment.bottomCenter,
-                  child: _buildLogArea(isDark),
+              return Scaffold(
+                backgroundColor: Colors.transparent,
+                resizeToAvoidBottomInset: false,
+                body: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Stack(
+                      children: [
+                        Positioned.fill(child: widget.child),
+                        if (settings.isLoggedIn && !isMinimized)
+                          Align(
+                            alignment: Alignment.bottomCenter,
+                            child: _buildLogArea(isDark),
+                          ),
+                        if (settings.isLoggedIn && isMinimized)
+                          _buildFloatingBubble(
+                            context,
+                            isDark,
+                            settings,
+                            constraints,
+                          ),
+                      ],
+                    );
+                  },
                 ),
-              if (settings.isLoggedIn && isMinimized)
-                _buildFloatingBubble(context, isDark, settings, constraints),
-            ],
-          );
-        },
-      ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -54,92 +135,83 @@ class _MobileLogOverlayState extends State<MobileLogOverlay> {
       top: false,
       child: SizedBox(
         height: _logPanelHeight,
-        child: Overlay(
-          initialEntries: [
-            OverlayEntry(
-              builder: (context) => Material(
-                color: Colors.transparent,
-                child: Column(
-                  children: [
-                    GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onVerticalDragUpdate: (details) {
-                        setState(() {
-                          _logPanelHeight -= details.delta.dy;
-                          final maxHeight =
-                              MediaQuery.of(context).size.height * 0.7;
-                          if (_logPanelHeight < _minLogHeight) {
-                            _logPanelHeight = _minLogHeight;
-                          } else if (_logPanelHeight > maxHeight) {
-                            _logPanelHeight = maxHeight;
-                          }
-                        });
-                      },
-                      child: Container(
-                        height: 44,
-                        width: double.infinity,
-                        color: isDark ? Colors.black26 : Colors.grey[300],
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 4,
-                        ),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            IgnorePointer(
-                              child: Container(
-                                width: 40,
-                                height: 4,
-                                decoration: BoxDecoration(
-                                  color: AppColors.glassBorder(isDark),
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                            ),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: OutlinedButton(
-                                style: OutlinedButton.styleFrom(
-                                  minimumSize: const Size(88, 28),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                  ),
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                  visualDensity: VisualDensity.compact,
-                                  side: BorderSide(
-                                    color: AppColors.glassBorder(isDark),
-                                  ),
-                                  backgroundColor: isDark
-                                      ? Colors.black54
-                                      : Colors.white.withValues(alpha: 0.92),
-                                  foregroundColor: AppColors.textPrimary(
-                                    isDark,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                ),
-                                onPressed: () {
-                                  settings.setLogOverlayMinimized(true);
-                                },
-                                child: const Text('最小化'),
-                              ),
-                            ),
-                          ],
+        child: Material(
+          color: Colors.transparent,
+          child: Column(
+            children: [
+              GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onVerticalDragUpdate: (details) {
+                  setState(() {
+                    _logPanelHeight -= details.delta.dy;
+                    final maxHeight = MediaQuery.of(context).size.height * 0.7;
+                    if (_logPanelHeight < _minLogHeight) {
+                      _logPanelHeight = _minLogHeight;
+                    } else if (_logPanelHeight > maxHeight) {
+                      _logPanelHeight = maxHeight;
+                    }
+                  });
+                },
+                child: Container(
+                  height: 44,
+                  width: double.infinity,
+                  color: isDark ? Colors.black26 : Colors.grey[300],
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      IgnorePointer(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: AppColors.glassBorder(isDark),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: settings.isInit
-                          ? LogPanel(isDark: isDark)
-                          : const SizedBox.shrink(),
-                    ),
-                  ],
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(88, 28),
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: VisualDensity.compact,
+                            side: BorderSide(
+                              color: AppColors.glassBorder(isDark),
+                            ),
+                            backgroundColor: isDark
+                                ? Colors.black54
+                                : Colors.white.withValues(alpha: 0.92),
+                            foregroundColor: AppColors.textPrimary(isDark),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          onPressed: () {
+                            settings.setLogOverlayMinimized(true);
+                          },
+                          child: const Text('最小化'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+              Expanded(
+                child: settings.isInit
+                    ? LogPanel(
+                        isDark: isDark,
+                        maxRetainedCharacters: compactRetainedLogPanelCharacters,
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          ),
         ),
       ),
     );

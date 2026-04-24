@@ -11,6 +11,14 @@ class OtherLoggedInDevicesController extends ChangeNotifier {
   String? get latestDeviceName =>
       _devices.isEmpty ? null : _devices.first.deviceName;
 
+  void clear() {
+    if (_devices.isEmpty) {
+      return;
+    }
+    _devices.clear();
+    notifyListeners();
+  }
+
   void recordDeviceLogin(String deviceName) {
     final trimmed = deviceName.trim();
     if (trimmed.isEmpty) {

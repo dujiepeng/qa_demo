@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import 'package:provider/provider.dart';
+import '../session_scope.dart';
 import '../../config/app_config.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
@@ -173,9 +173,7 @@ class MePageContent extends StatelessWidget {
         const SizedBox(height: 40),
         ElevatedButton(
           onPressed: () async {
-            try {
-              await EMClient.getInstance.logout();
-            } catch (_) {}
+            await resetQaSession(context);
             settings.isLoggedIn = false;
             settings.lastLoginUserId = '';
             settings.lastLoginPassword = '';

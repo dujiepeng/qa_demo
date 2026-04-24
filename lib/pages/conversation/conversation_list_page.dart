@@ -315,7 +315,7 @@ class _ConversationListPageState extends State<ConversationListPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('删除会话'),
+        title: const Text('删除会话及消息'),
         content: Text('确定要删除与 ${conversation.id} 的会话吗？'),
         actions: [
           TextButton(
@@ -332,8 +332,10 @@ class _ConversationListPageState extends State<ConversationListPage> {
 
     if (confirm == true) {
       try {
-        await EMClient.getInstance.chatManager.deleteConversation(
+        await EMClient.getInstance.chatManager.deleteRemoteConversation(
           conversation.id,
+          conversationType: conversation.type,
+          isDeleteMessage: true,
         );
         _fetchConversations(silent: true);
       } catch (e) {
