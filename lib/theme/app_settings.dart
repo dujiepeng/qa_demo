@@ -68,17 +68,8 @@ class AppSettings extends ChangeNotifier {
   double get logBubbleVerticalRatio => _logBubbleVerticalRatio;
 
   bool isDirty = false;
-  String _lastLoginUserId = '';
-  String get lastLoginUserId => _lastLoginUserId;
-  set lastLoginUserId(String value) {
-    _lastLoginUserId = value;
-  }
-
-  String _lastLoginPassword = '';
-  String get lastLoginPassword => _lastLoginPassword;
-  set lastLoginPassword(String value) {
-    _lastLoginPassword = value;
-  }
+  String lastLoginUserId = '';
+  String lastLoginPassword = '';
 
   // 当前选中的集群名称，例如 TKE / NGI / 开发沙箱
   String activeEnvName = 'TKE';
@@ -177,8 +168,8 @@ class AppSettings extends ChangeNotifier {
     _logBubbleVerticalRatio = _clampBubbleRatio(
       prefs.getDouble(_keyLogBubbleVerticalRatio) ?? 0.7,
     );
-    _lastLoginUserId = prefs.getString(_keyLastLoginUserId) ?? '';
-    _lastLoginPassword = prefs.getString(_keyLastLoginPassword) ?? '';
+    lastLoginUserId = prefs.getString(_keyLastLoginUserId) ?? '';
+    lastLoginPassword = prefs.getString(_keyLastLoginPassword) ?? '';
 
     _updateSnapshot();
     isDirty = true;
@@ -222,8 +213,8 @@ class AppSettings extends ChangeNotifier {
       _keyLogBubbleVerticalRatio,
       _clampBubbleRatio(_logBubbleVerticalRatio),
     );
-    await prefs.setString(_keyLastLoginUserId, _lastLoginUserId);
-    await prefs.setString(_keyLastLoginPassword, _lastLoginPassword);
+    await prefs.setString(_keyLastLoginUserId, lastLoginUserId);
+    await prefs.setString(_keyLastLoginPassword, lastLoginPassword);
 
     _updateSnapshot();
     isDirty = true;

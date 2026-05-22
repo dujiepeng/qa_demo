@@ -50,12 +50,19 @@
 ## 关键能力
 
 - 单聊、群聊、聊天室基础与专项功能测试
+- 聊天室消息定向发送、撤回、修改及相关回调日志验证
 - 会话列表、联系人状态、黑名单等辅助验证链路
 - 多环境配置与服务器切换
 - 当前用户资料、其他登录设备、推送昵称等附属能力测试
 - SDK 日志查看、应用内日志面板、连接状态提示
 - 基于 GitHub Release 的版本检查能力
 - 手机 / Pad 双端测试入口
+
+## 聊天室消息修改
+
+- 聊天室消息日志长按菜单提供 `修改` 操作，用固定英文内容 `Chatroom edited message` 修改文本/自定义消息 body，并写入固定 ext `qa_chatroom_edit=chatroom_edit_ext_updated`。
+- 文件、视频、音频、图片、位置和合并转发消息的 `修改` 操作只修改 ext，不替换原消息 body。
+- 命令消息不展示修改入口；收到 `onMessageContentChanged` 后会记录修改回调日志。
 
 ## 运行与验证
 
@@ -67,6 +74,8 @@ flutter analyze
 ```
 
 如果全局 Flutter/Dart 版本与项目要求不兼容，优先使用项目本地 `fvm` / Flutter 工具链执行验证命令。
+
+APK 版本直接来自 `pubspec.yaml` 的 `version:`，其中 `+` 前是 Android `versionName`，`+` 后是 `versionCode`。执行 `fvm flutter build apk --release` 时会自动带上这个版本；如需临时覆盖，可使用 `--build-name` 和 `--build-number`，但正式发布应保持 `pubspec.yaml`、`changelog.md` 和 Git tag 一致。
 
 针对局部改动，建议优先运行相关测试文件，例如：
 

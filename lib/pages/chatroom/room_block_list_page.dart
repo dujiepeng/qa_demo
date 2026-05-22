@@ -3,40 +3,40 @@ import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 
-typedef RoomMembersLoader =
-    Future<EMCursorResult<String>> Function(
+typedef RoomBlockListLoader =
+    Future<List<String>> Function(
       String roomId, {
-      String cursor,
+      int pageNum,
       int pageSize,
     });
-typedef RoomMemberBlocker =
+typedef RoomMemberUnblocker =
     Future<void> Function(String roomId, List<String> members);
 
-class RoomMembersPage extends StatefulWidget {
-  const RoomMembersPage({
+class RoomBlockListPage extends StatefulWidget {
+  const RoomBlockListPage({
     super.key,
     required this.roomId,
-    this.membersLoader,
-    this.memberBlocker,
+    this.blockListLoader,
+    this.memberUnblocker,
   });
 
   final String roomId;
-  final RoomMembersLoader? membersLoader;
-  final RoomMemberBlocker? memberBlocker;
+  final RoomBlockListLoader? blockListLoader;
+  final RoomMemberUnblocker? memberUnblocker;
 
   @override
-  State<RoomMembersPage> createState() =>
-      _RoomMembersPageState();
+  State<RoomBlockListPage> createState() => _RoomBlockListPageState();
 }
 
-class _RoomMembersPageState extends State<RoomMembersPage> {
+class _RoomBlockListPageState extends State<RoomBlockListPage> {
+  static const _pageSize = 50;
   final _settings = AppSettings();
   final _scrollController = ScrollController();
-  List<String> _members = [];
+  final List<String> _members = [];
   bool _isLoading = false;
   bool _isLoadingMore = false;
   String? _errorMessage;
-  String _cursor = '';
+  int _nextPageNum = 1;
   bool _hasMore = true;
 
   @override
@@ -61,25 +61,39 @@ class _RoomMembersPageState extends State<RoomMembersPage> {
     }
   }
 
+  Future<List<String>> _loadBlockListPage(int pageNum) {
+    final loader = widget.blockListLoader;
+    if (loader != null) {
+      return loader(widget.roomId, pageNum: pageNum, pageSize: _pageSize);
+    }
+    return EMClient.getInstance.chatRoomManager.fetchChatRoomBlockList(
+      widget.roomId,
+      pageNum: pageNum,
+      pageSize: _pageSize,
+    );
+  }
+
   Future<void> _fetchMembers() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
-      _cursor = '';
+      _nextPageNum = 1;
       _hasMore = true;
     });
 
     try {
-      // 获取聊天室成员列表
-      final result = await _loadMembers(cursor: '', pageSize: 50);
-
+      final result = await _loadBlockListPage(1);
+      if (!mounted) return;
       setState(() {
-        _members = result.data;
-        _cursor = result.cursor ?? '';
-        _hasMore = _cursor.isNotEmpty;
+        _members
+          ..clear()
+          ..addAll(result);
+        _nextPageNum = 2;
+        _hasMore = result.length >= _pageSize;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = e.toString();
         _isLoading = false;
@@ -94,25 +108,21 @@ class _RoomMembersPageState extends State<RoomMembersPage> {
       _isLoadingMore = true;
     });
 
+    final pageNum = _nextPageNum;
     try {
-      final result = await _loadMembers(cursor: _cursor, pageSize: 50);
-
+      final result = await _loadBlockListPage(pageNum);
+      if (!mounted) return;
       setState(() {
-        _members.addAll(result.data);
-        _cursor = result.cursor ?? '';
-        _hasMore = _cursor.isNotEmpty;
+        _members.addAll(result);
+        _nextPageNum = pageNum + 1;
+        _hasMore = result.length >= _pageSize;
         _isLoadingMore = false;
       });
-    } catch (e) {
+    } catch (_) {
+      if (!mounted) return;
       setState(() {
         _isLoadingMore = false;
       });
-      // 加载更多失败时显示提示
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('加载更多失败: ${e.toString()}')));
-      }
     }
   }
 
@@ -135,68 +145,18 @@ class _RoomMembersPageState extends State<RoomMembersPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Divider(height: 1, color: AppColors.glassBorder(isDark)),
-
-            // 设置管理员
             ListTile(
               leading: Icon(
-                Icons.admin_panel_settings_outlined,
+                Icons.person_add_alt_1_outlined,
                 color: AppColors.primary(isDark),
               ),
               title: Text(
-                '设置管理员',
+                '移出黑名单',
                 style: TextStyle(color: AppColors.textPrimary(isDark)),
               ),
               onTap: () {
                 Navigator.pop(context);
-                _setAdmin(memberId);
-              },
-            ),
-
-            // 禁言
-            ListTile(
-              leading: Icon(
-                Icons.mic_off_outlined,
-                color: AppColors.primary(isDark),
-              ),
-              title: Text(
-                '禁言',
-                style: TextStyle(color: AppColors.textPrimary(isDark)),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _muteMember(memberId);
-              },
-            ),
-
-            // 加入白名单
-            ListTile(
-              leading: Icon(
-                Icons.verified_user_outlined,
-                color: AppColors.primary(isDark),
-              ),
-              title: Text(
-                '加入白名单',
-                style: TextStyle(color: AppColors.textPrimary(isDark)),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _addToWhitelist(memberId);
-              },
-            ),
-
-            // 加入黑名单
-            ListTile(
-              leading: const Icon(
-                Icons.block_outlined,
-                color: Colors.red,
-              ),
-              title: Text(
-                '加入黑名单',
-                style: TextStyle(color: AppColors.textPrimary(isDark)),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _addToBlockList(memberId);
+                _removeFromBlockList(memberId);
               },
             ),
           ],
@@ -214,86 +174,25 @@ class _RoomMembersPageState extends State<RoomMembersPage> {
     );
   }
 
-  Future<EMCursorResult<String>> _loadMembers({
-    required String cursor,
-    required int pageSize,
-  }) {
-    final loader = widget.membersLoader;
-    if (loader != null) {
-      return loader(widget.roomId, cursor: cursor, pageSize: pageSize);
-    }
-    return EMClient.getInstance.chatRoomManager.fetchChatRoomMembers(
-      widget.roomId,
-      cursor: cursor,
-      pageSize: pageSize,
-    );
-  }
-
-  Future<void> _setAdmin(String memberId) async {
+  Future<void> _removeFromBlockList(String memberId) async {
     try {
-      await EMClient.getInstance.chatRoomManager.addChatRoomAdmin(
-        widget.roomId,
-        memberId,
-      );
-      if (mounted) {
-        _showResultDialog('已设置 $memberId 为管理员', true);
-      }
-    } catch (e) {
-      if (mounted) {
-        _showResultDialog('设置管理员失败: ${e.toString()}', false);
-      }
-    }
-  }
-
-  Future<void> _muteMember(String memberId) async {
-    try {
-      await EMClient.getInstance.chatRoomManager.muteChatRoomMembers(
-        widget.roomId,
-        [memberId],
-      );
-      if (mounted) {
-        _showResultDialog('已禁言 $memberId', true);
-      }
-    } catch (e) {
-      if (mounted) {
-        _showResultDialog('禁言失败: ${e.toString()}', false);
-      }
-    }
-  }
-
-  Future<void> _addToWhitelist(String memberId) async {
-    try {
-      await EMClient.getInstance.chatRoomManager.addMembersToChatRoomAllowList(
-        widget.roomId,
-        [memberId],
-      );
-      if (mounted) {
-        _showResultDialog('已将 $memberId 加入白名单', true);
-      }
-    } catch (e) {
-      if (mounted) {
-        _showResultDialog('加入白名单失败: ${e.toString()}', false);
-      }
-    }
-  }
-
-  Future<void> _addToBlockList(String memberId) async {
-    try {
-      final blocker = widget.memberBlocker;
-      if (blocker != null) {
-        await blocker(widget.roomId, [memberId]);
+      final unblocker = widget.memberUnblocker;
+      if (unblocker != null) {
+        await unblocker(widget.roomId, [memberId]);
       } else {
-        await EMClient.getInstance.chatRoomManager.blockChatRoomMembers(
+        await EMClient.getInstance.chatRoomManager.unBlockChatRoomMembers(
           widget.roomId,
           [memberId],
         );
       }
+      if (!mounted) return;
+      await _fetchMembers();
       if (mounted) {
-        _showResultDialog('已将 $memberId 加入黑名单', true);
+        _showResultDialog('已将 $memberId 移出黑名单', true);
       }
     } catch (e) {
       if (mounted) {
-        _showResultDialog('加入黑名单失败: ${e.toString()}', false);
+        _showResultDialog('移出黑名单失败: ${e.toString()}', false);
       }
     }
   }
@@ -339,7 +238,6 @@ class _RoomMembersPageState extends State<RoomMembersPage> {
 
     return Column(
       children: [
-        // 顶部标题栏
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           decoration: BoxDecoration(
@@ -354,7 +252,7 @@ class _RoomMembersPageState extends State<RoomMembersPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '聊天室成员 (${_members.length})',
+                '黑名单 (${_members.length})',
                 style: TextStyle(
                   color: AppColors.textPrimary(isDark),
                   fontSize: 18,
@@ -381,8 +279,6 @@ class _RoomMembersPageState extends State<RoomMembersPage> {
             ],
           ),
         ),
-
-        // 成员列表
         Expanded(child: _buildContent(isDark)),
       ],
     );
@@ -407,7 +303,7 @@ class _RoomMembersPageState extends State<RoomMembersPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              '获取成员列表失败',
+              '获取黑名单失败',
               style: TextStyle(
                 color: AppColors.textPrimary(isDark),
                 fontSize: 16,
@@ -442,7 +338,7 @@ class _RoomMembersPageState extends State<RoomMembersPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.people_outline,
+              Icons.block_outlined,
               size: 64,
               color: AppColors.textSecondary(isDark),
             ),
@@ -464,7 +360,6 @@ class _RoomMembersPageState extends State<RoomMembersPage> {
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: _members.length + (_hasMore ? 1 : 0),
       itemBuilder: (context, index) {
-        // 显示加载更多指示器
         if (index == _members.length) {
           return Container(
             padding: const EdgeInsets.symmetric(vertical: 20),
@@ -491,15 +386,9 @@ class _RoomMembersPageState extends State<RoomMembersPage> {
           ),
           child: ListTile(
             onTap: () => _showMemberActions(member, isDark),
-            leading: CircleAvatar(
-              backgroundColor: AppColors.primary(isDark),
-              child: Text(
-                member.isNotEmpty ? member[0].toUpperCase() : '?',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+            leading: const CircleAvatar(
+              backgroundColor: Colors.red,
+              child: Icon(Icons.block_outlined, color: Colors.white),
             ),
             title: Text(
               member,

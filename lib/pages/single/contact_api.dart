@@ -66,3 +66,11 @@ Future<List<EMPresence>> queryPresenceFromSdk(String userId) {
     members: [userId],
   );
 }
+
+Future<List<EMPresence>> queryPresenceForMembersFromSdk(
+  List<String> userIds,
+) {
+  return EMClient.getInstance.presenceManager.fetchPresenceStatus(
+    members: userIds,
+  );
+}

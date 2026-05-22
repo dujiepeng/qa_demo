@@ -224,7 +224,7 @@ class LogPanelController {
       (_) {
         _scheduleEventDrivenSync();
       },
-      onError: (_, __) {
+      onError: (error, stackTrace) {
         _eventUpdatesEnabled = false;
       },
     );

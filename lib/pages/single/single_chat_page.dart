@@ -720,7 +720,9 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
         onTap: () async {
           try {
             List<EMMessage> list = await EMClient.getInstance.chatManager
-                .fetchPinnedMessages(conversationId: _userIdController.text);
+                .fetchPinnedMessages(
+                  conversationId: _userIdController.text.trim().toLowerCase(),
+                );
             if (!mounted) return;
             await showDialog<void>(
               context: context,

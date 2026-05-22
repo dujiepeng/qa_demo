@@ -30,7 +30,7 @@ void main() {
                       prepareCalls++;
                       return completer.future;
                     },
-                    pushLogPage: (_, __) async {
+                    pushLogPage: (context, logPath) async {
                       pageOpenCalls++;
                     },
                   ),

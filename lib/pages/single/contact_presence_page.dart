@@ -43,8 +43,16 @@ class ContactPresencePage extends StatefulWidget {
   State<ContactPresencePage> createState() => _ContactPresencePageState();
 }
 
+@visibleForTesting
+void debugResetContactPresenceCache() {
+  _ContactPresencePageState._cachedSubscribedUsers.clear();
+  _ContactPresencePageState._cachedPresenceDisplays.clear();
+}
+
 class _ContactPresencePageState extends State<ContactPresencePage> {
   static const _presenceHandlerId = 'contact_presence_page';
+  static final Set<String> _cachedSubscribedUsers = {};
+  static final Map<String, _PresenceDisplay> _cachedPresenceDisplays = {};
 
   final _settings = AppSettings();
   final ScrollController _scrollController = ScrollController();
@@ -58,6 +66,8 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
   @override
   void initState() {
     super.initState();
+    _subscribedUsers.addAll(_cachedSubscribedUsers);
+    _presenceDisplays.addAll(_cachedPresenceDisplays);
     _attachPresenceUpdates();
     _initializePage();
   }
@@ -129,22 +139,71 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
       if (!mounted) {
         return;
       }
+      final subscribedMembers = result
+          .map((member) => member.trim())
+          .where((member) => member.isNotEmpty)
+          .toList();
+      _cachedSubscribedUsers.addAll(subscribedMembers);
       setState(() {
         _subscribedUsers
-          ..clear()
-          ..addAll(result);
+          ..addAll(_cachedSubscribedUsers)
+          ..addAll(subscribedMembers);
       });
+      await _restoreSubscribedPresence(_subscribedUsers.toList());
     } catch (_) {}
   }
 
-  void _applyPresenceList(List<EMPresence> list) {
+  Future<void> _restoreSubscribedPresence(List<String> members) async {
+    final subscribedMembers = members
+        .map((member) => member.trim())
+        .where((member) => member.isNotEmpty)
+        .toList();
+    if (subscribedMembers.isEmpty) {
+      return;
+    }
+
+    try {
+      if (widget.queryPresence != null) {
+        for (final member in subscribedMembers) {
+          final result = await widget.queryPresence!.call(member);
+          if (!mounted) {
+            return;
+          }
+          _applyPresenceList(result);
+        }
+      } else {
+        final result = await queryPresenceForMembersFromSdk(subscribedMembers);
+        if (!mounted) {
+          return;
+        }
+        _applyPresenceList(result);
+      }
+    } catch (_) {}
+  }
+
+  void _applyPresenceList(
+    List<EMPresence> list, {
+    bool forceRefresh = false,
+  }) {
     if (!mounted) {
       return;
     }
 
     setState(() {
       for (final presence in list) {
-        _presenceDisplays[presence.publisher] = _buildPresenceDisplay(presence);
+        final currentDisplay = _presenceDisplays[presence.publisher];
+        if (!forceRefresh &&
+            currentDisplay != null &&
+            presence.lastTime > 0 &&
+            currentDisplay.lastTime > presence.lastTime) {
+          continue;
+        }
+        final display = _buildPresenceDisplay(presence);
+        _presenceDisplays[presence.publisher] = display;
+        if (_subscribedUsers.contains(presence.publisher) ||
+            _cachedSubscribedUsers.contains(presence.publisher)) {
+          _cachedPresenceDisplays[presence.publisher] = display;
+        }
       }
     });
   }
@@ -158,6 +217,7 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
     return _PresenceDisplay(
       onlineLabel: isOnline ? '在线' : '离线',
       customLabel: customStatus.isEmpty ? null : customStatus,
+      lastTime: presence.lastTime,
     );
   }
 
@@ -236,10 +296,11 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
       if (!mounted) {
         return;
       }
+      _cachedSubscribedUsers.add(userId);
       setState(() {
         _subscribedUsers.add(userId);
       });
-      _applyPresenceList(result);
+      _applyPresenceList(result, forceRefresh: true);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('已订阅 $userId 的 Presence')));
@@ -261,8 +322,11 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
       if (!mounted) {
         return;
       }
+      _cachedSubscribedUsers.remove(userId);
+      _cachedPresenceDisplays.remove(userId);
       setState(() {
         _subscribedUsers.remove(userId);
+        _presenceDisplays.remove(userId);
       });
       ScaffoldMessenger.of(
         context,
@@ -285,10 +349,16 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
       if (!mounted) {
         return;
       }
-      _applyPresenceList(result);
+      _applyPresenceList(result, forceRefresh: true);
+      final display = _presenceDisplays[userId] ??
+          result
+              .where((presence) => presence.publisher == userId)
+              .map(_buildPresenceDisplay)
+              .firstOrNull;
+      final statusText = display?.onlineLabel ?? '未知';
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('已查询 $userId 的在线状态')));
+      ).showSnackBar(SnackBar(content: Text('已查询 $userId 的在线状态：$statusText')));
     } catch (e) {
       if (!mounted) {
         return;
@@ -448,14 +518,16 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
                                               value: 'set_remark',
                                               child: Text('设置备注'),
                                             ),
-                                            const PopupMenuItem(
-                                              value: 'subscribe',
-                                              child: Text('订阅 Presence'),
-                                            ),
-                                            const PopupMenuItem(
-                                              value: 'unsubscribe',
-                                              child: Text('取消订阅 Presence'),
-                                            ),
+                                            if (isSubscribed)
+                                              const PopupMenuItem(
+                                                value: 'unsubscribe',
+                                                child: Text('取消订阅 Presence'),
+                                              )
+                                            else
+                                              const PopupMenuItem(
+                                                value: 'subscribe',
+                                                child: Text('订阅 Presence'),
+                                              ),
                                             const PopupMenuItem(
                                               value: 'query',
                                               child: Text('查询状态'),
@@ -616,9 +688,11 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
 class _PresenceDisplay {
   final String onlineLabel;
   final String? customLabel;
+  final int lastTime;
 
   const _PresenceDisplay({
     required this.onlineLabel,
     required this.customLabel,
+    required this.lastTime,
   });
 }

@@ -7,6 +7,7 @@ import '../../common/widgets/input_dialog.dart';
 import 'room_members_page.dart';
 import 'room_admins_page.dart';
 import 'room_white_list_page.dart';
+import 'room_block_list_page.dart';
 import 'room_mute_list_page.dart';
 import 'room_change_owner_page.dart';
 import '../../common/widgets/log_view.dart';
@@ -22,6 +23,58 @@ import '../../common/widgets/info_dialog.dart';
 /// 聊天室信息编辑类型
 enum RoomInfoEditType { name, description, announcement }
 
+const chatRoomMessageEditContent = 'Chatroom edited message';
+const chatRoomMessageEditCustomEvent = 'chatroom_message_edited';
+const chatRoomMessageEditExtKey = 'qa_chatroom_edit';
+const chatRoomMessageEditExtValue = 'chatroom_edit_ext_updated';
+
+typedef ChatRoomMembersLoader =
+    Future<EMCursorResult<String>> Function(
+      String roomId, {
+      String cursor,
+      int pageSize,
+    });
+typedef ChatRoomMessageModifier =
+    Future<EMMessage> Function({
+      required String messageId,
+      EMMessageBody? msgBody,
+      Map<String, dynamic>? attributes,
+    });
+
+List<String>? parseChatRoomReceiverList(String rawValue) {
+  final members = rawValue
+      .split(RegExp(r'[\s,，]+'))
+      .map((value) => value.trim())
+      .where((value) => value.isNotEmpty);
+  final uniqueMembers = <String>[];
+  final seenMembers = <String>{};
+  for (final member in members) {
+    if (seenMembers.add(member)) {
+      uniqueMembers.add(member);
+    }
+  }
+  return uniqueMembers.isEmpty ? null : uniqueMembers;
+}
+
+bool isChatRoomRecallForRoom(RecallMessageInfo info, String roomId) {
+  return info.conversationId == roomId ||
+      info.recallMessage?.conversationId == roomId;
+}
+
+String buildChatRoomRecallLog(RecallMessageInfo info) {
+  final parts = <String>[
+    'msgId=${info.recallMessageId}',
+    'recallBy=${info.recallBy}',
+  ];
+  if (info.ext?.isNotEmpty == true) {
+    parts.add('ext=${info.ext}');
+  }
+  if (info.recallMessage != null) {
+    parts.add('hasMessage=true');
+  }
+  return '收到聊天室消息撤回: ${parts.join(', ')}';
+}
+
 class RoomPage extends StatefulWidget {
   const RoomPage({
     super.key,
@@ -29,12 +82,16 @@ class RoomPage extends StatefulWidget {
     this.showAppBar = true,
     this.userInfoLoader,
     this.roomInfoLoader,
+    this.chatRoomMembersLoader,
+    this.messageModifier,
     this.settingsOverride,
   });
   final String? roomId;
   final bool showAppBar;
   final RoomInfoDialogUserInfoLoader? userInfoLoader;
   final RoomInfoDialogChatRoomLoader? roomInfoLoader;
+  final ChatRoomMembersLoader? chatRoomMembersLoader;
+  final ChatRoomMessageModifier? messageModifier;
   final AppSettings? settingsOverride;
   @override
   State<RoomPage> createState() => _RoomPageState();
@@ -45,6 +102,7 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
   late final AppSettings _settings;
   final _roomIdController = TextEditingController();
   final _messageController = TextEditingController();
+  final _receiverListController = TextEditingController();
   final _logController = LogController();
   final _repeatCountController = TextEditingController(text: '1');
   String _roomId = '';
@@ -83,6 +141,7 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
   void dispose() {
     _roomIdController.dispose();
     _messageController.dispose();
+    _receiverListController.dispose();
     _repeatCountController.dispose();
     super.dispose();
   }
@@ -112,6 +171,22 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
                 tag: 'message',
               );
             }
+          }
+        },
+        onMessagesRecalledInfo: (infos) {
+          for (final info in infos) {
+            if (isChatRoomRecallForRoom(info, _roomId)) {
+              _handleChatRoomRecall(info);
+            }
+          }
+        },
+        onMessageContentChanged: (msg, operator, operationTime) {
+          if (msg.conversationId == _roomId) {
+            addReceiveLog(
+              '聊天室消息编辑回调: operator=$operator, operationTime=$operationTime, ${msg.from}: ${msg.toJson().toString()}',
+              attachment: msg,
+              tag: 'message',
+            );
           }
         },
       ),
@@ -192,6 +267,23 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
     if (roomId == _roomId) addReceiveLog(log);
   }
 
+  void _handleChatRoomRecall(RecallMessageInfo info) {
+    final recalledEntries = logController.entities
+        .where((element) => element.attachment is EMMessage)
+        .where((element) {
+          final message = element.attachment as EMMessage;
+          return message.msgId == info.recallMessageId;
+        })
+        .toList();
+    logController.changeEntities(
+      recalledEntries,
+      style: LogStyle.lineThrough,
+      overlayLabel: '消息已撤回',
+      overlayStyle: LogOverlayStyle.warning,
+    );
+    addReceiveLog(buildChatRoomRecallLog(info));
+  }
+
   PreferredSizeWidget _buildAppBar(bool isDark) {
     return AppBar(
       backgroundColor: Colors.transparent,
@@ -238,6 +330,36 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
           countController: _repeatCountController,
         ),
         const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: CommonInputRow(
+                controller: _receiverListController,
+                hintText: '定向接收人，最多20个，空则发全体',
+                isDark: isDark,
+              ),
+            ),
+            const SizedBox(width: 12),
+            ElevatedButton(
+              onPressed: _roomId.isEmpty ? null : _showReceiverPicker,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.inputBackground(isDark),
+                foregroundColor: AppColors.textPrimary(isDark),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: AppColors.glassBorder(isDark)),
+                ),
+                elevation: 0,
+              ),
+              child: const Text('选择'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
         CommonSectionTitle(title: '消息', isDark: isDark),
         const SizedBox(height: 10),
         _buildMessageTypeButtons(isDark),
@@ -257,7 +379,132 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
     return LogView(
       controller: _logController,
       isDark: isDark,
-      actionsBuilder: (_) => [LogViewActions.copyEntry()],
+      asyncActionsBuilder: _buildLogActions,
+    );
+  }
+
+  Future<List<LogAction>> _buildLogActions(LogEntry entry) async {
+    final actions = <LogAction>[LogViewActions.copyEntry()];
+    final attachment = entry.attachment;
+    if (entry.tag == 'message' && attachment is EMMessage) {
+      actions.add(
+        LogAction(
+          id: 'modify',
+          title: '修改',
+          icon: Icons.edit_outlined,
+          foregroundColor: Colors.purple,
+          isVisible: (_) =>
+              attachment.chatType == ChatType.ChatRoom &&
+              _canEditChatRoomMessage(attachment),
+          onSelected: (_) async {
+            try {
+              final body = _chatRoomEditedBody(attachment);
+              final msg = await _modifyChatRoomMessage(
+                messageId: attachment.msgId,
+                msgBody: body,
+                attributes: _chatRoomEditedAttributes(attachment),
+              );
+              addSendLog(
+                '${msg.from}: ${msg.toJson().toString()}',
+                attachment: msg,
+                tag: 'message',
+                color: Colors.purple,
+              );
+              return const LogActionResult(
+                overlayLabel: '已编辑',
+                overlayStyle: LogOverlayStyle.info,
+              );
+            } catch (e) {
+              return LogActionResult(
+                overlayLabel: '编辑失败: $e',
+                overlayStyle: LogOverlayStyle.error,
+              );
+            }
+          },
+        ),
+      );
+      actions.add(
+        LogAction(
+          id: 'recall',
+          title: '撤回',
+          icon: Icons.undo_outlined,
+          isDestructive: true,
+          isVisible: (_) =>
+              attachment.direction == MessageDirection.SEND &&
+              attachment.chatType == ChatType.ChatRoom,
+          onSelected: (_) async {
+            try {
+              await EMClient.getInstance.chatManager.recallMessage(
+                attachment.msgId,
+                ext: 'qa_demo_chatroom_recall',
+              );
+              return LogActionResult(
+                overlayLabel: '已撤回',
+                overlayStyle: LogOverlayStyle.warning,
+                color: Colors.red.withValues(alpha: 0.14),
+                style: LogStyle.lineThrough,
+              );
+            } catch (e) {
+              return LogActionResult(
+                overlayLabel: '撤回失败: $e',
+                overlayStyle: LogOverlayStyle.error,
+              );
+            }
+          },
+        ),
+      );
+    }
+    return actions;
+  }
+
+  bool _canEditChatRoomMessage(EMMessage message) {
+    if (message.chatType != ChatType.ChatRoom) {
+      return false;
+    }
+    return message.body is! EMCmdMessageBody;
+  }
+
+  EMMessageBody? _chatRoomEditedBody(EMMessage message) {
+    final body = message.body;
+    if (body is EMTextMessageBody) {
+      return EMTextMessageBody(content: chatRoomMessageEditContent);
+    }
+    if (body is EMCustomMessageBody) {
+      return EMCustomMessageBody(
+        event: chatRoomMessageEditCustomEvent,
+        params: {
+          ...?body.params,
+          'content': chatRoomMessageEditContent,
+        },
+      );
+    }
+    return null;
+  }
+
+  Map<String, dynamic> _chatRoomEditedAttributes(EMMessage message) {
+    return {
+      ...?message.attributes,
+      chatRoomMessageEditExtKey: chatRoomMessageEditExtValue,
+    };
+  }
+
+  Future<EMMessage> _modifyChatRoomMessage({
+    required String messageId,
+    EMMessageBody? msgBody,
+    Map<String, dynamic>? attributes,
+  }) {
+    final modifier = widget.messageModifier;
+    if (modifier != null) {
+      return modifier(
+        messageId: messageId,
+        msgBody: msgBody,
+        attributes: attributes,
+      );
+    }
+    return EMClient.getInstance.chatManager.modifyMessage(
+      messageId: messageId,
+      msgBody: msgBody,
+      attributes: attributes,
     );
   }
 
@@ -317,16 +564,65 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
       addSendLog('请先加入聊天室');
       return;
     }
+    final receiverList = parseChatRoomReceiverList(
+      _receiverListController.text,
+    );
+    if (receiverList != null && receiverList.length > 20) {
+      addSendLog('定向消息接收人不能超过20个');
+      return;
+    }
     try {
+      msg.receiverList = receiverList;
       msg.attributes = {
         'extKey1': 'extValue1',
         'date': DateTime.now().toString(),
       };
-      addSendLog('开始发送消息');
+      addSendLog(
+        receiverList == null
+            ? '开始发送消息'
+            : '开始发送定向消息: ${receiverList.join(', ')}',
+      );
       await EMClient.getInstance.chatManager.sendMessage(msg);
     } catch (e) {
       rethrow;
     }
+  }
+
+  Future<EMCursorResult<String>> _loadChatRoomMembersPage(
+    String roomId, {
+    String cursor = '',
+    int pageSize = 50,
+  }) {
+    final loader = widget.chatRoomMembersLoader;
+    if (loader != null) {
+      return loader(roomId, cursor: cursor, pageSize: pageSize);
+    }
+    return EMClient.getInstance.chatRoomManager.fetchChatRoomMembers(
+      roomId,
+      cursor: cursor,
+      pageSize: pageSize,
+    );
+  }
+
+  Future<void> _showReceiverPicker() async {
+    if (_roomId.isEmpty) return;
+    final selected = await showModalBottomSheet<List<String>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _ChatRoomReceiverPicker(
+        roomId: _roomId,
+        initialSelectedMembers:
+            parseChatRoomReceiverList(_receiverListController.text) ??
+            const <String>[],
+        membersLoader: _loadChatRoomMembersPage,
+        isDark: _settings.isDarkMode,
+      ),
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      _receiverListController.text = selected.join(', ');
+    });
   }
 
   Future<void> _showRoomInfoDialog(RoomInfoEditType type) async {
@@ -701,6 +997,11 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
         onTap: () => _showBottomSheet(RoomWhiteListPage(roomId: _roomId)),
       ),
       GridActionItem(
+        icon: Icons.block_outlined,
+        label: '黑名单',
+        onTap: () => _showBottomSheet(RoomBlockListPage(roomId: _roomId)),
+      ),
+      GridActionItem(
         icon: Icons.mic_off_outlined,
         label: '禁言列表',
         onTap: () => _showBottomSheet(RoomMuteListPage(roomId: _roomId)),
@@ -760,6 +1061,272 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
     return SizedBox(
       width: MediaQuery.of(context).size.width,
       child: GridActionMenu(items: items, isDark: isDark, columns: 6),
+    );
+  }
+}
+
+class _ChatRoomReceiverPicker extends StatefulWidget {
+  const _ChatRoomReceiverPicker({
+    required this.roomId,
+    required this.initialSelectedMembers,
+    required this.membersLoader,
+    required this.isDark,
+  });
+
+  final String roomId;
+  final List<String> initialSelectedMembers;
+  final ChatRoomMembersLoader membersLoader;
+  final bool isDark;
+
+  @override
+  State<_ChatRoomReceiverPicker> createState() =>
+      _ChatRoomReceiverPickerState();
+}
+
+class _ChatRoomReceiverPickerState extends State<_ChatRoomReceiverPicker> {
+  static const _pageSize = 50;
+  final _members = <String>[];
+  late final Set<String> _selectedMembers;
+  String _cursor = '';
+  bool _isLoading = false;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedMembers = widget.initialSelectedMembers.toSet();
+    _fetchMembers();
+  }
+
+  Future<void> _fetchMembers() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+      _cursor = '';
+      _hasMore = true;
+    });
+    try {
+      final result = await widget.membersLoader(
+        widget.roomId,
+        cursor: '',
+        pageSize: _pageSize,
+      );
+      if (!mounted) return;
+      setState(() {
+        _members
+          ..clear()
+          ..addAll(result.data);
+        _cursor = result.cursor ?? '';
+        _hasMore = _cursor.isNotEmpty;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_isLoadingMore || !_hasMore) return;
+    setState(() {
+      _isLoadingMore = true;
+    });
+    try {
+      final result = await widget.membersLoader(
+        widget.roomId,
+        cursor: _cursor,
+        pageSize: _pageSize,
+      );
+      if (!mounted) return;
+      setState(() {
+        _members.addAll(result.data);
+        _cursor = result.cursor ?? '';
+        _hasMore = _cursor.isNotEmpty;
+        _isLoadingMore = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingMore = false;
+      });
+    }
+  }
+
+  void _toggleMember(String memberId, bool selected) {
+    setState(() {
+      if (selected) {
+        if (_selectedMembers.length >= 20) return;
+        _selectedMembers.add(memberId);
+      } else {
+        _selectedMembers.remove(memberId);
+      }
+    });
+  }
+
+  void _selectLoadedMembers() {
+    setState(() {
+      for (final memberId in _members) {
+        if (_selectedMembers.length >= 20) break;
+        _selectedMembers.add(memberId);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = widget.isDark;
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.45,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) => Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '选择定向接收人 (${_selectedMembers.length}/20)',
+                      style: TextStyle(
+                        color: AppColors.textPrimary(isDark),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.refresh, color: AppColors.primary(isDark)),
+                    tooltip: '刷新',
+                    onPressed: _isLoading ? null : _fetchMembers,
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.close,
+                      color: AppColors.textSecondary(isDark),
+                    ),
+                    tooltip: '关闭',
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: _buildContent(scrollController, isDark),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+              child: Row(
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedMembers.clear();
+                      });
+                    },
+                    child: const Text('清空'),
+                  ),
+                  TextButton(
+                    onPressed: _members.isEmpty ? null : _selectLoadedMembers,
+                    child: const Text('全选'),
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('取消'),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(
+                      context,
+                      _selectedMembers.toList(),
+                    ),
+                    child: const Text('确定'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent(ScrollController scrollController, bool isDark) {
+    if (_isLoading) {
+      return Center(
+        child: CircularProgressIndicator(color: AppColors.primary(isDark)),
+      );
+    }
+    if (_errorMessage != null) {
+      return Center(
+        child: Text(
+          '加载失败: $_errorMessage',
+          style: TextStyle(color: AppColors.textSecondary(isDark)),
+        ),
+      );
+    }
+    if (_members.isEmpty) {
+      return Center(
+        child: Text(
+          '暂无成员',
+          style: TextStyle(color: AppColors.textSecondary(isDark)),
+        ),
+      );
+    }
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification.metrics.pixels >=
+            notification.metrics.maxScrollExtent - 120) {
+          _loadMore();
+        }
+        return false;
+      },
+      child: ListView.builder(
+        controller: scrollController,
+        itemCount: _members.length + (_isLoadingMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index >= _members.length) {
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Center(
+                child: CircularProgressIndicator(
+                  color: AppColors.primary(isDark),
+                ),
+              ),
+            );
+          }
+          final memberId = _members[index];
+          final selected = _selectedMembers.contains(memberId);
+          final disabled = !selected && _selectedMembers.length >= 20;
+          return CheckboxListTile(
+            value: selected,
+            onChanged: disabled
+                ? null
+                : (value) => _toggleMember(memberId, value ?? false),
+            title: Text(
+              memberId,
+              style: TextStyle(
+                color: disabled
+                    ? AppColors.textSecondary(isDark)
+                    : AppColors.textPrimary(isDark),
+              ),
+            ),
+            activeColor: AppColors.primary(isDark),
+            controlAffinity: ListTileControlAffinity.leading,
+          );
+        },
+      ),
     );
   }
 }

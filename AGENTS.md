@@ -59,6 +59,7 @@
 - Many pages intentionally expose raw or semi-raw QA controls rather than hiding complexity behind productized UX.
 - A number of mobile pages use callback injection for testability. Prefer extending that pattern instead of hard-wiring SDK calls into widget tests.
 - Transparent `Scaffold` + shared background is an intentional pattern in this app shell.
+- Chatroom message modification is a QA action on message log entries and the menu title is `修改` to match single chat. Text and custom messages use the fixed English body marker `Chatroom edited message`; text, custom, and ext-only editable messages write `qa_chatroom_edit=chatroom_edit_ext_updated`; command messages must not expose the modify action.
 
 ## Working Rules For LLM Agents
 
@@ -99,6 +100,8 @@
 
 - Project Dart SDK requirement is declared in `pubspec.yaml`.
 - If the globally available Flutter or Dart version does not satisfy the project's SDK requirement, use the local project-managed `fvm`/Flutter toolchain for verification and release commands instead of the incompatible global installation.
+- Android APK version is sourced from `pubspec.yaml` `version:`. The part before `+` becomes `versionName`, and the part after `+` becomes `versionCode`.
+- `fvm flutter build apk --release` uses the `pubspec.yaml` version automatically. Temporary overrides with `--build-name` and `--build-number` are allowed, but release builds should keep `pubspec.yaml`, `changelog.md`, and the Git tag aligned.
 
 ## High-Value Safety Notes
 
