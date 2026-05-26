@@ -11,6 +11,9 @@ typedef RoomMembersLoader =
     });
 typedef RoomMemberBlocker =
     Future<void> Function(String roomId, List<String> members);
+typedef RoomMemberRemover =
+    Future<void> Function(String roomId, List<String> members);
+typedef RoomCurrentUserIdLoader = Future<String?> Function();
 
 class RoomMembersPage extends StatefulWidget {
   const RoomMembersPage({
@@ -18,11 +21,15 @@ class RoomMembersPage extends StatefulWidget {
     required this.roomId,
     this.membersLoader,
     this.memberBlocker,
+    this.memberRemover,
+    this.currentUserIdLoader,
   });
 
   final String roomId;
   final RoomMembersLoader? membersLoader;
   final RoomMemberBlocker? memberBlocker;
+  final RoomMemberRemover? memberRemover;
+  final RoomCurrentUserIdLoader? currentUserIdLoader;
 
   @override
   State<RoomMembersPage> createState() =>
@@ -38,10 +45,12 @@ class _RoomMembersPageState extends State<RoomMembersPage> {
   String? _errorMessage;
   String _cursor = '';
   bool _hasMore = true;
+  String? _currentUserId;
 
   @override
   void initState() {
     super.initState();
+    _loadCurrentUserId();
     _fetchMembers();
     _scrollController.addListener(_onScroll);
   }
@@ -116,7 +125,20 @@ class _RoomMembersPageState extends State<RoomMembersPage> {
     }
   }
 
+  Future<void> _loadCurrentUserId() async {
+    final loader = widget.currentUserIdLoader;
+    final userId = loader != null
+        ? await loader()
+        : await EMClient.getInstance.getCurrentUserId();
+    if (mounted) {
+      setState(() {
+        _currentUserId = userId;
+      });
+    }
+  }
+
   void _showMemberActions(String memberId, bool isDark) {
+    final isSelf = _currentUserId?.trim() == memberId.trim();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -183,6 +205,23 @@ class _RoomMembersPageState extends State<RoomMembersPage> {
                 _addToWhitelist(memberId);
               },
             ),
+
+            if (!isSelf)
+              // 移出聊天室
+              ListTile(
+                leading: const Icon(
+                  Icons.logout_outlined,
+                  color: Colors.orange,
+                ),
+                title: Text(
+                  '移出聊天室',
+                  style: TextStyle(color: AppColors.textPrimary(isDark)),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _removeFromRoom(memberId);
+                },
+              ),
 
             // 加入黑名单
             ListTile(
@@ -294,6 +333,28 @@ class _RoomMembersPageState extends State<RoomMembersPage> {
     } catch (e) {
       if (mounted) {
         _showResultDialog('加入黑名单失败: ${e.toString()}', false);
+      }
+    }
+  }
+
+  Future<void> _removeFromRoom(String memberId) async {
+    try {
+      final remover = widget.memberRemover;
+      if (remover != null) {
+        await remover(widget.roomId, [memberId]);
+      } else {
+        await EMClient.getInstance.chatRoomManager.removeChatRoomMembers(
+          widget.roomId,
+          [memberId],
+        );
+      }
+      if (mounted) {
+        _showResultDialog('已将 $memberId 移出聊天室', true);
+        _fetchMembers();
+      }
+    } catch (e) {
+      if (mounted) {
+        _showResultDialog('移出聊天室失败: ${e.toString()}', false);
       }
     }
   }

@@ -246,7 +246,7 @@ void main() {
     expect(find.text('Presence 已订阅'), findsNothing);
   });
 
-  testWidgets('contact presence menu shows only valid subscription action', (
+  testWidgets('contact presence menu always shows subscription actions', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -266,14 +266,14 @@ void main() {
     await tester.longPress(find.text('alice'));
     await tester.pumpAndSettle();
     expect(find.text('取消订阅 Presence'), findsOneWidget);
-    expect(find.text('订阅 Presence'), findsNothing);
+    expect(find.text('订阅 Presence'), findsOneWidget);
     await tester.tapAt(Offset.zero);
     await tester.pumpAndSettle();
 
     await tester.longPress(find.text('bob'));
     await tester.pumpAndSettle();
     expect(find.text('订阅 Presence'), findsOneWidget);
-    expect(find.text('取消订阅 Presence'), findsNothing);
+    expect(find.text('取消订阅 Presence'), findsOneWidget);
   });
 
   testWidgets('contact presence page queries presence from menu', (

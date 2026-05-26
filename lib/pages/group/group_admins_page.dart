@@ -3,11 +3,24 @@ import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 
+typedef GroupAdminsGroupInfoLoader = Future<EMGroup> Function(String groupId);
+typedef GroupAdminRemover = Future<void> Function(
+  String groupId,
+  String adminId,
+);
+
 /// 群组管理员列表页面
 class GroupAdminsPage extends StatefulWidget {
-  const GroupAdminsPage({super.key, required this.groupId});
+  const GroupAdminsPage({
+    super.key,
+    required this.groupId,
+    this.groupInfoLoader,
+    this.adminRemover,
+  });
 
   final String groupId;
+  final GroupAdminsGroupInfoLoader? groupInfoLoader;
+  final GroupAdminRemover? adminRemover;
 
   @override
   State<GroupAdminsPage> createState() => _GroupAdminsPageState();
@@ -19,6 +32,7 @@ class _GroupAdminsPageState extends State<GroupAdminsPage> {
   List<String> _members = [];
   bool _isLoading = false;
   String? _errorMessage;
+  EMGroupPermissionType? _permissionType;
 
   @override
   void initState() {
@@ -41,11 +55,11 @@ class _GroupAdminsPageState extends State<GroupAdminsPage> {
 
     try {
       // 获取群组信息
-      final result = await EMClient.getInstance.groupManager
-          .fetchGroupInfoFromServer(widget.groupId);
+      final result = await _fetchGroupInfo();
 
       setState(() {
         _members = result.adminList ?? [];
+        _permissionType = result.permissionType;
         _isLoading = false;
       });
     } catch (e) {
@@ -56,8 +70,19 @@ class _GroupAdminsPageState extends State<GroupAdminsPage> {
     }
   }
 
+  Future<EMGroup> _fetchGroupInfo() {
+    final loader = widget.groupInfoLoader;
+    if (loader != null) {
+      return loader(widget.groupId);
+    }
+    return EMClient.getInstance.groupManager.fetchGroupInfoFromServer(
+      widget.groupId,
+    );
+  }
+
   /// 显示成员操作菜单
   void _showMemberActions(String memberId, bool isDark) {
+    final canRemoveAdmin = _permissionType == EMGroupPermissionType.Owner;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -78,21 +103,22 @@ class _GroupAdminsPageState extends State<GroupAdminsPage> {
             SizedBox(height: 16),
             Divider(height: 1, color: AppColors.glassBorder(isDark)),
 
-            // 移除管理员
-            ListTile(
-              leading: Icon(
-                Icons.admin_panel_settings_outlined,
-                color: AppColors.primary(isDark),
+            if (canRemoveAdmin)
+              // 移除管理员
+              ListTile(
+                leading: Icon(
+                  Icons.admin_panel_settings_outlined,
+                  color: AppColors.primary(isDark),
+                ),
+                title: Text(
+                  '移除管理员',
+                  style: TextStyle(color: AppColors.textPrimary(isDark)),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _removeAdmin(memberId);
+                },
               ),
-              title: Text(
-                '移除管理员',
-                style: TextStyle(color: AppColors.textPrimary(isDark)),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _removeAdmin(memberId);
-              },
-            ),
           ],
         ),
         actions: [
@@ -111,13 +137,28 @@ class _GroupAdminsPageState extends State<GroupAdminsPage> {
   /// 移除管理员
   Future<void> _removeAdmin(String memberId) async {
     try {
-      await EMClient.getInstance.groupManager.removeAdmin(
-        widget.groupId,
-        memberId,
-      );
+      final remover = widget.adminRemover;
+      if (remover != null) {
+        await remover(widget.groupId, memberId);
+      } else {
+        await EMClient.getInstance.groupManager.removeAdmin(
+          widget.groupId,
+          memberId,
+        );
+      }
+      final result = await _fetchGroupInfo();
+      final admins = result.adminList ?? [];
       if (mounted) {
-        _fetchMembers();
-        _showResultDialog('移除 $memberId 管理员成功', true);
+        setState(() {
+          _members = admins;
+          _permissionType = result.permissionType;
+          _isLoading = false;
+        });
+        if (admins.contains(memberId)) {
+          _showResultDialog('移除 $memberId 管理员失败: 服务端管理员列表仍包含该成员', false);
+        } else {
+          _showResultDialog('移除 $memberId 管理员成功', true);
+        }
       }
     } catch (e) {
       if (mounted) {

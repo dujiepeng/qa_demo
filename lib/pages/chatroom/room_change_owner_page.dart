@@ -3,19 +3,38 @@ import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 
+typedef RoomChangeOwnerMembersLoader =
+    Future<EMCursorResult<String>> Function(
+      String roomId, {
+      String cursor,
+      int pageSize,
+    });
+typedef RoomChangeOwnerInfoLoader = Future<EMChatRoom> Function(String roomId);
+typedef RoomChangeOwnerChanger =
+    Future<void> Function(String roomId, String newOwner);
+
 class RoomChangeOwnerPage extends StatefulWidget {
-  const RoomChangeOwnerPage({super.key, required this.roomId});
+  const RoomChangeOwnerPage({
+    super.key,
+    required this.roomId,
+    this.membersLoader,
+    this.roomInfoLoader,
+    this.ownerChanger,
+    this.settingsOverride,
+  });
 
   final String roomId;
+  final RoomChangeOwnerMembersLoader? membersLoader;
+  final RoomChangeOwnerInfoLoader? roomInfoLoader;
+  final RoomChangeOwnerChanger? ownerChanger;
+  final AppSettings? settingsOverride;
 
   @override
-  State<RoomChangeOwnerPage> createState() =>
-      _RoomChangeOwnerPageState();
+  State<RoomChangeOwnerPage> createState() => _RoomChangeOwnerPageState();
 }
 
-class _RoomChangeOwnerPageState
-    extends State<RoomChangeOwnerPage> {
-  final _settings = AppSettings();
+class _RoomChangeOwnerPageState extends State<RoomChangeOwnerPage> {
+  late final AppSettings _settings;
   final _scrollController = ScrollController();
   List<String> _members = [];
   bool _isLoading = false;
@@ -23,9 +42,14 @@ class _RoomChangeOwnerPageState
   String? _errorMessage;
   String _cursor = '';
   bool _hasMore = true;
+  EMChatRoom? _roomInfo;
+
+  bool get _canChangeOwner =>
+      _roomInfo?.permissionType == EMChatRoomPermissionType.Owner;
 
   @override
   void initState() {
+    _settings = widget.settingsOverride ?? AppSettings();
     super.initState();
     _fetchMembers();
     _scrollController.addListener(_onScroll);
@@ -55,11 +79,12 @@ class _RoomChangeOwnerPageState
     });
 
     try {
+      final room = await _fetchRoomInfo();
       // 获取聊天室成员列表
-      final result = await EMClient.getInstance.chatRoomManager
-          .fetchChatRoomMembers(widget.roomId, cursor: '', pageSize: 50);
+      final result = await _fetchMembersPage(cursor: '');
 
       setState(() {
+        _roomInfo = room;
         _members = result.data;
         _cursor = result.cursor ?? '';
         _hasMore = _cursor.isNotEmpty;
@@ -81,8 +106,7 @@ class _RoomChangeOwnerPageState
     });
 
     try {
-      final result = await EMClient.getInstance.chatRoomManager
-          .fetchChatRoomMembers(widget.roomId, cursor: _cursor, pageSize: 50);
+      final result = await _fetchMembersPage(cursor: _cursor);
 
       setState(() {
         _members.addAll(result.data);
@@ -101,6 +125,41 @@ class _RoomChangeOwnerPageState
         ).showSnackBar(SnackBar(content: Text('加载更多失败: ${e.toString()}')));
       }
     }
+  }
+
+  Future<EMChatRoom> _fetchRoomInfo() {
+    final loader = widget.roomInfoLoader;
+    if (loader != null) {
+      return loader(widget.roomId);
+    }
+    return EMClient.getInstance.chatRoomManager.fetchChatRoomInfoFromServer(
+      widget.roomId,
+    );
+  }
+
+  Future<EMCursorResult<String>> _fetchMembersPage({
+    required String cursor,
+  }) {
+    final loader = widget.membersLoader;
+    if (loader != null) {
+      return loader(widget.roomId, cursor: cursor, pageSize: 50);
+    }
+    return EMClient.getInstance.chatRoomManager.fetchChatRoomMembers(
+      widget.roomId,
+      cursor: cursor,
+      pageSize: 50,
+    );
+  }
+
+  Future<void> _changeRoomOwner(String memberId) {
+    final changer = widget.ownerChanger;
+    if (changer != null) {
+      return changer(widget.roomId, memberId);
+    }
+    return EMClient.getInstance.chatRoomManager.changeOwner(
+      widget.roomId,
+      memberId,
+    );
   }
 
   void _showMemberActions(String memberId, bool isDark) {
@@ -154,11 +213,16 @@ class _RoomChangeOwnerPageState
   }
 
   Future<void> _changeOwner(String memberId) async {
+    if (!_canChangeOwner) {
+      _showResultDialog('转移聊天室失败: 仅聊天室所有者可操作', false);
+      return;
+    }
+    if (_roomInfo?.owner == memberId) {
+      _showResultDialog('转移聊天室失败: 不能转移给当前所有者', false);
+      return;
+    }
     try {
-      await EMClient.getInstance.chatRoomManager.changeOwner(
-        widget.roomId,
-        memberId,
-      );
+      await _changeRoomOwner(memberId);
       if (mounted) {
         _showResultDialog('已转移聊天室给 $memberId', true);
       }

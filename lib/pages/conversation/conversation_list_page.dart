@@ -7,23 +7,29 @@ import '../../common/widgets/common_gradient_background.dart';
 
 enum ConversationListFilter { all, pinned, mark1, mark2, mark3 }
 
+typedef ConversationPageLoader =
+    Future<EMCursorResult<EMConversation>> Function({
+      String? cursor,
+      int pageSize,
+      ConversationListFilter filter,
+    });
+
+typedef LocalConversationsLoader = Future<List<EMConversation>> Function();
+
 /// 会话列表页面
 class ConversationListPage extends StatefulWidget {
   const ConversationListPage({
     super.key,
     this.loadConversationsPage,
+    this.loadLocalConversations,
     this.unreadCountBuilder,
     this.latestMessageBuilder,
     this.addConversationMark,
     this.removeConversationMark,
   });
 
-  final Future<EMCursorResult<EMConversation>> Function({
-    String? cursor,
-    int pageSize,
-    ConversationListFilter filter,
-  })?
-  loadConversationsPage;
+  final ConversationPageLoader? loadConversationsPage;
+  final LocalConversationsLoader? loadLocalConversations;
   final Future<int> Function(EMConversation conversation)? unreadCountBuilder;
   final Future<EMMessage?> Function(EMConversation conversation)?
   latestMessageBuilder;
@@ -58,6 +64,7 @@ class _ConversationListPageState extends State<ConversationListPage> {
         onMessagesRead: (messages) => _fetchConversations(silent: true),
         onMessagesDelivered: (messages) => _fetchConversations(silent: true),
         onMessagesRecalled: (messages) => _fetchConversations(silent: true),
+        onMessagesRecalledInfo: (infos) => _fetchConversations(silent: true),
         onConversationsUpdate: () => _fetchConversations(silent: true),
         onConversationRead: (from, to) => _fetchConversations(silent: true),
       ),
@@ -88,7 +95,7 @@ class _ConversationListPageState extends State<ConversationListPage> {
         setState(() {
           _conversations = result.data;
           _cursor = result.cursor;
-          _hasMore = result.data.length >= 30;
+          _hasMore = _hasMoreConversations(result);
         });
       }
     } catch (e) {
@@ -123,7 +130,7 @@ class _ConversationListPageState extends State<ConversationListPage> {
         setState(() {
           _conversations.addAll(result.data);
           _cursor = result.cursor;
-          _hasMore = result.data.length >= 30;
+          _hasMore = _hasMoreConversations(result);
         });
       }
     } catch (e) {
@@ -164,18 +171,81 @@ class _ConversationListPageState extends State<ConversationListPage> {
   Future<EMCursorResult<EMConversation>> _loadConversationsPage({
     String? cursor,
     int pageSize = 30,
-  }) {
+  }) async {
     final loadConversationsPage = widget.loadConversationsPage;
+    final EMCursorResult<EMConversation> result;
     if (loadConversationsPage != null) {
-      return loadConversationsPage(
+      result = await loadConversationsPage(
         cursor: cursor,
         pageSize: pageSize,
         filter: _currentFilter,
       );
+    } else {
+      result = await EMClient.getInstance.chatManager
+          .fetchConversationsByOptions(
+            options: _buildFetchOptions(cursor: cursor, pageSize: pageSize),
+          );
     }
-    return EMClient.getInstance.chatManager.fetchConversationsByOptions(
-      options: _buildFetchOptions(cursor: cursor, pageSize: pageSize),
+    if (cursor != null) return result;
+    final shouldLoadLocalConversations =
+        widget.loadLocalConversations != null || loadConversationsPage == null;
+    if (!shouldLoadLocalConversations) return result;
+
+    final localConversations = await _loadLocalConversations();
+    final localChatRoomConversations = localConversations.where(
+      (conversation) =>
+          conversation.type == EMConversationType.ChatRoom &&
+          _matchesCurrentFilter(conversation),
     );
+    if (localChatRoomConversations.isEmpty) return result;
+
+    final merged = _mergeConversations(result.data, localChatRoomConversations);
+    return EMCursorResult<EMConversation>(result.cursor, merged);
+  }
+
+  Future<List<EMConversation>> _loadLocalConversations() {
+    final loadLocalConversations = widget.loadLocalConversations;
+    if (loadLocalConversations != null) {
+      return loadLocalConversations();
+    }
+    return EMClient.getInstance.chatManager.loadAllConversations();
+  }
+
+  List<EMConversation> _mergeConversations(
+    List<EMConversation> remoteConversations,
+    Iterable<EMConversation> localConversations,
+  ) {
+    final merged = <EMConversation>[];
+    final seenKeys = <String>{};
+    for (final conversation in [
+      ...remoteConversations,
+      ...localConversations,
+    ]) {
+      final key = '${conversation.type.index}:${conversation.id}';
+      if (seenKeys.add(key)) {
+        merged.add(conversation);
+      }
+    }
+    return merged;
+  }
+
+  bool _hasMoreConversations(EMCursorResult<EMConversation> result) {
+    return result.cursor?.isNotEmpty == true;
+  }
+
+  bool _matchesCurrentFilter(EMConversation conversation) {
+    switch (_currentFilter) {
+      case ConversationListFilter.all:
+        return true;
+      case ConversationListFilter.pinned:
+        return conversation.isPinned;
+      case ConversationListFilter.mark1:
+        return _hasMark(conversation, ConversationMarkType.Type1);
+      case ConversationListFilter.mark2:
+        return _hasMark(conversation, ConversationMarkType.Type2);
+      case ConversationListFilter.mark3:
+        return _hasMark(conversation, ConversationMarkType.Type3);
+    }
   }
 
   ConversationFetchOptions _buildFetchOptions({

@@ -15,6 +15,7 @@ void main() {
         home: Scaffold(
           body: RoomMembersPage(
             roomId: 'room-001',
+            currentUserIdLoader: () async => 'bob',
             membersLoader: (_, {cursor = '', pageSize = 50}) async =>
                 EMCursorResult<String>('', const ['alice']),
             memberBlocker: (roomId, members) async {
@@ -35,5 +36,62 @@ void main() {
     expect(blockedRoomId, 'room-001');
     expect(blockedMembers, ['alice']);
     expect(find.text('已将 alice 加入黑名单'), findsOneWidget);
+  });
+
+  testWidgets('member actions can remove chatroom member from room', (
+    tester,
+  ) async {
+    String? removedRoomId;
+    List<String>? removedMembers;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: RoomMembersPage(
+            roomId: 'room-001',
+            currentUserIdLoader: () async => 'bob',
+            membersLoader: (_, {cursor = '', pageSize = 50}) async =>
+                EMCursorResult<String>('', const ['alice']),
+            memberRemover: (roomId, members) async {
+              removedRoomId = roomId;
+              removedMembers = members;
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('alice'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('移出聊天室'));
+    await tester.pumpAndSettle();
+
+    expect(removedRoomId, 'room-001');
+    expect(removedMembers, ['alice']);
+    expect(find.text('已将 alice 移出聊天室'), findsOneWidget);
+  });
+
+  testWidgets('member actions do not show remove room action for self', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: RoomMembersPage(
+            roomId: 'room-001',
+            currentUserIdLoader: () async => 'alice',
+            membersLoader: (_, {cursor = '', pageSize = 50}) async =>
+                EMCursorResult<String>('', const ['alice']),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('alice'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('移出聊天室'), findsNothing);
   });
 }

@@ -72,6 +72,7 @@
 - Follow existing callback-injection patterns when adding SDK-backed features so tests remain easy to write.
 - Favor small, local changes over broad refactors.
 - If a feature is implemented in both mobile and Pad variants, check whether both sides need updating.
+- Do not add client-side fallback data, simulated success records, mock return values, locally fabricated QA results, or synthetic UI replacements in any QA scenario. QA pages should reflect real user input, real SDK callbacks, local SDK message objects, and service-returned data only. If a callback does not arrive, a message is not present locally, a query returns empty, or an operation fails, expose/log that real missing, empty, or failed state instead of inventing replacement UI data.
 
 ## Documentation Alignment
 

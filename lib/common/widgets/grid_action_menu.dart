@@ -4,7 +4,7 @@ import '../../theme/app_colors.dart';
 class GridActionItem {
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   GridActionItem({
     required this.icon,
@@ -53,6 +53,10 @@ class GridActionMenu extends StatelessWidget {
           spacing: spacing,
           runSpacing: runSpacing,
           children: items.map((item) {
+            final isEnabled = item.onTap != null;
+            final disabledColor = AppColors.textSecondary(
+              isDark,
+            ).withValues(alpha: 0.45);
             return SizedBox(
               width: width,
               height: itemHeight,
@@ -71,13 +75,19 @@ class GridActionMenu extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(item.icon, color: AppColors.primary(isDark), size: 20),
+                    Icon(
+                      item.icon,
+                      color: isEnabled ? AppColors.primary(isDark) : disabledColor,
+                      size: 20,
+                    ),
                     const SizedBox(height: 2),
                     Text(
                       item.label,
                       style: TextStyle(
                         fontSize: 11,
-                        color: AppColors.textSecondary(isDark),
+                        color: isEnabled
+                            ? AppColors.textSecondary(isDark)
+                            : disabledColor,
                       ),
                       textAlign: TextAlign.center,
                       maxLines: 1,

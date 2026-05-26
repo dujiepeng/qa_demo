@@ -40,6 +40,22 @@ typedef ChatRoomMessageModifier =
       EMMessageBody? msgBody,
       Map<String, dynamic>? attributes,
     });
+typedef ChatRoomRemoteMessageRemover =
+    Future<void> Function({
+      required String conversationId,
+      required EMConversationType type,
+      required List<String> msgIds,
+    });
+typedef ChatRoomRemoteMessageBeforeTimeRemover =
+    Future<void> Function({
+      required String conversationId,
+      required EMConversationType type,
+      required int timestamp,
+    });
+
+bool canUseChatRoomOwnerOnlyActions(EMChatRoom? room) {
+  return room?.permissionType == EMChatRoomPermissionType.Owner;
+}
 
 List<String>? parseChatRoomReceiverList(String rawValue) {
   final members = rawValue
@@ -84,6 +100,8 @@ class RoomPage extends StatefulWidget {
     this.roomInfoLoader,
     this.chatRoomMembersLoader,
     this.messageModifier,
+    this.remoteMessageRemover,
+    this.remoteMessageBeforeTimeRemover,
     this.settingsOverride,
   });
   final String? roomId;
@@ -92,6 +110,8 @@ class RoomPage extends StatefulWidget {
   final RoomInfoDialogChatRoomLoader? roomInfoLoader;
   final ChatRoomMembersLoader? chatRoomMembersLoader;
   final ChatRoomMessageModifier? messageModifier;
+  final ChatRoomRemoteMessageRemover? remoteMessageRemover;
+  final ChatRoomRemoteMessageBeforeTimeRemover? remoteMessageBeforeTimeRemover;
   final AppSettings? settingsOverride;
   @override
   State<RoomPage> createState() => _RoomPageState();
@@ -107,6 +127,7 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
   final _repeatCountController = TextEditingController(text: '1');
   String _roomId = '';
   bool _isJoined = false;
+  EMChatRoom? _currentRoomInfo;
 
   @override
   LogController get logController => _logController;
@@ -125,16 +146,25 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
   void _checkChatRoomStatus() async {
     if (_roomId.isEmpty) return;
     try {
-      final room = await EMClient.getInstance.chatRoomManager
-          .fetchChatRoomInfoFromServer(_roomId);
-      if (room.permissionType != EMChatRoomPermissionType.None) {
-        _isJoined = true;
-      }
+      final room = await _fetchChatRoomInfo(_roomId);
+      _isJoined = room.permissionType != EMChatRoomPermissionType.None;
+      _currentRoomInfo = room;
     } catch (e) {
       _isJoined = false;
+      _currentRoomInfo = null;
     } finally {
       if (mounted) setState(() {});
     }
+  }
+
+  Future<EMChatRoom> _fetchChatRoomInfo(String roomId) {
+    final loader = widget.roomInfoLoader;
+    if (loader != null) {
+      return loader(roomId);
+    }
+    return EMClient.getInstance.chatRoomManager.fetchChatRoomInfoFromServer(
+      roomId,
+    );
   }
 
   @override
@@ -229,6 +259,7 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
             setState(() {
               _roomId = '';
               _isJoined = false;
+              _currentRoomInfo = null;
             });
             addReceiveLog('onRemoved: reason: $reason');
           }
@@ -236,6 +267,7 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
         onSpecificationChanged: (room) => _handleRoomEvent(
           room.roomId,
           'onSpecificationChanged: name: ${room.name}',
+          refreshRoomInfo: true,
         ),
         onMemberJoinedFromChatRoom: (roomId, participant, ext) => _handleRoomEvent(
           roomId,
@@ -257,14 +289,24 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
         onOwnerChangedFromChatRoom: (roomId, newOwner, oldOwner) =>
             _handleRoomEvent(
               roomId,
-              'onOwnerChangedFromChatRoom: newOwner: $newOwner, newOwner: $oldOwner',
+              'onOwnerChangedFromChatRoom: newOwner: $newOwner, oldOwner: $oldOwner',
+              refreshRoomInfo: true,
             ),
       ),
     );
   }
 
-  void _handleRoomEvent(String roomId, String log) {
-    if (roomId == _roomId) addReceiveLog(log);
+  void _handleRoomEvent(
+    String roomId,
+    String log, {
+    bool refreshRoomInfo = false,
+  }) {
+    if (roomId == _roomId) {
+      addReceiveLog(log);
+      if (refreshRoomInfo) {
+        _checkChatRoomStatus();
+      }
+    }
   }
 
   void _handleChatRoomRecall(RecallMessageInfo info) {
@@ -425,6 +467,58 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
       );
       actions.add(
         LogAction(
+          id: 'delete_server_history',
+          title: '删服务端',
+          icon: Icons.delete_sweep_outlined,
+          foregroundColor: Colors.deepOrange,
+          isDestructive: true,
+          isVisible: (_) => attachment.chatType == ChatType.ChatRoom,
+          onSelected: (_) async {
+            try {
+              await _removeChatRoomMessageFromServer(attachment);
+              return LogActionResult(
+                overlayLabel: '已删服务端',
+                overlayStyle: LogOverlayStyle.warning,
+                color: Colors.deepOrange.withValues(alpha: 0.14),
+                style: LogStyle.lineThrough,
+              );
+            } catch (e) {
+              return LogActionResult(
+                overlayLabel: '删服务端失败: $e',
+                overlayStyle: LogOverlayStyle.error,
+              );
+            }
+          },
+        ),
+      );
+      actions.add(
+        LogAction(
+          id: 'delete_server_history_before_time',
+          title: '按时间删',
+          icon: Icons.history_toggle_off_outlined,
+          foregroundColor: Colors.deepOrange,
+          isDestructive: true,
+          isVisible: (_) => attachment.chatType == ChatType.ChatRoom,
+          onSelected: (_) async {
+            try {
+              await _removeChatRoomMessagesFromServerBeforeTime(attachment);
+              return LogActionResult(
+                overlayLabel: '已按时间删服务端',
+                overlayStyle: LogOverlayStyle.warning,
+                color: Colors.deepOrange.withValues(alpha: 0.14),
+                style: LogStyle.lineThrough,
+              );
+            } catch (e) {
+              return LogActionResult(
+                overlayLabel: '按时间删失败: $e',
+                overlayStyle: LogOverlayStyle.error,
+              );
+            }
+          },
+        ),
+      );
+      actions.add(
+        LogAction(
           id: 'recall',
           title: '撤回',
           icon: Icons.undo_outlined,
@@ -472,10 +566,7 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
     if (body is EMCustomMessageBody) {
       return EMCustomMessageBody(
         event: chatRoomMessageEditCustomEvent,
-        params: {
-          ...?body.params,
-          'content': chatRoomMessageEditContent,
-        },
+        params: {...?body.params, 'content': chatRoomMessageEditContent},
       );
     }
     return null;
@@ -508,6 +599,40 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
     );
   }
 
+  Future<void> _removeChatRoomMessageFromServer(EMMessage message) {
+    final conversationId = message.conversationId ?? _roomId;
+    final remover = widget.remoteMessageRemover;
+    if (remover != null) {
+      return remover(
+        conversationId: conversationId,
+        type: EMConversationType.ChatRoom,
+        msgIds: [message.msgId],
+      );
+    }
+    return EMClient.getInstance.chatManager.deleteRemoteMessagesWithIds(
+      conversationId: conversationId,
+      type: EMConversationType.ChatRoom,
+      msgIds: [message.msgId],
+    );
+  }
+
+  Future<void> _removeChatRoomMessagesFromServerBeforeTime(EMMessage message) {
+    final conversationId = message.conversationId ?? _roomId;
+    final remover = widget.remoteMessageBeforeTimeRemover;
+    if (remover != null) {
+      return remover(
+        conversationId: conversationId,
+        type: EMConversationType.ChatRoom,
+        timestamp: message.serverTime,
+      );
+    }
+    return EMClient.getInstance.chatManager.deleteRemoteMessagesBefore(
+      conversationId: conversationId,
+      type: EMConversationType.ChatRoom,
+      timestamp: message.serverTime,
+    );
+  }
+
   Future<void> _handleJoinLeaveRoom() async {
     final inputId = _roomIdController.text.trim();
     if (inputId.isEmpty) return;
@@ -520,6 +645,7 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
         setState(() {
           _roomId = '';
           _isJoined = false;
+          _currentRoomInfo = null;
         });
       } catch (e) {
         addLog('退出失败: $e');
@@ -531,7 +657,9 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
         setState(() {
           _roomId = inputId;
           _isJoined = true;
+          _currentRoomInfo = null;
         });
+        _checkChatRoomStatus();
         addLog('加入成功: $inputId');
       } catch (e) {
         _isJoined = false;
@@ -803,6 +931,7 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
           _roomId = room.roomId;
           _roomIdController.text = _roomId;
           _isJoined = true;
+          _currentRoomInfo = room;
         });
       } catch (e) {
         addLog('创建失败: $e');
@@ -839,6 +968,7 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
           _roomId = '';
           _roomIdController.text = '';
           _isJoined = false;
+          _currentRoomInfo = null;
         });
       } catch (e) {
         addLog('解散失败: $e');
@@ -960,6 +1090,9 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
   }
 
   Widget _buildChatRoomManagementButtons(bool isDark) {
+    final canUseOwnerOnlyActions = canUseChatRoomOwnerOnlyActions(
+      _currentRoomInfo,
+    );
     final items = [
       GridActionItem(
         icon: Icons.assignment_outlined,
@@ -1031,7 +1164,9 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
       GridActionItem(
         icon: Icons.swap_horiz_outlined,
         label: '转移',
-        onTap: () => _showBottomSheet(RoomChangeOwnerPage(roomId: _roomId)),
+        onTap: canUseOwnerOnlyActions
+            ? () => _showBottomSheet(RoomChangeOwnerPage(roomId: _roomId))
+            : null,
       ),
       GridActionItem(
         icon: Icons.add_circle_outline,
@@ -1041,7 +1176,7 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
       GridActionItem(
         icon: Icons.dangerous_outlined,
         label: '解散',
-        onTap: _destroyChatRoom,
+        onTap: canUseOwnerOnlyActions ? _destroyChatRoom : null,
       ),
     ];
     return SizedBox(
@@ -1221,9 +1356,7 @@ class _ChatRoomReceiverPickerState extends State<_ChatRoomReceiverPicker> {
                 ],
               ),
             ),
-            Expanded(
-              child: _buildContent(scrollController, isDark),
-            ),
+            Expanded(child: _buildContent(scrollController, isDark)),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
               child: Row(
@@ -1247,10 +1380,8 @@ class _ChatRoomReceiverPickerState extends State<_ChatRoomReceiverPicker> {
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
-                    onPressed: () => Navigator.pop(
-                      context,
-                      _selectedMembers.toList(),
-                    ),
+                    onPressed: () =>
+                        Navigator.pop(context, _selectedMembers.toList()),
                     child: const Text('确定'),
                   ),
                 ],

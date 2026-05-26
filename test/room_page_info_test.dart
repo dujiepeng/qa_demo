@@ -74,4 +74,130 @@ void main() {
     expect(find.text('IM 服务器: im.example.com:18080'), findsOneWidget);
     expect(find.text('连接方式: WebSocket'), findsOneWidget);
   });
+
+  testWidgets('owner-only chatroom actions are disabled for non owner', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RoomPage(
+          roomId: 'room-001',
+          showAppBar: false,
+          roomInfoLoader: (_) async => EMChatRoom(
+            roomId: 'room-001',
+            owner: 'owner-001',
+            permissionType: EMChatRoomPermissionType.Admin,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final transferButton = tester.widget<ElevatedButton>(
+      find.ancestor(of: find.text('转移'), matching: find.byType(ElevatedButton)),
+    );
+    final destroyButton = tester.widget<ElevatedButton>(
+      find.ancestor(of: find.text('解散'), matching: find.byType(ElevatedButton)),
+    );
+    expect(transferButton.onPressed, isNull);
+    expect(destroyButton.onPressed, isNull);
+  });
+
+  testWidgets('owner-only chatroom actions are enabled for owner', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RoomPage(
+          roomId: 'room-001',
+          showAppBar: false,
+          roomInfoLoader: (_) async => EMChatRoom(
+            roomId: 'room-001',
+            owner: 'owner-001',
+            permissionType: EMChatRoomPermissionType.Owner,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final transferButton = tester.widget<ElevatedButton>(
+      find.ancestor(of: find.text('转移'), matching: find.byType(ElevatedButton)),
+    );
+    final destroyButton = tester.widget<ElevatedButton>(
+      find.ancestor(of: find.text('解散'), matching: find.byType(ElevatedButton)),
+    );
+    expect(transferButton.onPressed, isNotNull);
+    expect(destroyButton.onPressed, isNotNull);
+  });
+
+  testWidgets('removed from chatroom callback switches leave to join', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RoomPage(
+          roomId: 'room-001',
+          showAppBar: false,
+          roomInfoLoader: (_) async => EMChatRoom(
+            roomId: 'room-001',
+            permissionType: EMChatRoomPermissionType.Member,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Leave'), findsOneWidget);
+
+    EMClient.getInstance.chatRoomManager
+        .getEventHandler('room_test')
+        ?.onRemovedFromChatRoom
+        ?.call('room-001', '测试聊天室', 'user-b', LeaveReason.Kicked);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Join'), findsOneWidget);
+    expect(find.text('Leave'), findsNothing);
+  });
+
+  testWidgets('server none permission switches joined state to join', (
+    tester,
+  ) async {
+    var loadCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RoomPage(
+          roomId: 'room-001',
+          showAppBar: false,
+          roomInfoLoader: (_) async {
+            loadCount += 1;
+            return EMChatRoom(
+              roomId: 'room-001',
+              permissionType: loadCount == 1
+                  ? EMChatRoomPermissionType.Member
+                  : EMChatRoomPermissionType.None,
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Leave'), findsOneWidget);
+
+    EMClient.getInstance.chatRoomManager
+        .getEventHandler('room_test')
+        ?.onSpecificationChanged
+        ?.call(
+          EMChatRoom(
+            roomId: 'room-001',
+            permissionType: EMChatRoomPermissionType.None,
+          ),
+        );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Join'), findsOneWidget);
+    expect(find.text('Leave'), findsNothing);
+  });
 }

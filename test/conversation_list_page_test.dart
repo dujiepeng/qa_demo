@@ -172,12 +172,112 @@ void main() {
     );
     expect(find.text('mark1-3'), findsOneWidget);
   });
+
+  testWidgets('conversation list page includes local chatroom conversations', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversationListPage(
+          loadConversationsPage:
+              ({
+                cursor,
+                pageSize = 30,
+                filter = ConversationListFilter.all,
+              }) async => EMCursorResult<EMConversation>(null, [
+                _buildConversation('alice'),
+              ]),
+          loadLocalConversations: () async => [
+            _buildConversation('room-001', type: EMConversationType.ChatRoom),
+          ],
+          unreadCountBuilder: (_) async => 0,
+          latestMessageBuilder: (_) async => null,
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('alice'), findsOneWidget);
+    expect(find.text('room-001'), findsOneWidget);
+    expect(find.textContaining('[聊天室]'), findsOneWidget);
+  });
+
+  testWidgets('local chatroom conversations do not force loading indicator', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversationListPage(
+          loadConversationsPage:
+              ({
+                cursor,
+                pageSize = 30,
+                filter = ConversationListFilter.all,
+              }) async => EMCursorResult<EMConversation>(null, [
+                _buildConversation('alice'),
+              ]),
+          loadLocalConversations: () async => [
+            _buildConversation('room-001', type: EMConversationType.ChatRoom),
+          ],
+          unreadCountBuilder: (_) async => 0,
+          latestMessageBuilder: (_) async => null,
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
+  testWidgets('recall info event refreshes unread badge', (tester) async {
+    var unreadCount = 1;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversationListPage(
+          loadConversationsPage:
+              ({
+                cursor,
+                pageSize = 30,
+                filter = ConversationListFilter.all,
+              }) async => EMCursorResult<EMConversation>(null, [
+                _buildConversation('alice'),
+              ]),
+          unreadCountBuilder: (_) async => unreadCount,
+          latestMessageBuilder: (_) async => null,
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    expect(find.text('1'), findsOneWidget);
+
+    unreadCount = 0;
+    EMClient.getInstance.chatManager
+        .getEventHandler('conversation_list_page')
+        ?.onMessagesRecalledInfo
+        ?.call([
+          const RecallMessageInfo(
+            recallBy: 'alice',
+            recallMessageId: 'msg-001',
+            conversationId: 'alice',
+          ),
+        ]);
+    await tester.pumpAndSettle();
+
+    expect(find.text('1'), findsNothing);
+  });
 }
 
-EMConversation _buildConversation(String id) {
+EMConversation _buildConversation(
+  String id, {
+  EMConversationType type = EMConversationType.Chat,
+}) {
   return EMConversation.fromJson({
     'convId': id,
-    'type': EMConversationType.Chat.index,
+    'type': type.index,
     'isThread': false,
     'isPinned': false,
     'pinnedTime': 0,

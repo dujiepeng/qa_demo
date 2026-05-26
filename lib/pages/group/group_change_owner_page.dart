@@ -3,11 +3,34 @@ import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
 
+typedef GroupChangeOwnerGroupInfoLoader = Future<EMGroup> Function(
+  String groupId,
+);
+typedef GroupChangeOwnerMembersLoader =
+    Future<EMCursorResult<String>> Function(
+      String groupId, {
+      String cursor,
+      int pageSize,
+    });
+typedef GroupOwnerChanger = Future<void> Function(
+  String groupId,
+  String newOwner,
+);
+
 /// 群组转移所有者页面
 class GroupChangeOwnerPage extends StatefulWidget {
-  const GroupChangeOwnerPage({super.key, required this.groupId});
+  const GroupChangeOwnerPage({
+    super.key,
+    required this.groupId,
+    this.groupInfoLoader,
+    this.membersLoader,
+    this.ownerChanger,
+  });
 
   final String groupId;
+  final GroupChangeOwnerGroupInfoLoader? groupInfoLoader;
+  final GroupChangeOwnerMembersLoader? membersLoader;
+  final GroupOwnerChanger? ownerChanger;
 
   @override
   State<GroupChangeOwnerPage> createState() =>
@@ -23,6 +46,7 @@ class _GroupChangeOwnerPageState extends State<GroupChangeOwnerPage> {
   String? _errorMessage;
   String _cursor = '';
   bool _hasMore = true;
+  Set<String> _adminIds = {};
   static const int _pageSize = 50;
 
   @override
@@ -58,16 +82,16 @@ class _GroupChangeOwnerPageState extends State<GroupChangeOwnerPage> {
     });
 
     try {
+      final group = await _fetchGroupInfo();
       // 获取群组成员列表
-      final result = await EMClient.getInstance.groupManager
-          .fetchMemberListFromServer(
-            widget.groupId,
-            pageSize: _pageSize,
-            cursor: _cursor,
-          );
+      final result = await _loadMembersPage(cursor: _cursor);
+      final adminIds = group.adminList?.toSet() ?? <String>{};
 
       setState(() {
-        _members = result.data;
+        _adminIds = adminIds;
+        _members = result.data
+            .where((member) => !adminIds.contains(member))
+            .toList();
         _cursor = result.cursor ?? '';
         _hasMore = _cursor.isNotEmpty;
         _isLoading = false;
@@ -89,15 +113,12 @@ class _GroupChangeOwnerPageState extends State<GroupChangeOwnerPage> {
     });
 
     try {
-      final result = await EMClient.getInstance.groupManager
-          .fetchMemberListFromServer(
-            widget.groupId,
-            pageSize: _pageSize,
-            cursor: _cursor,
-          );
+      final result = await _loadMembersPage(cursor: _cursor);
 
       setState(() {
-        _members.addAll(result.data);
+        _members.addAll(
+          result.data.where((member) => !_adminIds.contains(member)),
+        );
         _cursor = result.cursor ?? '';
         _hasMore = _cursor.isNotEmpty;
         _isLoadingMore = false;
@@ -113,6 +134,30 @@ class _GroupChangeOwnerPageState extends State<GroupChangeOwnerPage> {
         ).showSnackBar(SnackBar(content: Text('加载更多失败: ${e.toString()}')));
       }
     }
+  }
+
+  Future<EMGroup> _fetchGroupInfo() {
+    final loader = widget.groupInfoLoader;
+    if (loader != null) {
+      return loader(widget.groupId);
+    }
+    return EMClient.getInstance.groupManager.fetchGroupInfoFromServer(
+      widget.groupId,
+    );
+  }
+
+  Future<EMCursorResult<String>> _loadMembersPage({
+    required String cursor,
+  }) {
+    final loader = widget.membersLoader;
+    if (loader != null) {
+      return loader(widget.groupId, cursor: cursor, pageSize: _pageSize);
+    }
+    return EMClient.getInstance.groupManager.fetchMemberListFromServer(
+      widget.groupId,
+      pageSize: _pageSize,
+      cursor: cursor,
+    );
   }
 
   /// 显示成员操作菜单
@@ -168,11 +213,20 @@ class _GroupChangeOwnerPageState extends State<GroupChangeOwnerPage> {
 
   /// 转移群组所有者
   Future<void> _changeOwner(String memberId) async {
+    if (_adminIds.contains(memberId)) {
+      _showResultDialog('转移群组失败: 不能转移给群管理员', false);
+      return;
+    }
     try {
-      await EMClient.getInstance.groupManager.changeOwner(
-        widget.groupId,
-        memberId,
-      );
+      final changer = widget.ownerChanger;
+      if (changer != null) {
+        await changer(widget.groupId, memberId);
+      } else {
+        await EMClient.getInstance.groupManager.changeOwner(
+          widget.groupId,
+          memberId,
+        );
+      }
       if (mounted) {
         _showResultDialog('已转移群组给 $memberId', true);
       }

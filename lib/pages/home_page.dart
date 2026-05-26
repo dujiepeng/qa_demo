@@ -23,8 +23,10 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   static const _connectionHandlerId = 'home_page_connection_status_overlay';
   static const _offlineMessageHandlerId = 'home_page_offline_message_counter';
+  static const _contactHandlerId = 'home_page_contact_events';
   bool _connectionHandlerAttached = false;
   bool _offlineMessageHandlerAttached = false;
+  bool _contactHandlerAttached = false;
 
   @override
   void initState() {
@@ -40,6 +42,8 @@ class _HomePageState extends State<HomePage> {
       if (!mounted) return;
       _attachConnectionStatusHandler();
       _attachOfflineMessageCounter();
+      _attachContactEventHandler();
+      await EMClient.getInstance.startCallback();
     });
   }
 
@@ -53,8 +57,43 @@ class _HomePageState extends State<HomePage> {
         _offlineMessageHandlerId,
       );
     }
+    if (_contactHandlerAttached) {
+      EMClient.getInstance.contactManager.removeEventHandler(_contactHandlerId);
+    }
     VersionManager().removeListener(_checkAndShowUpdateDialog);
     super.dispose();
+  }
+
+  void _attachContactEventHandler() {
+    if (_contactHandlerAttached) {
+      return;
+    }
+    final overlayController = context.read<ConnectionStatusOverlayController>();
+    EMClient.getInstance.contactManager.addEventHandler(
+      _contactHandlerId,
+      EMContactEventHandler(
+        onContactInvited: (userId, reason) {
+          final reasonText = reason?.trim();
+          final suffix = reasonText == null || reasonText.isEmpty
+              ? ''
+              : ' ($reasonText)';
+          overlayController.showMessage('收到好友申请: $userId$suffix');
+        },
+        onFriendRequestAccepted: (userId) {
+          overlayController.showMessage('好友申请已被接受: $userId');
+        },
+        onFriendRequestDeclined: (userId) {
+          overlayController.showMessage('好友申请已被拒绝: $userId');
+        },
+        onContactAdded: (userId) {
+          overlayController.showMessage('好友已添加: $userId');
+        },
+        onContactDeleted: (userId) {
+          overlayController.showMessage('好友已删除: $userId');
+        },
+      ),
+    );
+    _contactHandlerAttached = true;
   }
 
   void _attachOfflineMessageCounter() {

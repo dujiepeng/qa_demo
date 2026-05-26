@@ -13,6 +13,15 @@ import '../../common/widgets/info_dialog.dart';
 import '../../common/mixins/base_mixin.dart';
 import 'single_chat_reaction.dart';
 
+bool isSingleChatPinEventForCurrentConversation({
+  required String currentUserId,
+  required String conversationId,
+}) {
+  final normalizedCurrentUserId = currentUserId.trim().toLowerCase();
+  return normalizedCurrentUserId.isNotEmpty &&
+      normalizedCurrentUserId == conversationId.trim().toLowerCase();
+}
+
 class SingleChatPage extends StatefulWidget {
   const SingleChatPage({super.key, this.userId, this.showAppBar = true});
 
@@ -89,6 +98,12 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
 
         onMessagePinChanged:
             (messageId, conversationId, pinOperation, pinInfo) {
+              if (!isSingleChatPinEventForCurrentConversation(
+                currentUserId: _userIdController.text,
+                conversationId: conversationId,
+              )) {
+                return;
+              }
               logController.entities
                   .where((element) => element.attachment is EMMessage)
                   .forEach((element) {

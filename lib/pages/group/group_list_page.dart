@@ -19,6 +19,7 @@ class _GroupListPageState extends State<GroupListPage> {
   final _settings = AppSettings();
   final ScrollController _scrollController = ScrollController();
   List<EMGroup> _groups = [];
+  final List<_GroupInvitation> _pendingInvitations = [];
   bool _isLoading = false;
   bool _isFetchingMore = false;
   bool _hasMore = true;
@@ -33,14 +34,115 @@ class _GroupListPageState extends State<GroupListPage> {
 
     EMClient.getInstance.groupManager.addEventHandler(
       'group_list',
-      EMGroupEventHandler(),
+      EMGroupEventHandler(
+        onInvitationReceivedFromGroup: (groupId, groupName, inviter, reason) {
+          if (!mounted) {
+            return;
+          }
+          setState(() {
+            _pendingInvitations.removeWhere(
+              (invitation) => invitation.groupId == groupId,
+            );
+            _pendingInvitations.insert(
+              0,
+              _GroupInvitation(
+                groupId: groupId,
+                groupName: groupName,
+                inviter: inviter,
+                reason: reason,
+              ),
+            );
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('收到群组邀请: ${groupName ?? groupId}')),
+          );
+        },
+        onAutoAcceptInvitationFromGroup: (groupId, inviter, inviteMessage) {
+          if (!mounted) {
+            return;
+          }
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('已自动接受 $inviter 的群组邀请')));
+          _fetchGroups();
+        },
+        onInvitationAcceptedFromGroup: (groupId, invitee, reason) {
+          if (!mounted) {
+            return;
+          }
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('$invitee 已接受群组邀请')));
+        },
+        onInvitationDeclinedFromGroup: (groupId, invitee, reason) {
+          if (!mounted) {
+            return;
+          }
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('$invitee 已拒绝群组邀请')));
+        },
+      ),
     );
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    EMClient.getInstance.groupManager.removeEventHandler('group_list');
     super.dispose();
+  }
+
+  Future<void> _acceptInvitation(_GroupInvitation invitation) async {
+    try {
+      await EMClient.getInstance.groupManager.acceptInvitation(
+        invitation.groupId,
+        invitation.inviter,
+      );
+      if (mounted) {
+        setState(() {
+          _pendingInvitations.removeWhere(
+            (item) => item.groupId == invitation.groupId,
+          );
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已同意加入 ${invitation.displayName}')),
+        );
+        _fetchGroups();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('同意群组邀请失败: $e')));
+      }
+    }
+  }
+
+  Future<void> _declineInvitation(_GroupInvitation invitation) async {
+    try {
+      await EMClient.getInstance.groupManager.declineInvitation(
+        groupId: invitation.groupId,
+        inviter: invitation.inviter,
+        reason: 'declined from QA app',
+      );
+      if (mounted) {
+        setState(() {
+          _pendingInvitations.removeWhere(
+            (item) => item.groupId == invitation.groupId,
+          );
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已拒绝加入 ${invitation.displayName}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('拒绝群组邀请失败: $e')));
+      }
+    }
   }
 
   /// 滚动监听，触发加载更多
@@ -180,7 +282,7 @@ class _GroupListPageState extends State<GroupListPage> {
                   )
                 : RefreshIndicator(
                     onRefresh: _fetchGroups,
-                    child: _groups.isEmpty
+                    child: _pendingInvitations.isEmpty && _groups.isEmpty
                         ? ListView(
                             children: [
                               SizedBox(
@@ -200,10 +302,21 @@ class _GroupListPageState extends State<GroupListPage> {
                         : ListView.builder(
                             controller: _scrollController,
                             physics: const AlwaysScrollableScrollPhysics(),
-                            itemCount: _groups.length + (_hasMore ? 1 : 0),
+                            itemCount:
+                                _pendingInvitations.length +
+                                _groups.length +
+                                (_hasMore ? 1 : 0),
                             itemBuilder: (context, index) {
-                              if (index < _groups.length) {
-                                final group = _groups[index];
+                              if (index < _pendingInvitations.length) {
+                                return _buildInvitationTile(
+                                  _pendingInvitations[index],
+                                  isDark,
+                                );
+                              }
+                              final groupIndex =
+                                  index - _pendingInvitations.length;
+                              if (groupIndex < _groups.length) {
+                                final group = _groups[groupIndex];
                                 return GestureDetector(
                                   onLongPressStart: (details) async {
                                     final position = details.globalPosition;
@@ -314,5 +427,89 @@ class _GroupListPageState extends State<GroupListPage> {
         );
       },
     );
+  }
+
+  Widget _buildInvitationTile(_GroupInvitation invitation, bool isDark) {
+    final reason = invitation.reason?.trim();
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.inputBackground(isDark),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primary(isDark)),
+      ),
+      child: ListTile(
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: AppColors.primary(isDark).withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.group_add_outlined,
+            color: AppColors.primary(isDark),
+          ),
+        ),
+        title: Text(
+          invitation.displayName,
+          style: TextStyle(
+            color: AppColors.textPrimary(isDark),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '群组邀请',
+              style: TextStyle(color: AppColors.textSecondary(isDark)),
+            ),
+            Text(
+              '邀请人: ${invitation.inviter}',
+              style: TextStyle(color: AppColors.textSecondary(isDark)),
+            ),
+            if (reason != null && reason.isNotEmpty)
+              Text(
+                '原因: $reason',
+                style: TextStyle(color: AppColors.textSecondary(isDark)),
+              ),
+          ],
+        ),
+        trailing: Wrap(
+          spacing: 8,
+          children: [
+            TextButton(
+              onPressed: () => _declineInvitation(invitation),
+              child: const Text('拒绝'),
+            ),
+            FilledButton(
+              onPressed: () => _acceptInvitation(invitation),
+              child: const Text('同意'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GroupInvitation {
+  const _GroupInvitation({
+    required this.groupId,
+    required this.inviter,
+    this.groupName,
+    this.reason,
+  });
+
+  final String groupId;
+  final String? groupName;
+  final String inviter;
+  final String? reason;
+
+  String get displayName {
+    final name = groupName?.trim();
+    return name == null || name.isEmpty ? groupId : name;
   }
 }

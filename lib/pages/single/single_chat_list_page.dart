@@ -28,6 +28,7 @@ class _SingleChatListPageState extends State<SingleChatListPage> {
   final _settings = AppSettings();
   final ScrollController _scrollController = ScrollController();
   List<EMContact> _contacts = [];
+  final List<_ContactInvitation> _pendingInvitations = [];
   bool _isLoading = false;
 
   @override
@@ -43,23 +44,36 @@ class _SingleChatListPageState extends State<SingleChatListPage> {
         onContactDeleted: (username) {
           _fetchContacts();
         },
-        onContactInvited: (username, reason) async {
-          try {
-            await EMClient.getInstance.contactManager.acceptInvitation(
-              username,
+        onContactInvited: (username, reason) {
+          if (!mounted) {
+            return;
+          }
+          setState(() {
+            _pendingInvitations.removeWhere(
+              (invitation) => invitation.userId == username,
             );
-            if (mounted) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text('已接受好友申请')));
-              _fetchContacts();
-            }
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text('接受好友申请失败: $e')));
-            }
+            _pendingInvitations.insert(
+              0,
+              _ContactInvitation(userId: username, reason: reason),
+            );
+          });
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('收到好友申请: $username')));
+        },
+        onFriendRequestAccepted: (username) {
+          if (mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('$username 已接受好友申请')));
+            _fetchContacts();
+          }
+        },
+        onFriendRequestDeclined: (username) {
+          if (mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('$username 已拒绝好友申请')));
           }
         },
       ),
@@ -70,6 +84,51 @@ class _SingleChatListPageState extends State<SingleChatListPage> {
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  Future<void> _acceptInvitation(String username) async {
+    try {
+      await EMClient.getInstance.contactManager.acceptInvitation(username);
+      if (mounted) {
+        setState(() {
+          _pendingInvitations.removeWhere(
+            (invitation) => invitation.userId == username,
+          );
+        });
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('已同意 $username 的好友申请')));
+        _fetchContacts();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('同意好友申请失败: $e')));
+      }
+    }
+  }
+
+  Future<void> _declineInvitation(String username) async {
+    try {
+      await EMClient.getInstance.contactManager.declineInvitation(username);
+      if (mounted) {
+        setState(() {
+          _pendingInvitations.removeWhere(
+            (invitation) => invitation.userId == username,
+          );
+        });
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('已拒绝 $username 的好友申请')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('拒绝好友申请失败: $e')));
+      }
+    }
   }
 
   /// 获取好友列表
@@ -277,7 +336,7 @@ class _SingleChatListPageState extends State<SingleChatListPage> {
                   )
                 : RefreshIndicator(
                     onRefresh: _fetchContacts,
-                    child: _contacts.isEmpty
+                    child: _contacts.isEmpty && _pendingInvitations.isEmpty
                         ? ListView(
                             children: [
                               SizedBox(
@@ -297,9 +356,20 @@ class _SingleChatListPageState extends State<SingleChatListPage> {
                         : ListView.builder(
                             controller: _scrollController,
                             physics: const AlwaysScrollableScrollPhysics(),
-                            itemCount: _contacts.length,
+                            itemCount:
+                                _pendingInvitations.length + _contacts.length,
                             itemBuilder: (context, index) {
-                              final contact = _contacts[index];
+                              if (index < _pendingInvitations.length) {
+                                final invitation =
+                                    _pendingInvitations[index];
+                                return _buildInvitationTile(
+                                  invitation,
+                                  isDark,
+                                );
+                              }
+                              final contactIndex =
+                                  index - _pendingInvitations.length;
+                              final contact = _contacts[contactIndex];
                               return GestureDetector(
                                 onLongPressStart: (details) async {
                                   final position = details.globalPosition;
@@ -406,4 +476,72 @@ class _SingleChatListPageState extends State<SingleChatListPage> {
       },
     );
   }
+
+  Widget _buildInvitationTile(_ContactInvitation invitation, bool isDark) {
+    final reason = invitation.reason?.trim();
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.inputBackground(isDark),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primary(isDark)),
+      ),
+      child: ListTile(
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: AppColors.primary(isDark).withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.person_add_alt_1_outlined,
+            color: AppColors.primary(isDark),
+          ),
+        ),
+        title: Text(
+          invitation.userId,
+          style: TextStyle(
+            color: AppColors.textPrimary(isDark),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '好友申请',
+              style: TextStyle(color: AppColors.textSecondary(isDark)),
+            ),
+            if (reason != null && reason.isNotEmpty)
+              Text(
+                '原因: $reason',
+                style: TextStyle(color: AppColors.textSecondary(isDark)),
+              ),
+          ],
+        ),
+        trailing: Wrap(
+          spacing: 8,
+          children: [
+            TextButton(
+              onPressed: () => _declineInvitation(invitation.userId),
+              child: const Text('拒绝'),
+            ),
+            FilledButton(
+              onPressed: () => _acceptInvitation(invitation.userId),
+              child: const Text('同意'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ContactInvitation {
+  const _ContactInvitation({required this.userId, this.reason});
+
+  final String userId;
+  final String? reason;
 }

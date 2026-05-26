@@ -21,10 +21,43 @@ import 'group_white_list_page.dart';
 /// 群组信息编辑类型
 enum GroupInfoEditType { name, description, announcement }
 
+typedef GroupInfoLoader = Future<EMGroup> Function(String groupId);
+typedef PublicGroupJoiner = Future<void> Function(String groupId);
+typedef PublicGroupJoinRequester =
+    Future<void> Function(String groupId, {String? reason});
+typedef GroupCreator =
+    Future<EMGroup> Function({
+      String? groupName,
+      String? desc,
+      List<String>? inviteMembers,
+      String? inviteReason,
+      required EMGroupOptions options,
+    });
+typedef GroupDestroyer = Future<void> Function(String groupId);
+typedef GroupMessageBlocker = Future<void> Function(String groupId);
+
 class GroupPage extends StatefulWidget {
-  const GroupPage({super.key, this.groupId, this.showAppBar = true});
+  const GroupPage({
+    super.key,
+    this.groupId,
+    this.showAppBar = true,
+    this.groupInfoLoader,
+    this.publicGroupJoiner,
+    this.publicGroupJoinRequester,
+    this.groupCreator,
+    this.groupDestroyer,
+    this.groupMessageBlocker,
+    this.groupMessageUnblocker,
+  });
   final String? groupId;
   final bool showAppBar;
+  final GroupInfoLoader? groupInfoLoader;
+  final PublicGroupJoiner? publicGroupJoiner;
+  final PublicGroupJoinRequester? publicGroupJoinRequester;
+  final GroupCreator? groupCreator;
+  final GroupDestroyer? groupDestroyer;
+  final GroupMessageBlocker? groupMessageBlocker;
+  final GroupMessageBlocker? groupMessageUnblocker;
   @override
   State<GroupPage> createState() => _GroupPageState();
 }
@@ -38,6 +71,8 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
   final _repeatCountController = TextEditingController(text: '1');
   bool _deliverOnlineOnly = false;
   String _groupId = '';
+  EMGroupPermissionType? _permissionType;
+  bool? _messageBlocked;
 
   @override
   LogController get logController => _logController;
@@ -49,6 +84,11 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
     super.initState();
     _addListener();
     _groupIdController.addListener(() => setState(() {}));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _refreshGroupPermission();
+      }
+    });
   }
 
   @override
@@ -57,6 +97,32 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
     _messageController.dispose();
     _repeatCountController.dispose();
     super.dispose();
+  }
+
+  Future<void> _refreshGroupPermission() async {
+    final groupId = _groupId.trim();
+    if (groupId.isEmpty) {
+      if (_permissionType != null) {
+        setState(() => _permissionType = null);
+      }
+      return;
+    }
+    try {
+      final group = await _fetchGroupInfo(groupId);
+      if (!mounted || groupId != _groupId) return;
+      setState(() {
+        _permissionType = group.permissionType;
+        _messageBlocked = group.messageBlocked;
+      });
+    } catch (e) {
+      addLog('获取群权限失败: $e');
+      if (mounted && groupId == _groupId) {
+        setState(() {
+          _permissionType = null;
+          _messageBlocked = null;
+        });
+      }
+    }
   }
 
   void _addListener() {
@@ -123,13 +189,21 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
             ),
         onGroupDestroyed: (groupId, groupName) {
           if (groupId == _groupId) {
-            setState(() => _groupId = '');
+            setState(() {
+              _groupId = '';
+              _permissionType = null;
+              _messageBlocked = null;
+            });
             addReceiveLog('onGroupDestroyed: $groupName');
           }
         },
         onUserRemovedFromGroup: (groupId, groupName) {
           if (groupId == _groupId) {
-            setState(() => _groupId = '');
+            setState(() {
+              _groupId = '';
+              _permissionType = null;
+              _messageBlocked = null;
+            });
             addReceiveLog('onUserRemovedFromGroup: $groupName');
           }
         },
@@ -143,6 +217,83 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
 
   void _handleGroupEvent(String groupId, String log) {
     if (groupId == _groupId) addReceiveLog(log);
+  }
+
+  Future<EMGroup> _fetchGroupInfo(String groupId) {
+    final loader = widget.groupInfoLoader;
+    if (loader != null) {
+      return loader(groupId);
+    }
+    return EMClient.getInstance.groupManager.fetchGroupInfoFromServer(groupId);
+  }
+
+  Future<void> _joinPublicGroup(String groupId) {
+    final joiner = widget.publicGroupJoiner;
+    if (joiner != null) {
+      return joiner(groupId);
+    }
+    return EMClient.getInstance.groupManager.joinPublicGroup(groupId);
+  }
+
+  Future<void> _requestToJoinPublicGroup(String groupId, {String? reason}) {
+    final requester = widget.publicGroupJoinRequester;
+    if (requester != null) {
+      return requester(groupId, reason: reason);
+    }
+    return EMClient.getInstance.groupManager.requestToJoinPublicGroup(
+      groupId,
+      reason: reason,
+    );
+  }
+
+  Future<EMGroup> _createGroup({
+    String? groupName,
+    String? desc,
+    List<String>? inviteMembers,
+    String? inviteReason,
+    required EMGroupOptions options,
+  }) {
+    final creator = widget.groupCreator;
+    if (creator != null) {
+      return creator(
+        groupName: groupName,
+        desc: desc,
+        inviteMembers: inviteMembers,
+        inviteReason: inviteReason,
+        options: options,
+      );
+    }
+    return EMClient.getInstance.groupManager.createGroup(
+      groupName: groupName,
+      desc: desc,
+      inviteMembers: inviteMembers,
+      inviteReason: inviteReason,
+      options: options,
+    );
+  }
+
+  Future<void> _destroyGroup(String groupId) {
+    final destroyer = widget.groupDestroyer;
+    if (destroyer != null) {
+      return destroyer(groupId);
+    }
+    return EMClient.getInstance.groupManager.destroyGroup(groupId);
+  }
+
+  Future<void> _blockGroupMessages(String groupId) {
+    final blocker = widget.groupMessageBlocker;
+    if (blocker != null) {
+      return blocker(groupId);
+    }
+    return EMClient.getInstance.groupManager.blockGroup(groupId);
+  }
+
+  Future<void> _unblockGroupMessages(String groupId) {
+    final unblocker = widget.groupMessageUnblocker;
+    if (unblocker != null) {
+      return unblocker(groupId);
+    }
+    return EMClient.getInstance.groupManager.unblockGroup(groupId);
   }
 
   PreferredSizeWidget _buildAppBar(bool isDark) {
@@ -239,15 +390,33 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
       try {
         await EMClient.getInstance.groupManager.leaveGroup(_groupId);
         addLog('退出 $_groupId 成功');
-        setState(() => _groupId = '');
+        setState(() {
+          _groupId = '';
+          _permissionType = null;
+          _messageBlocked = null;
+        });
       } catch (e) {
         addLog('退出 $_groupId 失败: ${e.toString()}');
       }
     } else {
       addLog('开始加入 $inputId');
       try {
-        await EMClient.getInstance.groupManager.joinPublicGroup(inputId);
+        final group = await _fetchGroupInfo(inputId);
+        if (group.isMemberOnly == true) {
+          await _requestToJoinPublicGroup(
+            inputId,
+            reason: 'QA app request to join group',
+          );
+          addLog('已发送入群申请，GroupId: $inputId');
+          return;
+        }
+        if (group.isMemberOnly != false) {
+          addLog('加入 $inputId 失败：服务端未返回入群审批信息');
+          return;
+        }
+        await _joinPublicGroup(inputId);
         setState(() => _groupId = inputId);
+        _refreshGroupPermission();
         addLog('加入成功， GroupId: $inputId');
       } catch (e) {
         addLog('加入 $inputId 失败：${e.toString()}');
@@ -298,8 +467,7 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
       return;
     }
     try {
-      final group = await EMClient.getInstance.groupManager
-          .fetchGroupInfoFromServer(_groupId);
+      final group = await _fetchGroupInfo(_groupId);
       if (!mounted) return;
       String title = '', fieldTitle = '', placeholder = '', currentValue = '';
       bool multiline = false;
@@ -375,8 +543,7 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
       return;
     }
     try {
-      final group = await EMClient.getInstance.groupManager
-          .fetchGroupInfoFromServer(_groupId);
+      final group = await _fetchGroupInfo(_groupId);
       if (!mounted) return;
       showDialog(
         context: context,
@@ -436,8 +603,7 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
 
   void _showMuteAllMuteAlert() async {
     if (_groupId.isEmpty) return;
-    final group = await EMClient.getInstance.groupManager
-        .fetchGroupInfoFromServer(_groupId);
+    final group = await _fetchGroupInfo(_groupId);
     if (!mounted) return;
     showSwitchAlert(
       context: context,
@@ -459,6 +625,113 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
         }
       },
     );
+  }
+
+  Future<void> _showCreateGroupDialog() async {
+    final result = await showDialog<_CreateGroupFormData>(
+      context: context,
+      builder: (context) => const _CreateGroupDialog(),
+    );
+    if (result == null) return;
+    if (result.groupName.isEmpty) {
+      addLog('创建群组失败: 群组名称不能为空');
+      return;
+    }
+    try {
+      addLog('开始创建群组: ${result.groupName}');
+      final group = await _createGroup(
+        groupName: result.groupName,
+        desc: result.description,
+        inviteMembers: result.inviteMembers,
+        inviteReason: result.reason,
+        options: EMGroupOptions(
+          style: result.style,
+          maxCount: result.maxCount,
+          inviteNeedConfirm: result.inviteNeedConfirm,
+        ),
+      );
+      if (!mounted) return;
+      setState(() {
+        _groupId = group.groupId;
+        _groupIdController.text = group.groupId;
+        _permissionType = EMGroupPermissionType.Owner;
+        _messageBlocked = group.messageBlocked;
+      });
+      addLog('创建群组成功，GroupId: ${group.groupId}');
+    } catch (e) {
+      addLog('创建群组失败: $e');
+    }
+  }
+
+  Future<void> _destroyCurrentGroup() async {
+    if (_groupId.isEmpty) {
+      addLog('请先加入群组');
+      return;
+    }
+    if (_permissionType != EMGroupPermissionType.Owner) {
+      addLog('解散失败: 仅群主可以解散群组');
+      return;
+    }
+    final targetGroupId = _groupId;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('解散群组'),
+        content: Text('确定要解散群组 $targetGroupId 吗？该操作会删除本地群信息和群会话。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确定解散'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      addLog('开始解散群组: $targetGroupId');
+      await _destroyGroup(targetGroupId);
+      if (!mounted) return;
+      setState(() {
+        if (_groupId == targetGroupId) {
+          _groupId = '';
+          _groupIdController.clear();
+          _permissionType = null;
+          _messageBlocked = null;
+        }
+      });
+      addLog('解散群组成功: $targetGroupId');
+    } catch (e) {
+      addLog('解散群组失败: $e');
+    }
+  }
+
+  Future<void> _toggleGroupMessageBlock() async {
+    if (_groupId.isEmpty) {
+      addLog('请先加入群组');
+      return;
+    }
+    if (_permissionType != EMGroupPermissionType.Member) {
+      addLog('群主和管理员不能屏蔽群消息');
+      return;
+    }
+    final shouldUnblock = _messageBlocked == true;
+    try {
+      if (shouldUnblock) {
+        addLog('开始解除屏蔽群消息: $_groupId');
+        await _unblockGroupMessages(_groupId);
+      } else {
+        addLog('开始屏蔽群消息: $_groupId');
+        await _blockGroupMessages(_groupId);
+      }
+      await _refreshGroupPermission();
+      addLog(shouldUnblock ? '解除屏蔽群消息成功' : '屏蔽群消息成功');
+    } catch (e) {
+      addLog(shouldUnblock ? '解除屏蔽群消息失败: $e' : '屏蔽群消息失败: $e');
+    }
   }
 
   @override
@@ -575,7 +848,17 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
   }
 
   Widget _buildGroupManagementButtons(bool isDark) {
+    final canDestroyGroup = _groupId.isNotEmpty &&
+        _permissionType == EMGroupPermissionType.Owner;
+    final canToggleMessageBlock = _groupId.isNotEmpty &&
+        _permissionType == EMGroupPermissionType.Member;
+    final isMessageBlocked = _messageBlocked == true;
     final items = [
+      GridActionItem(
+        icon: Icons.add_circle_outline,
+        label: '创建',
+        onTap: _showCreateGroupDialog,
+      ),
       GridActionItem(
         icon: Icons.assignment_outlined,
         label: '详情',
@@ -622,6 +905,13 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
         onTap: _showMuteAllMuteAlert,
       ),
       GridActionItem(
+        icon: isMessageBlocked
+            ? Icons.notifications_active_outlined
+            : Icons.notifications_off_outlined,
+        label: isMessageBlocked ? '解除屏蔽' : '屏蔽消息',
+        onTap: canToggleMessageBlock ? _toggleGroupMessageBlock : null,
+      ),
+      GridActionItem(
         icon: Icons.tune,
         label: '自定义',
         onTap: () async {
@@ -642,6 +932,11 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
         label: '转移',
         onTap: () => _showBottomSheet(GroupChangeOwnerPage(groupId: _groupId)),
       ),
+      GridActionItem(
+        icon: Icons.delete_forever_outlined,
+        label: '解散',
+        onTap: canDestroyGroup ? _destroyCurrentGroup : null,
+      ),
     ];
     return SizedBox(
       width: MediaQuery.of(context).size.width,
@@ -660,6 +955,152 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
     return SizedBox(
       width: MediaQuery.of(context).size.width,
       child: GridActionMenu(items: items, isDark: isDark, columns: 6),
+    );
+  }
+}
+
+class _CreateGroupFormData {
+  const _CreateGroupFormData({
+    required this.groupName,
+    required this.description,
+    required this.inviteMembers,
+    required this.reason,
+    required this.style,
+    required this.inviteNeedConfirm,
+    required this.maxCount,
+  });
+
+  final String groupName;
+  final String description;
+  final List<String> inviteMembers;
+  final String reason;
+  final EMGroupStyle style;
+  final bool inviteNeedConfirm;
+  final int maxCount;
+}
+
+class _CreateGroupDialog extends StatefulWidget {
+  const _CreateGroupDialog();
+
+  @override
+  State<_CreateGroupDialog> createState() => _CreateGroupDialogState();
+}
+
+class _CreateGroupDialogState extends State<_CreateGroupDialog> {
+  final _nameController = TextEditingController();
+  final _descController = TextEditingController();
+  final _membersController = TextEditingController();
+  final _reasonController = TextEditingController();
+  final _maxCountController = TextEditingController(text: '200');
+  EMGroupStyle _style = EMGroupStyle.PrivateMemberCanInvite;
+  bool _inviteNeedConfirm = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descController.dispose();
+    _membersController.dispose();
+    _reasonController.dispose();
+    _maxCountController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('创建群组'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(labelText: '群组名称'),
+            ),
+            TextField(
+              controller: _descController,
+              decoration: const InputDecoration(labelText: '群组描述'),
+            ),
+            TextField(
+              controller: _membersController,
+              decoration: const InputDecoration(labelText: '邀请成员，英文逗号分隔'),
+            ),
+            TextField(
+              controller: _reasonController,
+              decoration: const InputDecoration(labelText: '创建/邀请原因'),
+            ),
+            TextField(
+              controller: _maxCountController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: '最大人数'),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<EMGroupStyle>(
+              initialValue: _style,
+              decoration: const InputDecoration(labelText: '群组类型'),
+              items: const [
+                DropdownMenuItem(
+                  value: EMGroupStyle.PrivateOnlyOwnerInvite,
+                  child: Text('私有仅群主邀请'),
+                ),
+                DropdownMenuItem(
+                  value: EMGroupStyle.PrivateMemberCanInvite,
+                  child: Text('私有成员可邀请'),
+                ),
+                DropdownMenuItem(
+                  value: EMGroupStyle.PublicJoinNeedApproval,
+                  child: Text('公开入群需审批'),
+                ),
+                DropdownMenuItem(
+                  value: EMGroupStyle.PublicOpenJoin,
+                  child: Text('公开自由加入'),
+                ),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() => _style = value);
+                }
+              },
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('需要确认'),
+              value: _inviteNeedConfirm,
+              onChanged: (value) {
+                setState(() => _inviteNeedConfirm = value);
+              },
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final members = _membersController.text
+                .split(',')
+                .map((member) => member.trim())
+                .where((member) => member.isNotEmpty)
+                .toList();
+            Navigator.pop(
+              context,
+              _CreateGroupFormData(
+                groupName: _nameController.text.trim(),
+                description: _descController.text.trim(),
+                inviteMembers: members,
+                reason: _reasonController.text.trim(),
+                style: _style,
+                inviteNeedConfirm: _inviteNeedConfirm,
+                maxCount: int.tryParse(_maxCountController.text.trim()) ?? 200,
+              ),
+            );
+          },
+          child: const Text('确定'),
+        ),
+      ],
     );
   }
 }

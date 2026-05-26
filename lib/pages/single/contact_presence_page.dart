@@ -518,16 +518,14 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
                                               value: 'set_remark',
                                               child: Text('设置备注'),
                                             ),
-                                            if (isSubscribed)
-                                              const PopupMenuItem(
-                                                value: 'unsubscribe',
-                                                child: Text('取消订阅 Presence'),
-                                              )
-                                            else
-                                              const PopupMenuItem(
-                                                value: 'subscribe',
-                                                child: Text('订阅 Presence'),
-                                              ),
+                                            const PopupMenuItem(
+                                              value: 'unsubscribe',
+                                              child: Text('取消订阅 Presence'),
+                                            ),
+                                            const PopupMenuItem(
+                                              value: 'subscribe',
+                                              child: Text('订阅 Presence'),
+                                            ),
                                             const PopupMenuItem(
                                               value: 'query',
                                               child: Text('查询状态'),

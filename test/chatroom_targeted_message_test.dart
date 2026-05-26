@@ -389,12 +389,112 @@ void main() {
 
     expect(find.text('撤回'), findsOneWidget);
   });
+
+  testWidgets('chatroom message log removes server history by message id', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    String? removedConversationId;
+    EMConversationType? removedConversationType;
+    List<String>? removedMessageIds;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RoomPage(
+          roomId: 'room-001',
+          showAppBar: false,
+          remoteMessageRemover:
+              ({required conversationId, required type, required msgIds}) async {
+                removedConversationId = conversationId;
+                removedConversationType = type;
+                removedMessageIds = msgIds;
+              },
+        ),
+      ),
+    );
+
+    final state = tester.state(find.byType(RoomPage)) as dynamic;
+    state.addSendLog(
+      'alice: delete server history',
+      attachment: _buildChatRoomTextMessage(
+        content: 'delete server history',
+        msgId: 'msg-delete-1',
+      ),
+      tag: 'message',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.textContaining('delete server history'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('删服务端'));
+    await tester.pumpAndSettle();
+
+    expect(removedConversationId, 'room-001');
+    expect(removedConversationType, EMConversationType.ChatRoom);
+    expect(removedMessageIds, ['msg-delete-1']);
+    expect(find.text('已删服务端'), findsOneWidget);
+  });
+
+  testWidgets('chatroom message log removes server history before server time', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    String? removedConversationId;
+    EMConversationType? removedConversationType;
+    int? removedTimestamp;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RoomPage(
+          roomId: 'room-001',
+          showAppBar: false,
+          remoteMessageBeforeTimeRemover:
+              ({required conversationId, required type, required timestamp}) async {
+                removedConversationId = conversationId;
+                removedConversationType = type;
+                removedTimestamp = timestamp;
+              },
+        ),
+      ),
+    );
+
+    final state = tester.state(find.byType(RoomPage)) as dynamic;
+    state.addSendLog(
+      'alice: delete before server time',
+      attachment: _buildChatRoomTextMessage(
+        content: 'delete before server time',
+        msgId: 'msg-delete-time-1',
+        serverTime: 1710000000000,
+      ),
+      tag: 'message',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.textContaining('delete before server time'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('按时间删'));
+    await tester.pumpAndSettle();
+
+    expect(removedConversationId, 'room-001');
+    expect(removedConversationType, EMConversationType.ChatRoom);
+    expect(removedTimestamp, 1710000000000);
+    expect(find.text('已按时间删服务端'), findsOneWidget);
+  });
 }
 
 EMMessage _buildChatRoomTextMessage({
   required String content,
   String msgId = 'msg-1',
   MessageDirection direction = MessageDirection.SEND,
+  int? serverTime,
 }) {
   return EMMessage.fromJson({
     'to': 'room-001',
@@ -405,6 +505,7 @@ EMMessage _buildChatRoomTextMessage({
     'convId': 'room-001',
     'chatType': ChatType.ChatRoom.index,
     'status': MessageStatus.SUCCESS.index,
+    'serverTime': serverTime,
   });
 }
 
