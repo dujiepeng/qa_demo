@@ -314,4 +314,27 @@ void main() {
     expect(ownerBlockButton.onPressed, isNull);
     expect(calls, 0);
   });
+
+  testWidgets('group page logs invitation declined callback', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GroupPage(
+          groupId: 'group-001',
+          showAppBar: false,
+          groupInfoLoader: (_) async => EMGroup(groupId: 'group-001'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    EMClient.getInstance.groupManager
+        .getEventHandler('group_test')
+        ?.onInvitationDeclinedFromGroup
+        ?.call('group-001', 'user-b', 'busy');
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('onInvitationDeclinedFromGroup'), findsOneWidget);
+    expect(find.textContaining('invitee: user-b'), findsOneWidget);
+    expect(find.textContaining('reason: busy'), findsOneWidget);
+  });
 }

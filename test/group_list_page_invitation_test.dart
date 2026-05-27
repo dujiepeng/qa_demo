@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import 'package:im_flutter_sdk_interface/im_flutter_sdk_interface.dart';
+import 'package:qa_flutter/pages/group/group_invitation_store.dart';
 import 'package:qa_flutter/pages/group/group_list_page.dart';
 
 class _GroupAction {
@@ -31,16 +32,17 @@ class _TestGroupManager extends GroupManager {
   @override
   Future<dynamic> callNativeMethod(String method, [dynamic params]) async {
     final request = params is Map ? params : <String, dynamic>{};
-    if (method == 'fetchJoinedGroupsFromServer') {
+    if (method == 'getJoinedGroupsFromServer') {
       return {method: <Map>[]};
     }
     if (method == 'acceptInvitationFromGroup') {
       actions.add(_GroupAction(method, request));
       return {
-        method: EMGroup(
-          groupId: request['groupId'] as String,
-          groupName: '邀请群',
-        ).toJson(),
+        method: {
+          'groupId': request['groupId'] as String,
+          'name': '邀请群',
+          'permissionType': 0,
+        },
       };
     }
     if (method == 'declineInvitationFromGroup') {
@@ -63,10 +65,12 @@ void main() {
     testClient = _TestClient();
     Client.instance = testClient;
     EMClient.getInstance.groupManager.clearEventHandlers();
+    GroupInvitationStore.instance.clear();
   });
 
   tearDown(() {
     EMClient.getInstance.groupManager.removeEventHandler('group_list');
+    GroupInvitationStore.instance.clear();
     Client.instance = previousClient;
   });
 
@@ -90,6 +94,29 @@ void main() {
     expect(find.text('拒绝'), findsOneWidget);
   });
 
+  testWidgets('stored group invitation is shown after entering group list', (
+    tester,
+  ) async {
+    GroupInvitationStore.instance.record(
+      const GroupInvitation(
+        groupId: 'group-001',
+        groupName: '邀请群',
+        inviter: 'owner-a',
+        reason: 'join us',
+      ),
+    );
+
+    await tester.pumpWidget(const MaterialApp(home: GroupListPage()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('群组邀请'), findsOneWidget);
+    expect(find.text('邀请群'), findsOneWidget);
+    expect(find.text('邀请人: owner-a'), findsOneWidget);
+    expect(find.text('原因: join us'), findsOneWidget);
+    expect(find.text('同意'), findsOneWidget);
+    expect(find.text('拒绝'), findsOneWidget);
+  });
+
   testWidgets('accepting a group invitation calls SDK accept invitation', (
     tester,
   ) async {
@@ -103,12 +130,14 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('同意'));
+    await tester.pump();
     await tester.pumpAndSettle();
 
     expect(testClient.actions.length, 1);
     expect(testClient.actions.single.method, 'acceptInvitationFromGroup');
     expect(testClient.actions.single.params['groupId'], 'group-001');
     expect(testClient.actions.single.params['inviter'], 'owner-a');
+    expect(find.textContaining('同意群组邀请失败'), findsNothing);
     expect(find.text('群组邀请'), findsNothing);
   });
 

@@ -7,6 +7,7 @@ import '../common/utils/offline_message_counter.dart';
 import '../common/utils/other_logged_in_devices_controller.dart';
 import '../common/utils/version_manager.dart';
 import '../common/widgets/update_dialog.dart';
+import 'group/group_invitation_store.dart';
 import 'single/contact_api.dart';
 import '../common/widgets/responsive_layout.dart';
 import '../mobile/home_page_mobile.dart';
@@ -24,9 +25,11 @@ class _HomePageState extends State<HomePage> {
   static const _connectionHandlerId = 'home_page_connection_status_overlay';
   static const _offlineMessageHandlerId = 'home_page_offline_message_counter';
   static const _contactHandlerId = 'home_page_contact_events';
+  static const _groupHandlerId = 'home_page_group_events';
   bool _connectionHandlerAttached = false;
   bool _offlineMessageHandlerAttached = false;
   bool _contactHandlerAttached = false;
+  bool _groupHandlerAttached = false;
 
   @override
   void initState() {
@@ -43,6 +46,7 @@ class _HomePageState extends State<HomePage> {
       _attachConnectionStatusHandler();
       _attachOfflineMessageCounter();
       _attachContactEventHandler();
+      _attachGroupEventHandler();
       await EMClient.getInstance.startCallback();
     });
   }
@@ -60,8 +64,53 @@ class _HomePageState extends State<HomePage> {
     if (_contactHandlerAttached) {
       EMClient.getInstance.contactManager.removeEventHandler(_contactHandlerId);
     }
+    if (_groupHandlerAttached) {
+      EMClient.getInstance.groupManager.removeEventHandler(_groupHandlerId);
+    }
     VersionManager().removeListener(_checkAndShowUpdateDialog);
     super.dispose();
+  }
+
+  void _attachGroupEventHandler() {
+    if (_groupHandlerAttached) {
+      return;
+    }
+    final overlayController = context.read<ConnectionStatusOverlayController>();
+    EMClient.getInstance.groupManager.addEventHandler(
+      _groupHandlerId,
+      EMGroupEventHandler(
+        onInvitationReceivedFromGroup: (groupId, groupName, inviter, reason) {
+          GroupInvitationStore.instance.record(
+            GroupInvitation(
+              groupId: groupId,
+              groupName: groupName,
+              inviter: inviter,
+              reason: reason,
+            ),
+          );
+          final target = groupName?.trim().isNotEmpty == true
+              ? groupName!
+              : groupId;
+          final reasonText = reason?.trim();
+          final suffix = reasonText == null || reasonText.isEmpty
+              ? ''
+              : ' ($reasonText)';
+          overlayController.showMessage(
+            '收到群组邀请: $target，邀请人: $inviter$suffix',
+          );
+        },
+        onAutoAcceptInvitationFromGroup: (groupId, inviter, inviteMessage) {
+          overlayController.showMessage('已自动接受群组邀请: $groupId，邀请人: $inviter');
+        },
+        onInvitationAcceptedFromGroup: (groupId, invitee, reason) {
+          overlayController.showMessage('群组邀请已被接受: $groupId，用户: $invitee');
+        },
+        onInvitationDeclinedFromGroup: (groupId, invitee, reason) {
+          overlayController.showMessage('群组邀请已被拒绝: $groupId，用户: $invitee');
+        },
+      ),
+    );
+    _groupHandlerAttached = true;
   }
 
   void _attachContactEventHandler() {

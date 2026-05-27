@@ -182,6 +182,16 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
               groupId,
               'onAnnouncementChangedFromGroup: announcement: $announcement',
             ),
+        onInvitationAcceptedFromGroup: (groupId, invitee, reason) =>
+            _handleGroupEvent(
+              groupId,
+              'onInvitationAcceptedFromGroup: invitee: $invitee, reason: $reason',
+            ),
+        onInvitationDeclinedFromGroup: (groupId, invitee, reason) =>
+            _handleGroupEvent(
+              groupId,
+              'onInvitationDeclinedFromGroup: invitee: $invitee, reason: $reason',
+            ),
         onAttributesChangedOfGroupMember:
             (groupId, userId, attributes, operatorId) => _handleGroupEvent(
               groupId,

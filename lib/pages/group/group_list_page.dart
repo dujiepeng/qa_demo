@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
+import 'package:qa_flutter/pages/group/group_invitation_store.dart';
 import 'package:qa_flutter/pages/group/group_page.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
@@ -18,8 +19,8 @@ class GroupListPage extends StatefulWidget {
 class _GroupListPageState extends State<GroupListPage> {
   final _settings = AppSettings();
   final ScrollController _scrollController = ScrollController();
+  final GroupInvitationStore _invitationStore = GroupInvitationStore.instance;
   List<EMGroup> _groups = [];
-  final List<_GroupInvitation> _pendingInvitations = [];
   bool _isLoading = false;
   bool _isFetchingMore = false;
   bool _hasMore = true;
@@ -31,6 +32,7 @@ class _GroupListPageState extends State<GroupListPage> {
     super.initState();
     _fetchGroups();
     _scrollController.addListener(_scrollListener);
+    _invitationStore.addListener(_onInvitationsChanged);
 
     EMClient.getInstance.groupManager.addEventHandler(
       'group_list',
@@ -39,20 +41,14 @@ class _GroupListPageState extends State<GroupListPage> {
           if (!mounted) {
             return;
           }
-          setState(() {
-            _pendingInvitations.removeWhere(
-              (invitation) => invitation.groupId == groupId,
-            );
-            _pendingInvitations.insert(
-              0,
-              _GroupInvitation(
-                groupId: groupId,
-                groupName: groupName,
-                inviter: inviter,
-                reason: reason,
-              ),
-            );
-          });
+          _invitationStore.record(
+            GroupInvitation(
+              groupId: groupId,
+              groupName: groupName,
+              inviter: inviter,
+              reason: reason,
+            ),
+          );
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('收到群组邀请: ${groupName ?? groupId}')),
           );
@@ -89,22 +85,25 @@ class _GroupListPageState extends State<GroupListPage> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _invitationStore.removeListener(_onInvitationsChanged);
     EMClient.getInstance.groupManager.removeEventHandler('group_list');
     super.dispose();
   }
 
-  Future<void> _acceptInvitation(_GroupInvitation invitation) async {
+  void _onInvitationsChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _acceptInvitation(GroupInvitation invitation) async {
     try {
       await EMClient.getInstance.groupManager.acceptInvitation(
         invitation.groupId,
         invitation.inviter,
       );
       if (mounted) {
-        setState(() {
-          _pendingInvitations.removeWhere(
-            (item) => item.groupId == invitation.groupId,
-          );
-        });
+        _invitationStore.remove(invitation.groupId);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('已同意加入 ${invitation.displayName}')),
         );
@@ -119,7 +118,7 @@ class _GroupListPageState extends State<GroupListPage> {
     }
   }
 
-  Future<void> _declineInvitation(_GroupInvitation invitation) async {
+  Future<void> _declineInvitation(GroupInvitation invitation) async {
     try {
       await EMClient.getInstance.groupManager.declineInvitation(
         groupId: invitation.groupId,
@@ -127,11 +126,7 @@ class _GroupListPageState extends State<GroupListPage> {
         reason: 'declined from QA app',
       );
       if (mounted) {
-        setState(() {
-          _pendingInvitations.removeWhere(
-            (item) => item.groupId == invitation.groupId,
-          );
-        });
+        _invitationStore.remove(invitation.groupId);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('已拒绝加入 ${invitation.displayName}')),
         );
@@ -238,6 +233,7 @@ class _GroupListPageState extends State<GroupListPage> {
       listenable: _settings,
       builder: (context, _) {
         final isDark = _settings.isDarkMode;
+        final pendingInvitations = _invitationStore.invitations;
         return CommonGradientBackground(
           isDark: isDark,
           child: Scaffold(
@@ -282,7 +278,7 @@ class _GroupListPageState extends State<GroupListPage> {
                   )
                 : RefreshIndicator(
                     onRefresh: _fetchGroups,
-                    child: _pendingInvitations.isEmpty && _groups.isEmpty
+                    child: pendingInvitations.isEmpty && _groups.isEmpty
                         ? ListView(
                             children: [
                               SizedBox(
@@ -303,18 +299,18 @@ class _GroupListPageState extends State<GroupListPage> {
                             controller: _scrollController,
                             physics: const AlwaysScrollableScrollPhysics(),
                             itemCount:
-                                _pendingInvitations.length +
+                                pendingInvitations.length +
                                 _groups.length +
                                 (_hasMore ? 1 : 0),
                             itemBuilder: (context, index) {
-                              if (index < _pendingInvitations.length) {
+                              if (index < pendingInvitations.length) {
                                 return _buildInvitationTile(
-                                  _pendingInvitations[index],
+                                  pendingInvitations[index],
                                   isDark,
                                 );
                               }
                               final groupIndex =
-                                  index - _pendingInvitations.length;
+                                  index - pendingInvitations.length;
                               if (groupIndex < _groups.length) {
                                 final group = _groups[groupIndex];
                                 return GestureDetector(
@@ -429,7 +425,7 @@ class _GroupListPageState extends State<GroupListPage> {
     );
   }
 
-  Widget _buildInvitationTile(_GroupInvitation invitation, bool isDark) {
+  Widget _buildInvitationTile(GroupInvitation invitation, bool isDark) {
     final reason = invitation.reason?.trim();
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -492,24 +488,5 @@ class _GroupListPageState extends State<GroupListPage> {
         ),
       ),
     );
-  }
-}
-
-class _GroupInvitation {
-  const _GroupInvitation({
-    required this.groupId,
-    required this.inviter,
-    this.groupName,
-    this.reason,
-  });
-
-  final String groupId;
-  final String? groupName;
-  final String inviter;
-  final String? reason;
-
-  String get displayName {
-    final name = groupName?.trim();
-    return name == null || name.isEmpty ? groupId : name;
   }
 }
