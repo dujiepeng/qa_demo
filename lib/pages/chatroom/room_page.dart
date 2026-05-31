@@ -52,6 +52,14 @@ typedef ChatRoomRemoteMessageBeforeTimeRemover =
       required EMConversationType type,
       required int timestamp,
     });
+typedef ChatRoomCreator =
+    Future<EMChatRoom> Function({
+      required String name,
+      String? desc,
+      String? welcomeMsg,
+      required int maxUserCount,
+      List<String>? members,
+    });
 
 bool canUseChatRoomOwnerOnlyActions(EMChatRoom? room) {
   return room?.permissionType == EMChatRoomPermissionType.Owner;
@@ -102,6 +110,7 @@ class RoomPage extends StatefulWidget {
     this.messageModifier,
     this.remoteMessageRemover,
     this.remoteMessageBeforeTimeRemover,
+    this.chatRoomCreator,
     this.settingsOverride,
   });
   final String? roomId;
@@ -112,6 +121,7 @@ class RoomPage extends StatefulWidget {
   final ChatRoomMessageModifier? messageModifier;
   final ChatRoomRemoteMessageRemover? remoteMessageRemover;
   final ChatRoomRemoteMessageBeforeTimeRemover? remoteMessageBeforeTimeRemover;
+  final ChatRoomCreator? chatRoomCreator;
   final AppSettings? settingsOverride;
   @override
   State<RoomPage> createState() => _RoomPageState();
@@ -164,6 +174,32 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
     }
     return EMClient.getInstance.chatRoomManager.fetchChatRoomInfoFromServer(
       roomId,
+    );
+  }
+
+  Future<EMChatRoom> _createChatRoomOnServer({
+    required String name,
+    String? desc,
+    String? welcomeMsg,
+    int maxUserCount = 300,
+    List<String>? members,
+  }) {
+    final creator = widget.chatRoomCreator;
+    if (creator != null) {
+      return creator(
+        name: name,
+        desc: desc,
+        welcomeMsg: welcomeMsg,
+        maxUserCount: maxUserCount,
+        members: members,
+      );
+    }
+    return EMClient.getInstance.chatRoomManager.createChatRoom(
+      name,
+      desc: desc,
+      welcomeMsg: welcomeMsg,
+      maxUserCount: maxUserCount,
+      members: members,
     );
   }
 
@@ -324,6 +360,13 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
       overlayStyle: LogOverlayStyle.warning,
     );
     addReceiveLog(buildChatRoomRecallLog(info));
+  }
+
+  void _showSnackBar(String message) {
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.removeCurrentSnackBar();
+    messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 
   PreferredSizeWidget _buildAppBar(bool isDark) {
@@ -921,20 +964,32 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
       final desc = result[1].text.trim();
       if (name.isEmpty) return;
       try {
-        addLog('开始创建聊天室: $name');
-        final room = await EMClient.getInstance.chatRoomManager.createChatRoom(
-          name,
-          desc: desc,
-        );
-        addLog('创建成功 ID: ${room.roomId}');
+        final startMessage = '开始创建聊天室: $name';
+        addLog(startMessage);
+        _showSnackBar(startMessage);
+        final room = await _createChatRoomOnServer(name: name, desc: desc);
+        final successMessage = '创建成功 ID: ${room.roomId}';
+        addLog(successMessage);
+        _showSnackBar(successMessage);
+        EMChatRoom? serverRoom;
+        try {
+          serverRoom = await _fetchChatRoomInfo(room.roomId);
+        } catch (e) {
+          addLog('创建后拉取聊天室详情失败: $e');
+        }
+        if (!mounted) return;
         setState(() {
           _roomId = room.roomId;
           _roomIdController.text = _roomId;
-          _isJoined = true;
-          _currentRoomInfo = room;
+          _isJoined =
+              (serverRoom ?? room).permissionType !=
+              EMChatRoomPermissionType.None;
+          _currentRoomInfo = serverRoom ?? room;
         });
       } catch (e) {
-        addLog('创建失败: $e');
+        final errorMessage = '创建失败: $e';
+        addLog(errorMessage);
+        _showSnackBar(errorMessage);
       }
     }
   }
@@ -973,6 +1028,27 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
       } catch (e) {
         addLog('解散失败: $e');
       }
+    }
+  }
+
+  Future<void> _removeChatRoomAttribute() async {
+    if (_roomId.isEmpty) return;
+    try {
+      final result = await EMClient.getInstance.chatRoomManager
+          .removeAttributes(_roomId, keys: const ['attKey'], force: true);
+      final failures = result ?? const <String, int>{};
+      if (failures.isEmpty) {
+        addLog('删除聊天室属性成功: attKey');
+      } else {
+        if (failures.containsKey('attKey')) {
+          const missingMessage = '聊天室属性 attKey 不存在，无需删除';
+          addLog(missingMessage);
+          _showSnackBar(missingMessage);
+        }
+        addLog('删除聊天室属性失败详情: $failures');
+      }
+    } catch (e) {
+      addLog('删除聊天室属性失败: $e');
     }
   }
 
@@ -1160,6 +1236,11 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
             addLog('失败: $e');
           }
         },
+      ),
+      GridActionItem(
+        icon: Icons.playlist_remove_outlined,
+        label: '删属性',
+        onTap: _removeChatRoomAttribute,
       ),
       GridActionItem(
         icon: Icons.swap_horiz_outlined,

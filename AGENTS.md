@@ -78,7 +78,9 @@
 
 - `README.md` is the human-facing project summary.
 - `AGENTS.md` is the agent-facing execution guide.
+- `case_list.md` is the QA capability and case coverage checklist mapped to the official Easemob/Huanxin IM docs.
 - If project positioning, scope, or workflow changes, keep both files aligned instead of updating only one.
+- Whenever adding, removing, or completing a QA capability or test case, update `case_list.md` in the same change so its implemented / partially implemented / not implemented status stays aligned with the code.
 
 ## Common Code Patterns
 

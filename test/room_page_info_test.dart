@@ -1,12 +1,187 @@
+// ignore_for_file: depend_on_referenced_packages
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
+import 'package:im_flutter_sdk_interface/im_flutter_sdk_interface.dart';
 import 'package:qa_flutter/common/widgets/info_dialog.dart';
 import 'package:qa_flutter/pages/chatroom/room_page.dart';
 import 'package:qa_flutter/theme/app_settings.dart';
 import 'package:qa_flutter/theme/app_settings.dart' as app;
 
+class _RoomAction {
+  const _RoomAction(this.method, this.params);
+
+  final String method;
+  final Map params;
+}
+
+class _TestClient extends Client {
+  final _chatRoomManager = _TestChatRoomManager();
+
+  @override
+  ChatRoomManager get chatRoomManager => _chatRoomManager;
+
+  List<_RoomAction> get actions => _chatRoomManager.actions;
+
+  @override
+  void updateNativeHandler(handler) {}
+}
+
+class _TestChatRoomManager extends ChatRoomManager {
+  final List<_RoomAction> actions = [];
+  Map<String, int> removeAttributesResult = const <String, int>{};
+
+  @override
+  Future<dynamic> callNativeMethod(String method, [dynamic params]) async {
+    final request = params is Map ? params : <String, dynamic>{};
+    if (method == 'removeChatRoomAttributes') {
+      actions.add(_RoomAction(method, request));
+      return {method: removeAttributesResult};
+    }
+    return {};
+  }
+
+  @override
+  void updateNativeHandler(handler) {}
+}
+
 void main() {
+  late Client previousClient;
+
+  setUp(() {
+    previousClient = Client.instance;
+  });
+
+  tearDown(() {
+    EMClient.getInstance.chatRoomManager.removeEventHandler('room_test');
+    Client.instance = previousClient;
+  });
+
+  testWidgets('creating a chatroom refreshes state from server info', (
+    tester,
+  ) async {
+    String? createdName;
+    String? createdDesc;
+    String? loadedRoomId;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RoomPage(
+          showAppBar: false,
+          chatRoomCreator:
+              ({
+                required name,
+                desc,
+                welcomeMsg,
+                required maxUserCount,
+                members,
+              }) async {
+                createdName = name;
+                createdDesc = desc;
+                return EMChatRoom(roomId: 'room-created');
+              },
+          roomInfoLoader: (roomId) async {
+            loadedRoomId = roomId;
+            return EMChatRoom(
+              roomId: roomId,
+              permissionType: EMChatRoomPermissionType.Owner,
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('创建'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, '名称'), 'qa room');
+    await tester.enterText(find.widgetWithText(TextField, '描述'), 'room desc');
+    await tester.tap(find.text('确定'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(createdName, 'qa room');
+    expect(createdDesc, 'room desc');
+    expect(loadedRoomId, 'room-created');
+    expect(find.text('创建成功 ID: room-created'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.text('room-created'), findsOneWidget);
+    expect(find.text('Leave'), findsOneWidget);
+
+    final destroyButton = tester.widget<ElevatedButton>(
+      find.ancestor(of: find.text('解散'), matching: find.byType(ElevatedButton)),
+    );
+    expect(destroyButton.onPressed, isNotNull);
+  });
+
+  testWidgets(
+    'creating a chatroom does not fake joined state when server info fails',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RoomPage(
+            showAppBar: false,
+            chatRoomCreator:
+                ({
+                  required name,
+                  desc,
+                  welcomeMsg,
+                  required maxUserCount,
+                  members,
+                }) async {
+                  return EMChatRoom(roomId: 'room-created');
+                },
+            roomInfoLoader: (_) async => throw Exception('server unavailable'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('创建'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.widgetWithText(TextField, '名称'), 'qa room');
+      await tester.tap(find.text('确定'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('room-created'), findsOneWidget);
+      expect(find.text('Join'), findsOneWidget);
+      expect(find.text('Leave'), findsNothing);
+    },
+  );
+
+  testWidgets('creating a chatroom shows real failure feedback', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RoomPage(
+          showAppBar: false,
+          chatRoomCreator:
+              ({
+                required name,
+                desc,
+                welcomeMsg,
+                required maxUserCount,
+                members,
+              }) async {
+                throw Exception('permission denied');
+              },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('创建'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, '名称'), 'qa room');
+    await tester.tap(find.text('确定'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('创建失败: Exception: permission denied'), findsOneWidget);
+  });
+
   testWidgets('chatroom info button shows user room and server info', (
     tester,
   ) async {
@@ -199,5 +374,63 @@ void main() {
 
     expect(find.text('Join'), findsOneWidget);
     expect(find.text('Leave'), findsNothing);
+  });
+
+  testWidgets('delete chatroom attribute action calls SDK remove attributes', (
+    tester,
+  ) async {
+    final testClient = _TestClient();
+    Client.instance = testClient;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RoomPage(
+          roomId: 'room-001',
+          showAppBar: false,
+          roomInfoLoader: (_) async => EMChatRoom(
+            roomId: 'room-001',
+            permissionType: EMChatRoomPermissionType.Member,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('删属性'));
+    await tester.pumpAndSettle();
+
+    expect(testClient.actions.length, 1);
+    expect(testClient.actions.single.method, 'removeChatRoomAttributes');
+    expect(testClient.actions.single.params['roomId'], 'room-001');
+    expect(testClient.actions.single.params['keys'], ['attKey']);
+    expect(testClient.actions.single.params['forced'], isTrue);
+  });
+
+  testWidgets('delete chatroom attribute shows missing attribute feedback', (
+    tester,
+  ) async {
+    final testClient = _TestClient();
+    testClient._chatRoomManager.removeAttributesResult = const {'attKey': 400};
+    Client.instance = testClient;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RoomPage(
+          roomId: 'room-001',
+          showAppBar: false,
+          roomInfoLoader: (_) async => EMChatRoom(
+            roomId: 'room-001',
+            permissionType: EMChatRoomPermissionType.Member,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('删属性'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('聊天室属性 attKey 不存在，无需删除'), findsWidgets);
+    expect(find.textContaining('删除聊天室属性失败详情: {attKey: 400}'), findsOneWidget);
   });
 }

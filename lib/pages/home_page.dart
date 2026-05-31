@@ -95,10 +95,29 @@ class _HomePageState extends State<HomePage> {
           final suffix = reasonText == null || reasonText.isEmpty
               ? ''
               : ' ($reasonText)';
-          overlayController.showMessage(
-            '收到群组邀请: $target，邀请人: $inviter$suffix',
-          );
+          overlayController.showMessage('收到群组邀请: $target，邀请人: $inviter$suffix');
         },
+        onRequestToJoinReceivedFromGroup:
+            (groupId, groupName, applicant, reason) {
+              GroupInvitationStore.instance.recordJoinRequest(
+                GroupJoinRequest(
+                  groupId: groupId,
+                  groupName: groupName,
+                  applicant: applicant,
+                  reason: reason,
+                ),
+              );
+              final target = groupName?.trim().isNotEmpty == true
+                  ? groupName!
+                  : groupId;
+              final reasonText = reason?.trim();
+              final suffix = reasonText == null || reasonText.isEmpty
+                  ? ''
+                  : ' ($reasonText)';
+              overlayController.showMessage(
+                '收到入群申请: $target，申请人: $applicant$suffix',
+              );
+            },
         onAutoAcceptInvitationFromGroup: (groupId, inviter, inviteMessage) {
           overlayController.showMessage('已自动接受群组邀请: $groupId，邀请人: $inviter');
         },
@@ -175,6 +194,7 @@ class _HomePageState extends State<HomePage> {
         () => EMClient.getInstance.isConnected(),
       );
     }
+
     EMClient.getInstance.addConnectionEventHandler(
       _connectionHandlerId,
       EMConnectionEventHandler(

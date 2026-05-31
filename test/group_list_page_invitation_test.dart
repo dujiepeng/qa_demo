@@ -49,6 +49,14 @@ class _TestGroupManager extends GroupManager {
       actions.add(_GroupAction(method, request));
       return {};
     }
+    if (method == 'acceptJoinApplication') {
+      actions.add(_GroupAction(method, request));
+      return {};
+    }
+    if (method == 'declineJoinApplication') {
+      actions.add(_GroupAction(method, request));
+      return {};
+    }
     return {};
   }
 
@@ -161,5 +169,71 @@ void main() {
     expect(testClient.actions.single.params['groupId'], 'group-001');
     expect(testClient.actions.single.params['inviter'], 'owner-a');
     expect(find.text('群组邀请'), findsNothing);
+  });
+
+  testWidgets('group join request callback is shown as pending approval', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MaterialApp(home: GroupListPage()));
+    await tester.pumpAndSettle();
+
+    EMClient.getInstance.groupManager
+        .getEventHandler('group_list')
+        ?.onRequestToJoinReceivedFromGroup
+        ?.call('group-001', '审批群', 'applicant-a', 'please approve');
+    await tester.pumpAndSettle();
+
+    expect(find.text('入群申请'), findsOneWidget);
+    expect(find.text('审批群'), findsOneWidget);
+    expect(find.text('申请人: applicant-a'), findsOneWidget);
+    expect(find.text('原因: please approve'), findsOneWidget);
+    expect(find.text('同意'), findsOneWidget);
+    expect(find.text('拒绝'), findsOneWidget);
+  });
+
+  testWidgets('accepting a group join request calls SDK accept application', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MaterialApp(home: GroupListPage()));
+    await tester.pumpAndSettle();
+
+    EMClient.getInstance.groupManager
+        .getEventHandler('group_list')
+        ?.onRequestToJoinReceivedFromGroup
+        ?.call('group-001', '审批群', 'applicant-a', null);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('同意'));
+    await tester.pumpAndSettle();
+
+    expect(testClient.actions.length, 1);
+    expect(testClient.actions.single.method, 'acceptJoinApplication');
+    expect(testClient.actions.single.params['groupId'], 'group-001');
+    expect(testClient.actions.single.params['userId'], 'applicant-a');
+    expect(find.textContaining('同意入群申请失败'), findsNothing);
+    expect(find.text('入群申请'), findsNothing);
+  });
+
+  testWidgets('declining a group join request calls SDK decline application', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MaterialApp(home: GroupListPage()));
+    await tester.pumpAndSettle();
+
+    EMClient.getInstance.groupManager
+        .getEventHandler('group_list')
+        ?.onRequestToJoinReceivedFromGroup
+        ?.call('group-001', '审批群', 'applicant-a', null);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('拒绝'));
+    await tester.pumpAndSettle();
+
+    expect(testClient.actions.length, 1);
+    expect(testClient.actions.single.method, 'declineJoinApplication');
+    expect(testClient.actions.single.params['groupId'], 'group-001');
+    expect(testClient.actions.single.params['userId'], 'applicant-a');
+    expect(testClient.actions.single.params['reason'], 'declined from QA app');
+    expect(find.text('入群申请'), findsNothing);
   });
 }

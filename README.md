@@ -95,5 +95,6 @@ flutter analyze lib/mobile/my_page_mobile.dart
 
 ## 文档说明
 
+- `case_list.md` 维护官方文档能力与本地 QA 用例覆盖状态；补充或完成用例时应同步更新
 - 面向代码代理的执行约定见 `AGENTS.md`
 - 发布与版本规则也统一维护在 `AGENTS.md`

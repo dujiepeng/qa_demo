@@ -53,6 +53,23 @@ class _GroupListPageState extends State<GroupListPage> {
             SnackBar(content: Text('收到群组邀请: ${groupName ?? groupId}')),
           );
         },
+        onRequestToJoinReceivedFromGroup:
+            (groupId, groupName, applicant, reason) {
+              if (!mounted) {
+                return;
+              }
+              _invitationStore.recordJoinRequest(
+                GroupJoinRequest(
+                  groupId: groupId,
+                  groupName: groupName,
+                  applicant: applicant,
+                  reason: reason,
+                ),
+              );
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('收到入群申请: ${groupName ?? groupId}')),
+              );
+            },
         onAutoAcceptInvitationFromGroup: (groupId, inviter, inviteMessage) {
           if (!mounted) {
             return;
@@ -136,6 +153,54 @@ class _GroupListPageState extends State<GroupListPage> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('拒绝群组邀请失败: $e')));
+      }
+    }
+  }
+
+  Future<void> _acceptJoinRequest(GroupJoinRequest request) async {
+    try {
+      await EMClient.getInstance.groupManager.acceptJoinApplication(
+        request.groupId,
+        request.applicant,
+      );
+      if (mounted) {
+        _invitationStore.removeJoinRequest(request.groupId, request.applicant);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('已同意 ${request.applicant} 加入 ${request.displayName}'),
+          ),
+        );
+        _fetchGroups();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('同意入群申请失败: $e')));
+      }
+    }
+  }
+
+  Future<void> _declineJoinRequest(GroupJoinRequest request) async {
+    try {
+      await EMClient.getInstance.groupManager.declineJoinApplication(
+        request.groupId,
+        request.applicant,
+        reason: 'declined from QA app',
+      );
+      if (mounted) {
+        _invitationStore.removeJoinRequest(request.groupId, request.applicant);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('已拒绝 ${request.applicant} 加入 ${request.displayName}'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('拒绝入群申请失败: $e')));
       }
     }
   }
@@ -234,6 +299,7 @@ class _GroupListPageState extends State<GroupListPage> {
       builder: (context, _) {
         final isDark = _settings.isDarkMode;
         final pendingInvitations = _invitationStore.invitations;
+        final pendingJoinRequests = _invitationStore.joinRequests;
         return CommonGradientBackground(
           isDark: isDark,
           child: Scaffold(
@@ -278,7 +344,10 @@ class _GroupListPageState extends State<GroupListPage> {
                   )
                 : RefreshIndicator(
                     onRefresh: _fetchGroups,
-                    child: pendingInvitations.isEmpty && _groups.isEmpty
+                    child:
+                        pendingInvitations.isEmpty &&
+                            pendingJoinRequests.isEmpty &&
+                            _groups.isEmpty
                         ? ListView(
                             children: [
                               SizedBox(
@@ -300,6 +369,7 @@ class _GroupListPageState extends State<GroupListPage> {
                             physics: const AlwaysScrollableScrollPhysics(),
                             itemCount:
                                 pendingInvitations.length +
+                                pendingJoinRequests.length +
                                 _groups.length +
                                 (_hasMore ? 1 : 0),
                             itemBuilder: (context, index) {
@@ -309,8 +379,16 @@ class _GroupListPageState extends State<GroupListPage> {
                                   isDark,
                                 );
                               }
-                              final groupIndex =
+                              final requestIndex =
                                   index - pendingInvitations.length;
+                              if (requestIndex < pendingJoinRequests.length) {
+                                return _buildJoinRequestTile(
+                                  pendingJoinRequests[requestIndex],
+                                  isDark,
+                                );
+                              }
+                              final groupIndex =
+                                  requestIndex - pendingJoinRequests.length;
                               if (groupIndex < _groups.length) {
                                 final group = _groups[groupIndex];
                                 return GestureDetector(
@@ -390,10 +468,9 @@ class _GroupListPageState extends State<GroupListPage> {
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (context) =>
-                                                  GroupPage(
-                                                    groupId: group.groupId,
-                                                  ),
+                                              builder: (context) => GroupPage(
+                                                groupId: group.groupId,
+                                              ),
                                             ),
                                           );
                                         }
@@ -482,6 +559,71 @@ class _GroupListPageState extends State<GroupListPage> {
             ),
             FilledButton(
               onPressed: () => _acceptInvitation(invitation),
+              child: const Text('同意'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildJoinRequestTile(GroupJoinRequest request, bool isDark) {
+    final reason = request.reason?.trim();
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.inputBackground(isDark),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primary(isDark)),
+      ),
+      child: ListTile(
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: AppColors.primary(isDark).withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.how_to_reg_outlined,
+            color: AppColors.primary(isDark),
+          ),
+        ),
+        title: Text(
+          request.displayName,
+          style: TextStyle(
+            color: AppColors.textPrimary(isDark),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '入群申请',
+              style: TextStyle(color: AppColors.textSecondary(isDark)),
+            ),
+            Text(
+              '申请人: ${request.applicant}',
+              style: TextStyle(color: AppColors.textSecondary(isDark)),
+            ),
+            if (reason != null && reason.isNotEmpty)
+              Text(
+                '原因: $reason',
+                style: TextStyle(color: AppColors.textSecondary(isDark)),
+              ),
+          ],
+        ),
+        trailing: Wrap(
+          spacing: 8,
+          children: [
+            TextButton(
+              onPressed: () => _declineJoinRequest(request),
+              child: const Text('拒绝'),
+            ),
+            FilledButton(
+              onPressed: () => _acceptJoinRequest(request),
               child: const Text('同意'),
             ),
           ],
