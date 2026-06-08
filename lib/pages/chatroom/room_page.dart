@@ -60,9 +60,22 @@ typedef ChatRoomCreator =
       required int maxUserCount,
       List<String>? members,
     });
+typedef ChatRoomAttributesFetcher =
+    Future<Map<String, String>?> Function({
+      required String roomId,
+      List<String>? keys,
+    });
 
 bool canUseChatRoomOwnerOnlyActions(EMChatRoom? room) {
   return room?.permissionType == EMChatRoomPermissionType.Owner;
+}
+
+EMMessage createChatRoomCommandMessage(String roomId) {
+  return EMMessage.createCmdSendMessage(
+    targetId: roomId,
+    action: 'action1',
+    chatType: ChatType.ChatRoom,
+  );
 }
 
 List<String>? parseChatRoomReceiverList(String rawValue) {
@@ -111,6 +124,7 @@ class RoomPage extends StatefulWidget {
     this.remoteMessageRemover,
     this.remoteMessageBeforeTimeRemover,
     this.chatRoomCreator,
+    this.attributesFetcher,
     this.settingsOverride,
   });
   final String? roomId;
@@ -122,6 +136,7 @@ class RoomPage extends StatefulWidget {
   final ChatRoomRemoteMessageRemover? remoteMessageRemover;
   final ChatRoomRemoteMessageBeforeTimeRemover? remoteMessageBeforeTimeRemover;
   final ChatRoomCreator? chatRoomCreator;
+  final ChatRoomAttributesFetcher? attributesFetcher;
   final AppSettings? settingsOverride;
   @override
   State<RoomPage> createState() => _RoomPageState();
@@ -1052,6 +1067,18 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
     }
   }
 
+  Future<void> _fetchChatRoomAttribute() async {
+    if (_roomId.isEmpty) return;
+    try {
+      final result = await (widget.attributesFetcher ??
+              EMClient.getInstance.chatRoomManager.fetchChatRoomAttributes)
+          .call(roomId: _roomId, keys: const ['attKey']);
+      addLog('聊天室属性: ${result ?? const <String, String>{}}');
+    } catch (e) {
+      addLog('获取聊天室属性失败: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = _settings.isDarkMode;
@@ -1158,10 +1185,15 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
           chatType: ChatType.ChatRoom,
         ),
       ),
+      bi(
+        Icons.terminal_outlined,
+        '命令',
+        () async => createChatRoomCommandMessage(_roomId),
+      ),
     ];
     return SizedBox(
       width: MediaQuery.of(context).size.width,
-      child: GridActionMenu(items: items, isDark: isDark, columns: 6),
+      child: GridActionMenu(items: items, isDark: isDark, columns: 7),
     );
   }
 
@@ -1241,6 +1273,11 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
         icon: Icons.playlist_remove_outlined,
         label: '删属性',
         onTap: _removeChatRoomAttribute,
+      ),
+      GridActionItem(
+        icon: Icons.manage_search_outlined,
+        label: '取属性',
+        onTap: _fetchChatRoomAttribute,
       ),
       GridActionItem(
         icon: Icons.swap_horiz_outlined,

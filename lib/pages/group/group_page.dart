@@ -35,6 +35,34 @@ typedef GroupCreator =
     });
 typedef GroupDestroyer = Future<void> Function(String groupId);
 typedef GroupMessageBlocker = Future<void> Function(String groupId);
+typedef GroupMessageSender = Future<EMMessage> Function(EMMessage message);
+typedef GroupMessageReadAckSender =
+    Future<void> Function(String msgId, String groupId, {String? content});
+typedef GroupAcksFetcher =
+    Future<EMCursorResult<EMGroupMessageAck>> Function(
+      String msgId,
+      String groupId, {
+      String? startAckId,
+      int pageSize,
+    });
+
+List<String>? parseGroupReceiverList(String rawValue) {
+  final list = rawValue
+      .split(RegExp(r'[,，\n]'))
+      .map((item) => item.trim())
+      .where((item) => item.isNotEmpty)
+      .toSet()
+      .toList();
+  return list.isEmpty ? null : list;
+}
+
+EMMessage createGroupCommandMessage(String groupId) {
+  return EMMessage.createCmdSendMessage(
+    targetId: groupId,
+    action: 'action1',
+    chatType: ChatType.GroupChat,
+  );
+}
 
 class GroupPage extends StatefulWidget {
   const GroupPage({
@@ -48,6 +76,9 @@ class GroupPage extends StatefulWidget {
     this.groupDestroyer,
     this.groupMessageBlocker,
     this.groupMessageUnblocker,
+    this.messageSender,
+    this.groupMessageReadAckSender,
+    this.groupAcksFetcher,
   });
   final String? groupId;
   final bool showAppBar;
@@ -58,6 +89,9 @@ class GroupPage extends StatefulWidget {
   final GroupDestroyer? groupDestroyer;
   final GroupMessageBlocker? groupMessageBlocker;
   final GroupMessageBlocker? groupMessageUnblocker;
+  final GroupMessageSender? messageSender;
+  final GroupMessageReadAckSender? groupMessageReadAckSender;
+  final GroupAcksFetcher? groupAcksFetcher;
   @override
   State<GroupPage> createState() => _GroupPageState();
 }
@@ -67,6 +101,7 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
   final _settings = AppSettings();
   final _groupIdController = TextEditingController();
   final _messageController = TextEditingController();
+  final _receiverListController = TextEditingController();
   final _logController = LogController();
   final _repeatCountController = TextEditingController(text: '1');
   bool _deliverOnlineOnly = false;
@@ -95,6 +130,7 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
   void dispose() {
     _groupIdController.dispose();
     _messageController.dispose();
+    _receiverListController.dispose();
     _repeatCountController.dispose();
     super.dispose();
   }
@@ -151,6 +187,16 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
               );
             }
           }
+        },
+        onGroupMessageRead: (acks) {
+          for (final ack in acks) {
+            addReceiveLog(
+              '收到群消息已读回执: msgId=${ack.messageId}, from=${ack.from}, count=${ack.readCount}, content=${ack.content}',
+            );
+          }
+        },
+        onReadAckForGroupMessageUpdated: () {
+          addReceiveLog('群消息已读状态更新');
         },
       ),
     );
@@ -368,6 +414,32 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
           countController: _repeatCountController,
         ),
         const SizedBox(height: 10),
+        TextField(
+          controller: _receiverListController,
+          style: TextStyle(color: AppColors.textPrimary(isDark), fontSize: 14),
+          decoration: InputDecoration(
+            hintText: '定向接收人，英文逗号分隔，最多 20 个',
+            hintStyle: TextStyle(
+              color: AppColors.textSecondary(isDark),
+              fontSize: 14,
+            ),
+            filled: true,
+            fillColor: AppColors.inputBackground(isDark),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.glassBorder(isDark)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.glassBorder(isDark)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.primary(isDark)),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
         CommonSectionTitle(title: '消息', isDark: isDark),
         const SizedBox(height: 10),
         _buildMessageTypeButtons(isDark),
@@ -387,7 +459,35 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
     return LogView(
       controller: _logController,
       isDark: isDark,
-      actionsBuilder: (_) => [LogViewActions.copyEntry()],
+      actionsBuilder: (entry) => [
+        LogViewActions.copyEntry(),
+        if (entry.attachment is EMMessage &&
+            (entry.attachment as EMMessage).chatType == ChatType.GroupChat) ...[
+          LogAction(
+            id: 'send_group_ack',
+            title: '发送群回执',
+            icon: Icons.done_all_outlined,
+            isVisible: (entry) {
+              final message = entry.attachment;
+              return message is EMMessage &&
+                  message.direction == MessageDirection.RECEIVE;
+            },
+            onSelected: (entry) async {
+              await _sendGroupMessageReadAck(entry.attachment as EMMessage);
+              return null;
+            },
+          ),
+          LogAction(
+            id: 'fetch_group_acks',
+            title: '回执详情',
+            icon: Icons.receipt_long_outlined,
+            onSelected: (entry) async {
+              await _fetchGroupMessageAcks(entry.attachment as EMMessage);
+              return null;
+            },
+          ),
+        ],
+      ],
     );
   }
 
@@ -459,15 +559,71 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
       return;
     }
     try {
+      final receiverList = parseGroupReceiverList(_receiverListController.text);
+      if (receiverList != null && receiverList.length > 20) {
+        addSendLog('定向消息接收人最多 20 个');
+        return;
+      }
       msg.deliverOnlineOnly = _deliverOnlineOnly;
+      msg.needGroupAck = true;
+      msg.receiverList = receiverList;
       msg.attributes = {
         'extKey1': 'extValue1',
         'date': DateTime.now().toString(),
       };
-      addSendLog('开始发送消息');
-      await EMClient.getInstance.chatManager.sendMessage(msg);
+      addSendLog(
+        receiverList == null
+            ? '开始发送消息'
+            : '开始发送定向消息: ${receiverList.join(', ')}',
+      );
+      await (widget.messageSender ??
+              EMClient.getInstance.chatManager.sendMessage)
+          .call(msg);
     } catch (e) {
       rethrow;
+    }
+  }
+
+  Future<void> _sendGroupMessageReadAck(EMMessage message) async {
+    final msgId = message.msgId;
+    final groupId = message.conversationId ?? _groupId;
+    if (msgId.isEmpty || groupId.isEmpty) {
+      addSendLog('发送群消息已读回执失败: 缺少 msgId 或 groupId');
+      return;
+    }
+    try {
+      await (widget.groupMessageReadAckSender ??
+              EMClient.getInstance.chatManager.sendGroupMessageReadAck)
+          .call(msgId, groupId, content: 'qa_group_read_ack');
+      addSendLog('发送群消息已读回执成功: msgId=$msgId');
+    } catch (e) {
+      addAppErrLog('发送群消息已读回执失败: $e');
+    }
+  }
+
+  Future<void> _fetchGroupMessageAcks(EMMessage message) async {
+    final msgId = message.msgId;
+    final groupId = message.conversationId ?? _groupId;
+    if (msgId.isEmpty || groupId.isEmpty) {
+      addSendLog('查询群消息回执详情失败: 缺少 msgId 或 groupId');
+      return;
+    }
+    try {
+      final result =
+          await (widget.groupAcksFetcher ??
+                  EMClient.getInstance.chatManager.fetchGroupAcks)
+              .call(msgId, groupId, pageSize: 20);
+      if (result.data.isEmpty) {
+        addReceiveLog('群消息回执详情为空: msgId=$msgId');
+        return;
+      }
+      for (final ack in result.data) {
+        addReceiveLog(
+          '群消息回执详情: msgId=${ack.messageId}, from=${ack.from}, count=${ack.readCount}, content=${ack.content}',
+        );
+      }
+    } catch (e) {
+      addAppErrLog('查询群消息回执详情失败: $e');
     }
   }
 
@@ -850,18 +1006,23 @@ class _GroupPageState extends State<GroupPage> with BaseMixin {
           chatType: ChatType.GroupChat,
         ),
       ),
+      buildItem(
+        Icons.terminal_outlined,
+        '命令',
+        () async => createGroupCommandMessage(_groupId),
+      ),
     ];
     return SizedBox(
       width: MediaQuery.of(context).size.width,
-      child: GridActionMenu(items: items, isDark: isDark, columns: 6),
+      child: GridActionMenu(items: items, isDark: isDark, columns: 7),
     );
   }
 
   Widget _buildGroupManagementButtons(bool isDark) {
-    final canDestroyGroup = _groupId.isNotEmpty &&
-        _permissionType == EMGroupPermissionType.Owner;
-    final canToggleMessageBlock = _groupId.isNotEmpty &&
-        _permissionType == EMGroupPermissionType.Member;
+    final canDestroyGroup =
+        _groupId.isNotEmpty && _permissionType == EMGroupPermissionType.Owner;
+    final canToggleMessageBlock =
+        _groupId.isNotEmpty && _permissionType == EMGroupPermissionType.Member;
     final isMessageBlocked = _messageBlocked == true;
     final items = [
       GridActionItem(

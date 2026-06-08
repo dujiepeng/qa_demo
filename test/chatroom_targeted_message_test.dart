@@ -488,6 +488,30 @@ void main() {
     expect(removedTimestamp, 1710000000000);
     expect(find.text('已按时间删服务端'), findsOneWidget);
   });
+
+  testWidgets('chatroom page fetches custom attributes', (tester) async {
+    List<String>? requestedKeys;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RoomPage(
+          roomId: 'room-001',
+          showAppBar: false,
+          attributesFetcher: ({required roomId, keys}) async {
+            requestedKeys = keys;
+            expect(roomId, 'room-001');
+            return {'attKey': 'attValue'};
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('取属性'));
+    await tester.pumpAndSettle();
+
+    expect(requestedKeys, ['attKey']);
+    expect(find.textContaining('聊天室属性: {attKey: attValue}'), findsOneWidget);
+  });
 }
 
 EMMessage _buildChatRoomTextMessage({

@@ -14,6 +14,7 @@ typedef PresenceActionCallback =
     Future<List<EMPresence>> Function(String userId);
 typedef PresenceCancelCallback = Future<void> Function(String userId);
 typedef ContactActionCallback = Future<void> Function(String userId);
+typedef PublishPresenceCallback = Future<void> Function(String description);
 typedef ContactRemarkActionCallback =
     Future<void> Function(String userId, String remark);
 
@@ -23,6 +24,7 @@ class ContactPresencePage extends StatefulWidget {
   final PresenceActionCallback? subscribePresence;
   final PresenceCancelCallback? unsubscribePresence;
   final PresenceActionCallback? queryPresence;
+  final PublishPresenceCallback? publishPresence;
   final ContactActionCallback? addUserToBlockList;
   final ContactRemarkActionCallback? setContactRemark;
   final Stream<List<EMPresence>>? presenceUpdates;
@@ -34,6 +36,7 @@ class ContactPresencePage extends StatefulWidget {
     this.subscribePresence,
     this.unsubscribePresence,
     this.queryPresence,
+    this.publishPresence,
     this.addUserToBlockList,
     this.setContactRemark,
     this.presenceUpdates,
@@ -369,6 +372,50 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
     }
   }
 
+  Future<void> _publishPresence() async {
+    final result = await showInputDialog(
+      context: context,
+      title: '发布 Presence',
+      fields: [
+        InputFieldData(
+          title: '自定义状态',
+          placeholder: '请输入 Presence 自定义状态',
+          text: '',
+        ),
+      ],
+    );
+    if (!mounted || result == null || result.isEmpty) {
+      return;
+    }
+
+    final description = result.first.text.trim();
+    if (description.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请输入 Presence 自定义状态')));
+      return;
+    }
+
+    try {
+      await (widget.publishPresence ?? publishPresenceFromSdk).call(
+        description,
+      );
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Presence 状态已发布')));
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('发布 Presence 失败: $e')));
+    }
+  }
+
   Future<void> _addToBlackList(String userId) async {
     try {
       await (widget.addUserToBlockList ?? addUserToBlockListFromSdk).call(
@@ -446,6 +493,13 @@ class _ContactPresencePageState extends State<ContactPresencePage> {
               ),
               centerTitle: true,
               actions: [
+                TextButton(
+                  onPressed: _publishPresence,
+                  child: Text(
+                    '发布 Presence',
+                    style: TextStyle(color: AppColors.primary(isDark)),
+                  ),
+                ),
                 IconButton(
                   tooltip: '刷新',
                   onPressed: _initializePage,

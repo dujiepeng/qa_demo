@@ -22,6 +22,14 @@ bool isSingleChatPinEventForCurrentConversation({
       normalizedCurrentUserId == conversationId.trim().toLowerCase();
 }
 
+EMMessage createSingleChatCommandMessage(String targetId) {
+  return EMMessage.createCmdSendMessage(
+    targetId: targetId.trim().toLowerCase(),
+    action: 'action1',
+    chatType: ChatType.Chat,
+  );
+}
+
 class SingleChatPage extends StatefulWidget {
   const SingleChatPage({super.key, this.userId, this.showAppBar = true});
 
@@ -664,11 +672,24 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
           }
         },
       ),
+      GridActionItem(
+        icon: Icons.terminal_outlined,
+        label: '命令',
+        onTap: () async {
+          try {
+            await sendMessage(
+              createSingleChatCommandMessage(_userIdController.text),
+            );
+          } catch (e) {
+            addAppErrLog('发送命令失败: ${e.toString()}');
+          }
+        },
+      ),
     ];
 
     return SizedBox(
       width: MediaQuery.of(context).size.width,
-      child: GridActionMenu(items: items, isDark: isDark, columns: 6),
+      child: GridActionMenu(items: items, isDark: isDark, columns: 7),
     );
   }
 

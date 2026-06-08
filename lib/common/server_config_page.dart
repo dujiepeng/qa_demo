@@ -50,7 +50,9 @@ class _ServerConfigPageState extends State<ServerConfigPage>
       final wsServer = savedEnvStr?['wsServer'] ?? env.wsServer;
       final wsPort =
           savedEnvStr?['wsPort']?.toString() ?? env.wsPort.toString();
+      final wsPath = savedEnvStr?['wsPath'] ?? env.wsPath;
       final isMsync = savedEnvStr?['isMsync'] ?? env.isMsync;
+      final enableTls = savedEnvStr?['enableTls'] ?? env.enableTls;
 
       _controllers[env.name] = _EnvControllers(
         appKeyController: TextEditingController(text: appKey),
@@ -59,7 +61,9 @@ class _ServerConfigPageState extends State<ServerConfigPage>
         msyncPortController: TextEditingController(text: msyncPort),
         wsServerController: TextEditingController(text: wsServer),
         wsPortController: TextEditingController(text: wsPort),
+        wsPathController: TextEditingController(text: wsPath),
         isMsync: isMsync,
+        enableTls: enableTls,
       );
     }
   }
@@ -86,7 +90,9 @@ class _ServerConfigPageState extends State<ServerConfigPage>
       'msyncPort': int.tryParse(ctrl.msyncPortController.text.trim()) ?? 6717,
       'wsServer': ctrl.wsServerController.text.trim(),
       'wsPort': int.tryParse(ctrl.wsPortController.text.trim()) ?? 443,
+      'wsPath': ctrl.wsPathController.text.trim(),
       'isMsync': ctrl.isMsync,
+      'enableTls': ctrl.enableTls,
     };
 
     // 保存到 AppSettings
@@ -145,7 +151,9 @@ class _ServerConfigPageState extends State<ServerConfigPage>
       ctrl.msyncPortController.text = config.msyncPort.toString();
       ctrl.wsServerController.text = config.wsServer;
       ctrl.wsPortController.text = config.wsPort.toString();
+      ctrl.wsPathController.text = config.wsPath;
       ctrl.isMsync = config.isMsync;
+      ctrl.enableTls = config.enableTls;
 
       // 切换到对应的 tab
       final index = _envs.indexWhere((e) => e.name == config.envName);
@@ -548,6 +556,13 @@ class _ServerConfigPageState extends State<ServerConfigPage>
             isDark: isDark,
             enabled: !ctrl.isMsync,
           ),
+          const SizedBox(height: 10),
+          _buildInputItem(
+            controller: ctrl.wsPathController,
+            hintText: 'WebSocket 路径',
+            isDark: isDark,
+            enabled: !ctrl.isMsync,
+          ),
         ],
       ],
     );
@@ -645,7 +660,9 @@ class _EnvControllers {
   final TextEditingController msyncPortController;
   final TextEditingController wsServerController;
   final TextEditingController wsPortController;
+  final TextEditingController wsPathController;
   bool isMsync;
+  bool enableTls;
 
   _EnvControllers({
     required this.appKeyController,
@@ -654,7 +671,9 @@ class _EnvControllers {
     required this.msyncPortController,
     required this.wsServerController,
     required this.wsPortController,
+    required this.wsPathController,
     required this.isMsync,
+    required this.enableTls,
   });
 
   void dispose() {
@@ -664,5 +683,6 @@ class _EnvControllers {
     msyncPortController.dispose();
     wsServerController.dispose();
     wsPortController.dispose();
+    wsPathController.dispose();
   }
 }

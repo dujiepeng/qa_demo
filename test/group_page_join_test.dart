@@ -242,7 +242,10 @@ void main() {
 
     expect(find.text('屏蔽消息'), findsOneWidget);
     var blockButton = tester.widget<ElevatedButton>(
-      find.ancestor(of: find.text('屏蔽消息'), matching: find.byType(ElevatedButton)),
+      find.ancestor(
+        of: find.text('屏蔽消息'),
+        matching: find.byType(ElevatedButton),
+      ),
     );
     expect(blockButton.onPressed, isNotNull);
 
@@ -253,7 +256,10 @@ void main() {
     expect(find.text('解除屏蔽'), findsOneWidget);
 
     final unblockButton = tester.widget<ElevatedButton>(
-      find.ancestor(of: find.text('解除屏蔽'), matching: find.byType(ElevatedButton)),
+      find.ancestor(
+        of: find.text('解除屏蔽'),
+        matching: find.byType(ElevatedButton),
+      ),
     );
     expect(unblockButton.onPressed, isNotNull);
 
@@ -286,7 +292,10 @@ void main() {
     await tester.pumpAndSettle();
 
     final adminBlockButton = tester.widget<ElevatedButton>(
-      find.ancestor(of: find.text('屏蔽消息'), matching: find.byType(ElevatedButton)),
+      find.ancestor(
+        of: find.text('屏蔽消息'),
+        matching: find.byType(ElevatedButton),
+      ),
     );
     expect(adminBlockButton.onPressed, isNull);
 
@@ -309,7 +318,10 @@ void main() {
     await tester.pumpAndSettle();
 
     final ownerBlockButton = tester.widget<ElevatedButton>(
-      find.ancestor(of: find.text('屏蔽消息'), matching: find.byType(ElevatedButton)),
+      find.ancestor(
+        of: find.text('屏蔽消息'),
+        matching: find.byType(ElevatedButton),
+      ),
     );
     expect(ownerBlockButton.onPressed, isNull);
     expect(calls, 0);
@@ -333,8 +345,191 @@ void main() {
         ?.call('group-001', 'user-b', 'busy');
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('onInvitationDeclinedFromGroup'), findsOneWidget);
+    expect(
+      find.textContaining('onInvitationDeclinedFromGroup'),
+      findsOneWidget,
+    );
     expect(find.textContaining('invitee: user-b'), findsOneWidget);
     expect(find.textContaining('reason: busy'), findsOneWidget);
   });
+
+  testWidgets('group page sends targeted message with receiver list', (
+    tester,
+  ) async {
+    EMMessage? sentMessage;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GroupPage(
+          groupId: 'group-001',
+          showAppBar: false,
+          groupInfoLoader: (_) async => EMGroup(groupId: 'group-001'),
+          messageSender: (message) async {
+            sentMessage = message;
+            return message;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextField, '定向接收人，英文逗号分隔，最多 20 个'),
+      'alice, bob',
+    );
+    await tester.enterText(find.widgetWithText(TextField, '输入消息内容'), 'hello');
+    await tester.tap(find.text('Send'));
+    await tester.pumpAndSettle();
+
+    expect(sentMessage, isNotNull);
+    expect(sentMessage!.receiverList, ['alice', 'bob']);
+    expect(find.textContaining('开始发送定向消息: alice, bob'), findsOneWidget);
+  });
+
+  testWidgets('group page rejects targeted message receiver list over limit', (
+    tester,
+  ) async {
+    EMMessage? sentMessage;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GroupPage(
+          groupId: 'group-001',
+          showAppBar: false,
+          groupInfoLoader: (_) async => EMGroup(groupId: 'group-001'),
+          messageSender: (message) async {
+            sentMessage = message;
+            return message;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final receivers = List.generate(21, (index) => 'u$index').join(',');
+    await tester.enterText(
+      find.widgetWithText(TextField, '定向接收人，英文逗号分隔，最多 20 个'),
+      receivers,
+    );
+    await tester.enterText(find.widgetWithText(TextField, '输入消息内容'), 'hello');
+    await tester.tap(find.text('Send'));
+    await tester.pumpAndSettle();
+
+    expect(sentMessage, isNull);
+    expect(find.textContaining('定向消息接收人最多 20 个'), findsOneWidget);
+  });
+
+  testWidgets('group message log can send and fetch read acknowledgements', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    String? ackMsgId;
+    String? ackGroupId;
+    String? fetchMsgId;
+    String? fetchGroupId;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GroupPage(
+          groupId: 'group-001',
+          showAppBar: false,
+          groupInfoLoader: (_) async => EMGroup(groupId: 'group-001'),
+          groupMessageReadAckSender: (msgId, groupId, {content}) async {
+            ackMsgId = msgId;
+            ackGroupId = groupId;
+          },
+          groupAcksFetcher:
+              (msgId, groupId, {startAckId, pageSize = 20}) async {
+                fetchMsgId = msgId;
+                fetchGroupId = groupId;
+                return EMCursorResult<EMGroupMessageAck>('', [
+                  EMGroupMessageAck(
+                    messageId: msgId,
+                    from: 'alice',
+                    content: 'qa_group_read_ack',
+                    readCount: 1,
+                    timestamp: 1,
+                  ),
+                ]);
+              },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final state = tester.state(find.byType(GroupPage)) as dynamic;
+    final message = EMMessage.fromJson({
+      'from': 'alice',
+      'to': 'group-001',
+      'body': {
+        'type': MessageType.TXT.index,
+        'content': 'received group message',
+      },
+      'direction': MessageDirection.RECEIVE.index,
+      'hasRead': false,
+      'hasReadAck': false,
+      'hasDeliverAck': false,
+      'needGroupAck': true,
+      'msgId': 'msg-001',
+      'convId': 'group-001',
+      'chatType': ChatType.GroupChat.index,
+      'status': MessageStatus.SUCCESS.index,
+    });
+    state.addReceiveLog(
+      'alice: received group message',
+      attachment: message,
+      tag: 'message',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.textContaining('received group message'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('发送群回执'));
+    await tester.pumpAndSettle();
+
+    expect(ackMsgId, 'msg-001');
+    expect(ackGroupId, 'group-001');
+    expect(find.textContaining('发送群消息已读回执成功'), findsOneWidget);
+
+    await tester.longPress(find.textContaining('received group message'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('回执详情'));
+    await tester.pumpAndSettle();
+
+    expect(fetchMsgId, 'msg-001');
+    expect(fetchGroupId, 'group-001');
+    expect(find.textContaining('from=alice'), findsOneWidget);
+  });
+
+  testWidgets(
+    'self sent group message can request read ack and fetch ack detail',
+    (tester) async {
+      EMMessage? sentMessage;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: GroupPage(
+            groupId: 'group-001',
+            showAppBar: false,
+            groupInfoLoader: (_) async => EMGroup(groupId: 'group-001'),
+            messageSender: (message) async {
+              sentMessage = message;
+              return message;
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.widgetWithText(TextField, '输入消息内容'), 'hello');
+      await tester.tap(find.text('Send'));
+      await tester.pumpAndSettle();
+
+      expect(sentMessage?.needGroupAck, isTrue);
+    },
+  );
 }

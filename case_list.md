@@ -2,8 +2,8 @@
 
 ## 审计说明
 
-- 审计日期：2026-05-31。
-- 官方基准：[Android 入门指引](https://doc.easemob.com/document/android/beginner_guide.html)，页面显示最近更新于 2026-05-28。
+- 审计日期：2026-06-03。
+- 官方基准：[Android 入门指引](https://doc.easemob.com/document/android/beginner_guide.html) 及其 Android SDK 侧边栏功能页；官网概述页显示最近更新于 2026-06-03。
 - 本地项目：Flutter QA app。虽然官方基准页是 Android 文档，本地通过 `im_flutter_sdk` 调用 Android 原生 SDK 能力。
 - 本清单用于核对 QA app 是否提供可操作入口、真实 SDK 调用和必要回调。它不代表服务端套餐、REST 权限或控制台配置已经开通。
 - 状态定义：
@@ -29,11 +29,11 @@
 | LOGIN-011 | 主动退出登录 | 已实现 | `lib/common/session_scope.dart`、`lib/common/widgets/me_page_content.dart` | 调用真实 `logout()`。 |
 | LOGIN-012 | 连接状态监听 | 已实现 | `lib/pages/home_page.dart`：`EMConnectionEventHandler` | 覆盖连接、断开、鉴权失败、Token 过期、被踢等事件。 |
 | LOGIN-013 | 获取 SDK 日志 | 已实现 | `lib/common/utils/log_file_helper.dart`、各聊天页“日志”入口 | 调用真实 `compressLogs` 并展示日志。 |
-| LOGIN-014 | 私有云服务器配置 | 已实现 | `lib/common/server_config_page.dart`、`ensureSdkInit` | 支持 REST、TCP/WebSocket、端口和环境切换。 |
+| LOGIN-014 | 私有云服务器配置 | 已实现 | `lib/common/server_config_page.dart`、`ensureSdkInit` | 支持 REST、TCP/WebSocket、端口、TLS 开关和环境切换；内置 TKE、qa隔舱、开发沙箱、ebs。 |
 
 ## 2. 用户、联系人与 Presence
 
-官方入口：[用户关系](https://doc.easemob.com/document/android/user_relationship.html)、[用户属性](https://doc.easemob.com/document/android/userprofile.html)、[Presence](https://doc.easemob.com/document/android/presence.html)、[多设备登录](https://doc.easemob.com/document/android/multi_device.html)。
+官方入口：[用户关系](https://doc.easemob.com/document/android/user_relationship.html)、[用户属性](https://doc.easemob.com/document/android/userprofile.html)、[Presence](https://doc.easemob.com/document/android/presence.html)、[多设备登录](https://doc.easemob.com/document/android/multi_device.html)、[用户信息自动管理](https://doc.easemob.com/document/android/userinfo_provider.html)。
 
 | Case | 能力 | 状态 | 本地入口 / 证据 | 备注 |
 | --- | --- | --- | --- | --- |
@@ -48,8 +48,8 @@
 | USER-009 | 移出联系人黑名单 | 已实现 | `lib/pages/single/black_list_page.dart`：`removeUserFromBlockList` | 使用真实 SDK 调用。 |
 | USER-010 | 获取自己的用户属性 | 已实现 | `lib/mobile/my_user_profile_page_mobile.dart`：`fetchOwnInfo` | 当前入口在 Mobile“我的”。 |
 | USER-011 | 修改自己的用户属性 | 部分实现 | `lib/mobile/my_user_profile_page_mobile.dart`：`updateUserInfo` | 已支持昵称、生日、邮箱；未覆盖头像、电话、性别、签名等全部字段。 |
-| USER-012 | 查询其他用户属性 | 未实现 | 未找到按用户 ID 查询用户属性的 QA 入口 | 当前只拉取自己的属性。 |
-| USER-013 | 发布 Presence 自定义状态 | 未实现 | 未找到 `publishPresence` 调用 | 当前只查询和订阅。 |
+| USER-012 | 查询其他用户属性 | 已实现 | `lib/mobile/user_info_lookup_page_mobile.dart`：`fetchUserInfoById` | Mobile“我的”支持输入 1-100 个用户 ID 批量查询全部用户属性。 |
+| USER-013 | 发布 Presence 自定义状态 | 已实现 | `lib/pages/single/contact_presence_page.dart`：`publishPresence` | 联系人与 Presence 页 AppBar 支持发布自定义状态。 |
 | USER-014 | 查询 Presence 状态 | 已实现 | `lib/pages/single/contact_api.dart`：`fetchPresenceStatus` | 页面展示实际在线 / 离线状态。 |
 | USER-015 | 订阅 Presence | 已实现 | `lib/pages/single/contact_api.dart`：`subscribe` | 联系人长按菜单可操作。 |
 | USER-016 | 取消订阅 Presence | 已实现 | `lib/pages/single/contact_api.dart`：`unsubscribe` | 联系人长按菜单可操作。 |
@@ -58,10 +58,11 @@
 | USER-019 | 获取其他登录设备 | 已实现 | `lib/pages/single/contact_api.dart`：`fetchLoggedInDevices` | Mobile“我的”中有设备页。 |
 | USER-020 | 踢其他设备下线 | 已实现 | `lib/pages/single/contact_api.dart`：`kickDevice` | 需要真实账号密码和 resource。 |
 | USER-021 | 多设备登录事件监听 | 已实现 | `lib/pages/home_page.dart`：`onUserDidLoginFromOtherDevice` 等 | 首页展示真实回调。 |
+| USER-022 | 用户信息自动管理 | 未实现 | 未找到 `userinfo_provider` 对应自动资料提供 / 缓存管理入口 | 官网用户相关侧边栏独立功能页；当前 QA app 只提供手动查询 / 修改自己的用户属性。 |
 
 ## 3. 消息管理
 
-官方入口：[发送消息](https://doc.easemob.com/document/android/message_send.html)、[接收消息](https://doc.easemob.com/document/android/message_receive.html)、[消息撤回](https://doc.easemob.com/document/android/message_recall.html)、[消息修改](https://doc.easemob.com/document/android/message_modify.html)。
+官方入口：[消息概述](https://doc.easemob.com/document/android/message_overview.html)、[发送消息](https://doc.easemob.com/document/android/message_send.html)、[接收消息](https://doc.easemob.com/document/android/message_receive.html)、[获取历史消息](https://doc.easemob.com/document/android/message_retrieve.html)、[消息撤回](https://doc.easemob.com/document/android/message_recall.html)、[消息修改](https://doc.easemob.com/document/android/message_modify.html)。
 
 | Case | 能力 | 状态 | 本地入口 / 证据 | 备注 |
 | --- | --- | --- | --- | --- |
@@ -72,14 +73,14 @@
 | MSG-005 | 发送文件消息 | 已实现 | 三类聊天页“文件”按钮 | 使用本地测试资源并调用真实 SDK。 |
 | MSG-006 | 发送位置消息 | 已实现 | 三类聊天页“位置”按钮 | 使用固定 QA 经纬度。 |
 | MSG-007 | 发送自定义消息 | 已实现 | 三类聊天页“自定义”按钮 | 使用固定 QA event 和 params。 |
-| MSG-008 | 发送命令消息 | 未实现 | 未找到 `createCmdSendMessage` 调用 | 聊天室修改逻辑仅识别命令消息并隐藏修改入口。 |
+| MSG-008 | 发送命令消息 | 已实现 | 单聊、群聊、聊天室消息类型区“命令”按钮：`createCmdSendMessage` | 固定发送 QA action `action1`，分别设置 `Chat`、`GroupChat`、`ChatRoom`。 |
 | MSG-009 | 接收消息回调 | 已实现 | 三类聊天页：`onMessagesReceived` | 将 SDK 消息对象写入日志。 |
 | MSG-010 | 消息扩展字段 ext | 已实现 | 三类聊天页：`msg.attributes = {...}` | QA 场景固定写入 ext。 |
 | MSG-011 | 只投递在线用户 | 部分实现 | 单聊、群聊页：`deliverOnlineOnly` | 聊天室页未提供该开关。 |
-| MSG-012 | 群组定向消息 | 未实现 | 未找到群组页 `receiverList` 入口 | 官方最多 20 个接收方。 |
+| MSG-012 | 群组定向消息 | 已实现 | `lib/pages/group/group_page.dart`：群聊发送前设置 `receiverList` | 输入框支持逗号 / 换行拆分，限制最多 20 个接收方。 |
 | MSG-013 | 聊天室定向消息 | 已实现 | `room_page.dart`：`receiverList`、成员选择器、全选 | 最多 20 个接收方，使用真实成员列表。 |
 | MSG-014 | 单聊消息已读 ACK | 已实现 | `single_chat_page.dart`：`sendMessageReadAck` | 收到的单聊消息长按可操作。 |
-| MSG-015 | 群消息已读回执 | 未实现 | 未找到群消息 ACK 入口 | 未覆盖群回执详情查询。 |
+| MSG-015 | 群消息已读回执 | 已实现 | `lib/pages/group/group_page.dart`：`needGroupAck`、`sendGroupMessageReadAck`、`fetchGroupAcks` | 群消息日志长按可发送群回执和查询回执详情，并监听群回执事件。 |
 | MSG-016 | 消息送达 / 已读回调 | 已实现 | `single_chat_page.dart`：`onMessagesDelivered`、`onMessagesRead` | 单聊日志展示状态。 |
 | MSG-017 | 拉取服务端历史消息 | 部分实现 | `single_chat_page.dart`：“拉消息1 / 拉消息2” | 当前只有单聊入口；群聊、聊天室未提供拉取入口。 |
 | MSG-018 | 单向删除服务端消息 | 部分实现 | 单聊和聊天室消息长按菜单 | 单聊、聊天室已实现；群聊未实现。 |
@@ -98,6 +99,11 @@
 | MSG-031 | 子区 / Thread | 未实现 | 未找到 Thread 管理入口 | 无 QA 入口。 |
 | MSG-032 | 流式消息 | 未实现 | 未找到 stream message 调用 | 无 QA 入口。 |
 | MSG-033 | 内容审核配置 | 控制台/服务端 | 未找到客户端开关 | 属于服务端增值能力。 |
+| MSG-034 | 获取本地历史消息 | 未实现 | 未找到 `loadMessages` / 本地历史分页加载 QA 入口 | 官网消息概述表独立列出“获取本地历史消息”。 |
+| MSG-035 | 更新本地消息 | 未实现 | 未找到 `updateMessage` 本地消息更新入口 | 区分于 `MSG-021` 的服务端消息修改。 |
+| MSG-036 | 删除本地历史消息 | 未实现 | 未找到本地消息删除 / 清理指定会话本地消息入口 | 区分于 `MSG-018`、`MSG-019` 的服务端历史消息删除。 |
+| MSG-037 | 消息多端同步 | 部分实现 | `home_page.dart`、聊天页 SDK event handlers | 已监听部分消息 / 会话相关回调，但未提供覆盖全部消息多端事件的专门 QA 面板。 |
+| MSG-038 | 获取消息流量统计 | 未实现 | 未找到消息流量统计 SDK / REST 入口 | 官网 Android 消息概述表独立列出，Flutter 列不支持；本 QA app 未提供 Android 原生专项入口。 |
 
 ## 4. 会话管理
 
@@ -117,6 +123,12 @@
 | CONV-010 | 会话变更监听并刷新列表 | 已实现 | `conversation_list_page.dart`：`EMChatEventHandler` | 覆盖收到、已读、送达、撤回、会话更新。 |
 | CONV-011 | 清空本地会话消息但保留会话 | 未实现 | 未找到独立入口 | 当前删除入口调用服务端删除会话。 |
 | CONV-012 | 会话级已读回执发送 | 未实现 | 未找到 `sendConversationReadAck` 调用 | 当前仅支持本地会话设置为已读。 |
+| CONV-013 | 获取 / 创建指定会话 | 部分实现 | `single_chat_page.dart`、`group_page.dart`、`room_page.dart` 通过发送消息自然创建会话 | 未提供 `getConversation(createIfNotExists)` 的独立 QA 入口。 |
+| CONV-014 | 拉取空会话 | 已实现 | `conversation_list_page.dart`：`EMFetchConversationOptions` 中 `includeEmptyConversation: true` | 服务端会话列表会包含空会话。 |
+| CONV-015 | 设置指定消息为已读 | 未实现 | 未找到 `markMessageAsRead` 单条消息入口 | 当前仅支持整个会话设置为已读。 |
+| CONV-016 | 获取会话全部消息数 | 未实现 | 未找到 `getAllMsgCount` / 本地总消息数展示入口 | 无 QA 入口。 |
+| CONV-017 | 获取对方发来的最后一条消息 | 未实现 | 未找到 `latestMessageFromOthers` 入口 | 当前只展示会话最后一条消息。 |
+| CONV-018 | 会话扩展字段 set/get | 未实现 | 未找到 `setExtField` / `getExtField` 入口 | 无 QA 入口。 |
 
 ## 5. 群组管理
 
@@ -138,13 +150,13 @@
 | GROUP-012 | 解散群组 | 已实现 | `group_page.dart`：`destroyGroup` | 仅群主按钮可用，含二次确认。 |
 | GROUP-013 | 获取群成员列表 | 已实现 | `lib/pages/group/group_members_page.dart`：`fetchMemberListFromServer` | 支持分页。 |
 | GROUP-014 | 邀请 / 添加群成员 | 已实现 | `group_members_page.dart`：`addMembers` | 使用真实 SDK 调用。 |
-| GROUP-015 | 移出群成员 | 未实现 | 未找到 `removeMembers` 入口 | 无成员踢出操作。 |
-| GROUP-016 | 群黑名单管理 | 未实现 | 未找到群黑名单列表、加入、移出入口 | 联系人黑名单和聊天室黑名单已实现，但群黑名单未实现。 |
+| GROUP-015 | 移出群成员 | 已实现 | `lib/pages/group/group_members_page.dart`：`removeMembers` | 群成员操作菜单可将指定成员移出群组。 |
+| GROUP-016 | 群黑名单管理 | 已实现 | `group_members_page.dart`：`blockMembers`、`fetchBlockListFromServer`、`unblockMembers` | 群成员操作菜单支持加入黑名单，顶部黑名单入口支持获取与移出。 |
 | GROUP-017 | 添加群管理员 | 已实现 | `group_members_page.dart`：`addAdmin` | 成员操作菜单。 |
 | GROUP-018 | 移除群管理员 | 已实现 | `lib/pages/group/group_admins_page.dart`：`removeAdmin` | 操作后重新拉取服务端管理员列表验证。 |
 | GROUP-019 | 转移群主 | 已实现 | `lib/pages/group/group_change_owner_page.dart`：`changeOwner` | 当前页面筛除了管理员候选人。 |
 | GROUP-020 | 修改群名称 / 描述 | 已实现 | `group_page.dart`：`updateGroupName`、`updateGroupDesc` | 使用真实 SDK 调用。 |
-| GROUP-021 | 修改群公告 | 已实现 | `group_page.dart`：`updateGroupAnnouncement` | 使用真实 SDK 调用。 |
+| GROUP-021 | 获取 / 修改群公告 | 部分实现 | `group_page.dart`：`updateGroupAnnouncement`、`fetchGroupInfoFromServer` | 已支持更新公告并监听变更；未提供独立获取群公告入口。 |
 | GROUP-022 | 获取 / 设置群成员名片 | 未实现 | 未找到 namecard 调用 | 无 QA 入口。 |
 | GROUP-023 | 禁言群成员 | 已实现 | `group_members_page.dart`：`muteMembers` | 成员操作菜单。 |
 | GROUP-024 | 获取群禁言列表 | 已实现 | `lib/pages/group/group_mute_list_page.dart`：`fetchMuteListFromServer` | 支持分页。 |
@@ -157,10 +169,17 @@
 | GROUP-031 | 群组自定义属性管理 | 未实现 | 未找到 group attributes 增删改查入口 | 当前实现的是群成员属性，不是群组属性。 |
 | GROUP-032 | 群共享文件 | 未实现 | 未找到共享文件上传、下载、删除入口 | 无 QA 入口。 |
 | GROUP-033 | 群组事件监听 | 部分实现 | `group_page.dart`、`home_page.dart`：`EMGroupEventHandler` | 已监听常用事件，但未覆盖官方文档中的全部群事件。 |
+| GROUP-034 | 封禁 / 解禁群组 | 控制台/服务端 | 未找到客户端 SDK 入口 | 官网群组概述说明通过 REST API 封禁 / 解禁指定群组。 |
+| GROUP-035 | 获取 app 中的群组列表 | 控制台/服务端 | 未找到客户端 SDK 入口 | 官网群组概述说明通过 REST API 分页获取应用下群组。 |
+| GROUP-036 | 查询当前用户已加入群组数量 | 已实现 | `lib/pages/group/group_list_page.dart`：`fetchJoinedGroupCount` | 群组列表页顶部统计入口展示服务端返回数量。 |
+| GROUP-037 | 获取单个用户加入的所有群组 | 控制台/服务端 | 未找到客户端 SDK 入口 | 官网群组概述说明通过 REST API 按用户 ID 查询。 |
+| GROUP-038 | 查看指定用户是否已加入群组 | 控制台/服务端 | 未找到客户端 SDK 入口 | 官网群组概述说明通过 REST API 查询。 |
+| GROUP-039 | 获取单个群成员自定义属性 | 已实现 | `lib/pages/group/group_members_page.dart`：`fetchMemberAttributes` | 群成员操作菜单可查询指定成员全部自定义属性。 |
+| GROUP-040 | 群组事件服务端回调 | 控制台/服务端 | 未找到业务服务端回调接收 / 配置入口 | 属于应用服务器 HTTP/HTTPS 回调能力。 |
 
 ## 6. 聊天室管理
 
-官方入口：[聊天室管理概览](https://doc.easemob.com/document/android/room_overview.html)、[创建和管理聊天室](https://doc.easemob.com/document/android/room_manage.html)、[聊天室成员管理](https://doc.easemob.com/document/android/room_members.html)。
+官方入口：[聊天室管理概览](https://doc.easemob.com/document/android/room_overview.html)、[创建和管理聊天室](https://doc.easemob.com/document/android/room_manage.html)、[聊天室成员管理](https://doc.easemob.com/document/android/room_members.html)、[聊天室属性](https://doc.easemob.com/document/android/room_attributes.html)。
 
 | Case | 能力 | 状态 | 本地入口 / 证据 | 备注 |
 | --- | --- | --- | --- | --- |
@@ -170,7 +189,7 @@
 | ROOM-004 | 加入 / 退出聊天室 | 已实现 | `room_page.dart`：`joinChatRoom`、`leaveChatRoom` | 使用真实 SDK 调用。 |
 | ROOM-005 | 解散聊天室 | 已实现 | `room_page.dart`：`destroyChatRoom` | 仅所有者按钮可用，含二次确认。 |
 | ROOM-006 | 修改聊天室名称 / 描述 | 已实现 | `room_page.dart`：`changeChatRoomName`、`changeChatRoomDescription` | 使用真实 SDK 调用。 |
-| ROOM-007 | 修改聊天室公告 | 已实现 | `room_page.dart`：`updateChatRoomAnnouncement` | 使用真实 SDK 调用。 |
+| ROOM-007 | 获取 / 修改聊天室公告 | 部分实现 | `room_page.dart`：`updateChatRoomAnnouncement`、`fetchChatRoomInfoFromServer` | 已支持更新公告并监听变更；未提供独立获取公告入口。 |
 | ROOM-008 | 获取聊天室成员列表 | 已实现 | `lib/pages/chatroom/room_members_page.dart`：`fetchChatRoomMembers` | 支持分页。 |
 | ROOM-009 | 移出聊天室成员 | 已实现 | `room_members_page.dart`：`removeChatRoomMembers` | 不展示移除自己的入口。 |
 | ROOM-010 | 添加聊天室管理员 | 已实现 | `room_members_page.dart`：`addChatRoomAdmin` | 成员操作菜单。 |
@@ -185,9 +204,12 @@
 | ROOM-019 | 获取聊天室黑名单 | 已实现 | `lib/pages/chatroom/room_block_list_page.dart`：`fetchChatRoomBlockList` | 支持分页。 |
 | ROOM-020 | 加入 / 移出聊天室黑名单 | 已实现 | `room_members_page.dart`、`room_block_list_page.dart` | 使用真实 SDK 调用。 |
 | ROOM-021 | 设置聊天室自定义属性 | 已实现 | `room_page.dart`：`addAttributes` | 固定写入 QA 属性。 |
-| ROOM-022 | 获取聊天室自定义属性 | 未实现 | 未找到 fetch attributes 入口 | 无 QA 入口。 |
+| ROOM-022 | 获取聊天室自定义属性 | 已实现 | `room_page.dart`：“取属性”按钮，`fetchChatRoomAttributes` | 固定查询 QA 属性键 `attKey` 并写入日志。 |
 | ROOM-023 | 删除聊天室自定义属性 | 已实现 | `room_page.dart`：`removeAttributes` | 固定删除 QA 属性键 `attKey`；无该属性时提示“不存在，无需删除”，并记录真实 SDK 返回。 |
 | ROOM-024 | 聊天室事件监听 | 部分实现 | `room_page.dart`：`EMChatRoomEventHandler` | 已监听常用事件，但未覆盖官方文档中的全部聊天室事件。 |
+| ROOM-025 | 实时更新聊天室成员人数 | 未实现 | 未找到实时聊天室人数监听 / 展示入口 | 官网聊天室概述独立列出该能力。 |
+| ROOM-026 | 强制设置 / 强制删除聊天室属性 | 部分实现 | `room_page.dart`：`removeAttributes(..., force: true)` | 已强制删除固定属性；设置属性未使用 force 参数，且缺少可配置化入口。 |
+| ROOM-027 | 聊天室事件服务端回调 | 控制台/服务端 | 未找到业务服务端回调接收 / 配置入口 | 属于应用服务器 HTTP/HTTPS 回调能力。 |
 
 ## 7. 离线推送
 
@@ -196,22 +218,67 @@
 | Case | 能力 | 状态 | 本地入口 / 证据 | 备注 |
 | --- | --- | --- | --- | --- |
 | PUSH-001 | 厂商推送集成 | 未实现 | 未找到 FCM、华为、小米、OPPO、vivo、魅族、荣耀推送配置 | 需要 Android 原生配置和厂商控制台信息。 |
-| PUSH-002 | 上传 / 更新推送 token | 未实现 | 未找到真实 `pushManager` 调用 | 无 QA 入口。 |
-| PUSH-003 | 设置推送昵称 | 未实现 | `lib/mobile/my_page_mobile.dart` 仅更新本地 `_pushNickname` | 当前 UI 会提示更新，但未调用 SDK，不能视为已实现。 |
-| PUSH-004 | 推送免打扰 / 静默模式 | 未实现 | 未找到 silent mode SDK 调用 | 无 QA 入口。 |
-| PUSH-005 | 推送展示字段、扩展、模板 | 未实现 | 未找到真实 SDK 调用 | 无 QA 入口。 |
-| PUSH-006 | 推送消息分类 | 未实现 | 未找到真实 SDK 调用 | 无 QA 入口。 |
-| PUSH-007 | 推送解析 | 未实现 | 未找到原生推送点击解析逻辑 | 无 QA 入口。 |
+| PUSH-002 | 上传 / 更新推送 token | 已实现 | `lib/mobile/push_settings_page_mobile.dart`：`pushManager.bindDeviceToken` | “我的 > 推送设置”输入 notifier name 和真实 token 后绑定。 |
+| PUSH-003 | 设置推送昵称 | 已实现 | `lib/mobile/my_page_mobile.dart`：`pushManager.updatePushNickname` | “我的”页设置推送昵称后调用真实 SDK。 |
+| PUSH-004 | 推送免打扰 / 静默模式 | 已实现 | `push_settings_page_mobile.dart`：`setSilentModeForAll`、`setConversationSilentMode`、查询 / 清除 / 同步会话静默 | 使用真实 SDK silent mode API。 |
+| PUSH-005 | 推送展示字段、扩展、模板 | 部分实现 | `push_settings_page_mobile.dart`：`updatePushDisplayStyle`、`fetchPushConfigsFromServer`、`setPushTemplate`、`getPushTemplate` | 已覆盖展示样式和模板；推送扩展仍需服务端模板 / 原生通知链路验证。 |
+| PUSH-006 | 推送消息分类 | 未实现 | 当前 Flutter SDK 未找到消息分类专用 API / 原生通道入口 | 需要厂商通知类别或服务端模板能力配合，不能在客户端伪造。 |
+| PUSH-007 | 推送解析 | 未实现 | 未找到原生推送点击解析逻辑 | 需要 Android/iOS 原生通知点击数据链路。 |
 | PUSH-008 | 离线消息计数展示 | 已实现 | `lib/common/utils/offline_message_counter.dart`、`home_page.dart` | 这是 SDK 收到离线消息后的 QA 计数，不等同于厂商离线推送集成。 |
+| PUSH-009 | 设置推送翻译 | 未实现 | 未找到推送翻译 SDK / 服务端配置入口 | 官网离线推送侧边栏独立功能页。 |
+| PUSH-010 | 统一获取消息方案 | 未实现 | 未找到统一解析 / 拉取推送消息方案入口 | `syncConversationsSilentMode` 只同步会话静默设置，不等同于统一获取消息方案。 |
 
 ## 8. 建议优先补齐项
 
 | 优先级 | 缺口 | 原因 |
 | --- | --- | --- |
-| P0 | `PUSH-003` 设置推送昵称 | 当前存在 UI，但只修改本地变量，容易造成“功能已生效”的误判。 |
-| P1 | `GROUP-015` 移出群成员、`GROUP-016` 群黑名单 | 群成员治理能力缺口较明显。 |
-| P1 | `MSG-012` 群组定向消息 | 聊天室已支持定向消息和成员选择器，群组端仍缺入口。 |
 | P1 | `MSG-020`、`MSG-021` 群聊撤回和修改 | 单聊、聊天室已覆盖，群聊缺少对应 QA 操作入口。 |
-| P2 | `ROOM-022` 聊天室属性获取 | 当前已支持设置和删除，但仍缺少主动获取属性入口。 |
-| P2 | `USER-013` 发布 Presence | 当前仅能查询和订阅，无法验证自定义状态发布。 |
-| P2 | `MSG-025` 至 `MSG-032` 扩展消息能力 | 转发、引用、搜索、翻译、输入状态、Thread、流式消息均未覆盖。 |
+| P2 | `GROUP-022` 获取 / 设置群成员名片 | 群成员资料展示常用，但当前未找到 namecard 调用入口。 |
+| P2 | `GROUP-031` 群组自定义属性管理 | 当前仅支持群成员属性，缺少群组属性增删改查入口。 |
+| P2 | `MSG-025` 至 `MSG-038` 扩展消息能力 | 转发、引用、搜索、翻译、输入状态、Thread、流式消息、本地历史 / 本地更新 / 本地删除、流量统计等均未完整覆盖。 |
+
+## 9. 覆盖统计
+
+统计日期：2026-06-07。
+
+统计口径：
+
+- 官网功能总数按本文件中 `LOGIN`、`USER`、`MSG`、`CONV`、`GROUP`、`ROOM`、`PUSH` 表格的 Case 行计数，基准为 Android SDK 官网侧边栏功能页和概述页中可独立验证的客户端 / 服务端能力。
+- `控制台/服务端` 项计入官网功能总数，但不计入客户端覆盖率分母。
+- 本地覆盖总数 = `已实现` + `部分实现`。`部分实现` 代表本地存在真实 SDK 调用或回调入口，但覆盖范围未达到官网能力完整口径。
+
+| 指标 | 数值 |
+| --- | ---: |
+| 官网功能总数 | 169 |
+| 控制台/服务端功能数 | 12 |
+| 客户端功能总数 | 157 |
+| 已实现功能数 | 111 |
+| 部分实现功能数 | 15 |
+| 未实现客户端功能数 | 31 |
+| 本地实现覆盖总数 | 126 |
+| 功能覆盖率 | 80.25% |
+
+分模块统计：
+
+| 模块 | 官网功能数 |
+| --- | ---: |
+| 接入与登录 | 14 |
+| 用户、联系人与 Presence | 22 |
+| 消息管理 | 38 |
+| 会话管理 | 18 |
+| 群组管理 | 40 |
+| 聊天室管理 | 27 |
+| 离线推送 | 10 |
+
+分模块客户端覆盖率：
+
+| 模块 | 总 Case | 覆盖 Case | 覆盖率 |
+| --- | ---: | ---: | ---: |
+| 接入与登录 | 9 | 7 | 77.78% |
+| 用户、联系人与 Presence | 22 | 21 | 95.45% |
+| 消息管理 | 37 | 25 | 67.57% |
+| 会话管理 | 18 | 12 | 66.67% |
+| 群组管理 | 35 | 31 | 88.57% |
+| 聊天室管理 | 26 | 25 | 96.15% |
+| 离线推送 | 10 | 5 | 50.00% |
+| 总数 | 157 | 126 | 80.25% |

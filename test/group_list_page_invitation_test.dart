@@ -35,6 +35,10 @@ class _TestGroupManager extends GroupManager {
     if (method == 'getJoinedGroupsFromServer') {
       return {method: <Map>[]};
     }
+    if (method == 'fetchJoinedGroupCount') {
+      actions.add(_GroupAction(method, request));
+      return {method: 7};
+    }
     if (method == 'acceptInvitationFromGroup') {
       actions.add(_GroupAction(method, request));
       return {
@@ -235,5 +239,18 @@ void main() {
     expect(testClient.actions.single.params['userId'], 'applicant-a');
     expect(testClient.actions.single.params['reason'], 'declined from QA app');
     expect(find.text('入群申请'), findsNothing);
+  });
+
+  testWidgets('fetching joined group count shows server result', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MaterialApp(home: GroupListPage()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('查询已加入群组数量'));
+    await tester.pumpAndSettle();
+
+    expect(testClient.actions.single.method, 'fetchJoinedGroupCount');
+    expect(find.text('已加入群组数量: 7'), findsOneWidget);
   });
 }
