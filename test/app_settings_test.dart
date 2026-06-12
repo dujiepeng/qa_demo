@@ -171,4 +171,32 @@ void main() {
     expect(settings.activeConfig?.enableTls, isFalse);
     expect(settings.activeConfig?.wsPath, '/websocket');
   });
+
+  test('active env app key does not fall back to TKE when custom flag is false', () {
+    final settings = AppSettings();
+    settings.useCustomAppKey = false;
+    settings.saveCustomEnv('qa隔舱', {
+      'appKey': ServerEnvironment.qaCabin.appKey,
+      'restServer': ServerEnvironment.qaCabin.restServer,
+      'msyncServer': ServerEnvironment.qaCabin.msyncServer,
+      'msyncPort': ServerEnvironment.qaCabin.msyncPort,
+      'wsServer': ServerEnvironment.qaCabin.wsServer,
+      'wsPort': ServerEnvironment.qaCabin.wsPort,
+      'wsPath': ServerEnvironment.qaCabin.wsPath,
+      'enableTls': ServerEnvironment.qaCabin.enableTls,
+      'isMsync': false,
+    });
+    settings.activeEnvName = 'qa隔舱';
+
+    expect(settings.appKey, ServerEnvironment.qaCabin.appKey);
+    expect(settings.activeConfig?.appKey, ServerEnvironment.qaCabin.appKey);
+  });
+
+  test('known active env app key uses built in environment fallback', () {
+    final settings = AppSettings();
+    settings.useCustomAppKey = false;
+    settings.activeEnvName = 'qa隔舱';
+
+    expect(settings.appKey, ServerEnvironment.qaCabin.appKey);
+  });
 }

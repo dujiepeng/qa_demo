@@ -19,6 +19,7 @@ import '../../common/widgets/common_layout.dart';
 import '../../common/mixins/base_mixin.dart';
 import '../../common/widgets/log_page_launcher.dart';
 import '../../common/widgets/info_dialog.dart';
+import '../../common/utils/message_forward_helper.dart';
 
 /// 聊天室信息编辑类型
 enum RoomInfoEditType { name, description, announcement }
@@ -65,6 +66,9 @@ typedef ChatRoomAttributesFetcher =
       required String roomId,
       List<String>? keys,
     });
+typedef ChatRoomMessageSender = Future<EMMessage> Function(EMMessage message);
+typedef ChatRoomAnnouncementFetcher = Future<String?> Function(String roomId);
+typedef ChatRoomMembershipChecker = Future<bool> Function(String roomId);
 
 bool canUseChatRoomOwnerOnlyActions(EMChatRoom? room) {
   return room?.permissionType == EMChatRoomPermissionType.Owner;
@@ -125,6 +129,10 @@ class RoomPage extends StatefulWidget {
     this.remoteMessageBeforeTimeRemover,
     this.chatRoomCreator,
     this.attributesFetcher,
+    this.messageSender,
+    this.announcementFetcher,
+    this.allowListMembershipChecker,
+    this.muteListMembershipChecker,
     this.settingsOverride,
   });
   final String? roomId;
@@ -137,6 +145,10 @@ class RoomPage extends StatefulWidget {
   final ChatRoomRemoteMessageBeforeTimeRemover? remoteMessageBeforeTimeRemover;
   final ChatRoomCreator? chatRoomCreator;
   final ChatRoomAttributesFetcher? attributesFetcher;
+  final ChatRoomMessageSender? messageSender;
+  final ChatRoomAnnouncementFetcher? announcementFetcher;
+  final ChatRoomMembershipChecker? allowListMembershipChecker;
+  final ChatRoomMembershipChecker? muteListMembershipChecker;
   final AppSettings? settingsOverride;
   @override
   State<RoomPage> createState() => _RoomPageState();
@@ -215,6 +227,36 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
       welcomeMsg: welcomeMsg,
       maxUserCount: maxUserCount,
       members: members,
+    );
+  }
+
+  Future<String?> _fetchChatRoomAnnouncement(String roomId) {
+    final fetcher = widget.announcementFetcher;
+    if (fetcher != null) {
+      return fetcher(roomId);
+    }
+    return EMClient.getInstance.chatRoomManager.fetchChatRoomAnnouncement(
+      roomId,
+    );
+  }
+
+  Future<bool> _isMemberInChatRoomAllowList(String roomId) {
+    final checker = widget.allowListMembershipChecker;
+    if (checker != null) {
+      return checker(roomId);
+    }
+    return EMClient.getInstance.chatRoomManager.isMemberInChatRoomAllowList(
+      roomId,
+    );
+  }
+
+  Future<bool> _isMemberInChatRoomMuteList(String roomId) {
+    final checker = widget.muteListMembershipChecker;
+    if (checker != null) {
+      return checker(roomId);
+    }
+    return EMClient.getInstance.chatRoomManager.isMemberInChatRoomMuteList(
+      roomId,
     );
   }
 
@@ -489,6 +531,15 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
     if (entry.tag == 'message' && attachment is EMMessage) {
       actions.add(
         LogAction(
+          id: 'forward',
+          title: '转发',
+          icon: Icons.forward_outlined,
+          isVisible: (_) => attachment.chatType == ChatType.ChatRoom,
+          onSelected: (_) => _forwardMessage(attachment),
+        ),
+      );
+      actions.add(
+        LogAction(
           id: 'modify',
           title: '修改',
           icon: Icons.edit_outlined,
@@ -607,6 +658,120 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
       );
     }
     return actions;
+  }
+
+  Future<LogActionResult?> _forwardMessage(EMMessage message) async {
+    final result = await showInputDialog(
+      context: context,
+      title: '转发消息',
+      fields: [
+        InputFieldData(
+          title: '目标 ID',
+          placeholder: '用户 / 群组 / 聊天室 ID',
+          text: '',
+        ),
+        InputFieldData(
+          title: '类型',
+          placeholder: forwardChatTypeHint(),
+          text: 'room',
+        ),
+      ],
+    );
+    if (result == null || result.length < 2) {
+      return null;
+    }
+    try {
+      final forwarded = createForwardMessage(
+        source: message,
+        targetId: result[0].text,
+        chatType: parseForwardChatType(result[1].text),
+      );
+      await _sendMessageThroughSdk(forwarded);
+      addSendLog(
+        '转发消息: ${forwarded.toJson()}',
+        attachment: forwarded,
+        tag: 'message',
+      );
+      return const LogActionResult(
+        overlayLabel: '已转发',
+        overlayStyle: LogOverlayStyle.success,
+      );
+    } catch (e) {
+      return LogActionResult(
+        overlayLabel: '转发失败: $e',
+        overlayStyle: LogOverlayStyle.error,
+      );
+    }
+  }
+
+  Future<void> _sendCombineForwardMessage({
+    required String defaultTargetId,
+    required ChatType defaultChatType,
+  }) async {
+    final localMessageIds = successfulLocalMessageIdsForCombineForward(
+      entries: logController.entities,
+      chatType: ChatType.ChatRoom,
+      conversationId: _roomId,
+    );
+    final result = await showInputDialog(
+      context: context,
+      title: '合并转发',
+      fields: [
+        InputFieldData(
+          title: '目标 ID',
+          placeholder: '用户 / 群组 / 聊天室 ID',
+          text: defaultTargetId,
+        ),
+        InputFieldData(
+          title: '类型',
+          placeholder: forwardChatTypeHint(),
+          text: defaultChatType == ChatType.GroupChat
+              ? 'group'
+              : defaultChatType == ChatType.ChatRoom
+              ? 'room'
+              : 'chat',
+        ),
+        InputFieldData(
+          title: '消息 ID 列表',
+          placeholder: '本地存在且发送成功的 msgId，多个用逗号或换行分隔',
+          text: localMessageIds.join('\n'),
+          multiline: true,
+        ),
+        InputFieldData(title: '标题', placeholder: '合并消息标题', text: '聊天记录'),
+        InputFieldData(
+          title: '摘要',
+          placeholder: '合并消息摘要',
+          text: '',
+          multiline: true,
+        ),
+        InputFieldData(
+          title: '兼容文本',
+          placeholder: '旧版本不支持合并消息时展示',
+          text: '当前版本不支持合并消息',
+        ),
+      ],
+    );
+    if (result == null || result.length < 6) {
+      return;
+    }
+    try {
+      final message = createCombineForwardMessage(
+        targetId: result[0].text,
+        chatType: parseForwardChatType(result[1].text),
+        msgIds: parseForwardMessageIds(result[2].text),
+        title: result[3].text,
+        summary: result[4].text,
+        compatibleText: result[5].text,
+      );
+      await sendMessage(message);
+      addSendLog(
+        '合并转发消息: ${message.toJson()}',
+        attachment: message,
+        tag: 'message',
+      );
+    } catch (e) {
+      addSendLog('合并转发失败: $e。请确认消息 ID 在本地存在且发送状态为成功。');
+    }
   }
 
   bool _canEditChatRoomMessage(EMMessage message) {
@@ -768,10 +933,16 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
             ? '开始发送消息'
             : '开始发送定向消息: ${receiverList.join(', ')}',
       );
-      await EMClient.getInstance.chatManager.sendMessage(msg);
+      await _sendMessageThroughSdk(msg);
     } catch (e) {
       rethrow;
     }
+  }
+
+  Future<EMMessage> _sendMessageThroughSdk(EMMessage message) {
+    return (widget.messageSender ??
+            EMClient.getInstance.chatManager.sendMessage)
+        .call(message);
   }
 
   Future<EMCursorResult<String>> _loadChatRoomMembersPage(
@@ -907,6 +1078,40 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
     }
   }
 
+  Future<void> _fetchAnnouncementFromServer() async {
+    if (_roomId.isEmpty) return;
+    try {
+      final announcement = await _fetchChatRoomAnnouncement(_roomId);
+      addReceiveLog(
+        announcement == null || announcement.isEmpty
+            ? '聊天室公告为空'
+            : '聊天室公告: $announcement',
+      );
+    } catch (e) {
+      addAppErrLog('获取聊天室公告失败: $e');
+    }
+  }
+
+  Future<void> _queryAllowListMembership() async {
+    if (_roomId.isEmpty) return;
+    try {
+      final inAllowList = await _isMemberInChatRoomAllowList(_roomId);
+      addReceiveLog('当前用户在聊天室白名单中: $inAllowList');
+    } catch (e) {
+      addAppErrLog('查询当前用户聊天室白名单状态失败: $e');
+    }
+  }
+
+  Future<void> _queryMuteListMembership() async {
+    if (_roomId.isEmpty) return;
+    try {
+      final inMuteList = await _isMemberInChatRoomMuteList(_roomId);
+      addReceiveLog('当前用户在聊天室禁言列表中: $inMuteList');
+    } catch (e) {
+      addAppErrLog('查询当前用户聊天室禁言状态失败: $e');
+    }
+  }
+
   void _showBottomSheet(Widget page) {
     if (_roomId.isEmpty) return;
     showModalBottomSheet(
@@ -930,10 +1135,42 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
     );
   }
 
+  Future<bool> _hasChatRoomPermissionFor(String actionName) async {
+    if (_roomId.isEmpty) {
+      addLog('请先加入聊天室');
+      return false;
+    }
+    var room = _currentRoomInfo;
+    if (room?.permissionType == null ||
+        room?.permissionType == EMChatRoomPermissionType.None) {
+      try {
+        room = await _fetchChatRoomInfo(_roomId);
+        _currentRoomInfo = room;
+        _isJoined = room.permissionType != EMChatRoomPermissionType.None;
+        if (mounted) setState(() {});
+      } catch (e) {
+        addAppErrLog('获取聊天室权限失败，不能打开$actionName: $e');
+        return false;
+      }
+    }
+    final permissionType = room?.permissionType;
+    if (permissionType == null ||
+        permissionType == EMChatRoomPermissionType.None) {
+      addLog('当前用户无聊天室权限，不能打开$actionName');
+      return false;
+    }
+    return true;
+  }
+
+  Future<void> _showMuteListPage() async {
+    final hasPermission = await _hasChatRoomPermissionFor('禁言列表');
+    if (!hasPermission || !mounted) return;
+    _showBottomSheet(RoomMuteListPage(roomId: _roomId));
+  }
+
   void _showMuteAllMuteAlert() async {
     if (_roomId.isEmpty) return;
-    final room = await EMClient.getInstance.chatRoomManager
-        .fetchChatRoomInfoFromServer(_roomId);
+    final room = await _fetchChatRoomInfo(_roomId);
     if (!mounted) return;
     showSwitchAlert(
       context: context,
@@ -951,8 +1188,10 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
               _roomId,
             );
           }
+          addLog(value ? '聊天室全部禁言已开启' : '聊天室全部禁言已关闭');
           return true;
         } catch (e) {
+          addAppErrLog(value ? '聊天室全部禁言失败: $e' : '聊天室取消全部禁言失败: $e');
           return false;
         }
       },
@@ -1070,9 +1309,10 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
   Future<void> _fetchChatRoomAttribute() async {
     if (_roomId.isEmpty) return;
     try {
-      final result = await (widget.attributesFetcher ??
-              EMClient.getInstance.chatRoomManager.fetchChatRoomAttributes)
-          .call(roomId: _roomId, keys: const ['attKey']);
+      final result =
+          await (widget.attributesFetcher ??
+                  EMClient.getInstance.chatRoomManager.fetchChatRoomAttributes)
+              .call(roomId: _roomId, keys: const ['attKey']);
       addLog('聊天室属性: ${result ?? const <String, String>{}}');
     } catch (e) {
       addLog('获取聊天室属性失败: $e');
@@ -1190,6 +1430,14 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
         '命令',
         () async => createChatRoomCommandMessage(_roomId),
       ),
+      GridActionItem(
+        icon: Icons.merge_type_outlined,
+        label: '合并转发',
+        onTap: () => _sendCombineForwardMessage(
+          defaultTargetId: _roomId,
+          defaultChatType: ChatType.ChatRoom,
+        ),
+      ),
     ];
     return SizedBox(
       width: MediaQuery.of(context).size.width,
@@ -1223,6 +1471,11 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
         onTap: () => _showRoomInfoDialog(RoomInfoEditType.announcement),
       ),
       GridActionItem(
+        icon: Icons.article_outlined,
+        label: '取公告',
+        onTap: _fetchAnnouncementFromServer,
+      ),
+      GridActionItem(
         icon: Icons.group_outlined,
         label: '成员',
         onTap: () => _showBottomSheet(RoomMembersPage(roomId: _roomId)),
@@ -1238,6 +1491,11 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
         onTap: () => _showBottomSheet(RoomWhiteListPage(roomId: _roomId)),
       ),
       GridActionItem(
+        icon: Icons.fact_check_outlined,
+        label: '查白名单',
+        onTap: _queryAllowListMembership,
+      ),
+      GridActionItem(
         icon: Icons.block_outlined,
         label: '黑名单',
         onTap: () => _showBottomSheet(RoomBlockListPage(roomId: _roomId)),
@@ -1245,7 +1503,12 @@ class _RoomPageState extends State<RoomPage> with BaseMixin {
       GridActionItem(
         icon: Icons.mic_off_outlined,
         label: '禁言列表',
-        onTap: () => _showBottomSheet(RoomMuteListPage(roomId: _roomId)),
+        onTap: _showMuteListPage,
+      ),
+      GridActionItem(
+        icon: Icons.record_voice_over_outlined,
+        label: '查禁言',
+        onTap: _queryMuteListMembership,
       ),
       GridActionItem(
         icon: Icons.voice_over_off_outlined,

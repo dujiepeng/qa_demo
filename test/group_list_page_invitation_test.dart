@@ -247,7 +247,9 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: GroupListPage()));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('查询已加入群组数量'));
+    expect(find.text('群组数量'), findsOneWidget);
+
+    await tester.tap(find.text('群组数量'));
     await tester.pumpAndSettle();
 
     expect(testClient.actions.single.method, 'fetchJoinedGroupCount');

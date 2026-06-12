@@ -346,24 +346,34 @@ class _GroupListPageState extends State<GroupListPage> {
               elevation: 0,
               iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
               actions: [
-                IconButton(
-                  icon: _isFetchingJoinedGroupCount
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
+                Tooltip(
+                  message: '查询已加入群组数量',
+                  child: TextButton.icon(
+                    icon: _isFetchingJoinedGroupCount
+                        ? SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.textPrimary(isDark),
+                            ),
+                          )
+                        : Icon(
+                            Icons.groups_2_outlined,
+                            size: 18,
                             color: AppColors.textPrimary(isDark),
                           ),
-                        )
-                      : Icon(
-                          Icons.numbers_outlined,
-                          color: AppColors.textPrimary(isDark),
-                        ),
-                  tooltip: '查询已加入群组数量',
-                  onPressed: _isFetchingJoinedGroupCount
-                      ? null
-                      : _fetchJoinedGroupCount,
+                    label: Text(
+                      '群组数量',
+                      style: TextStyle(
+                        color: AppColors.textPrimary(isDark),
+                        fontSize: 14,
+                      ),
+                    ),
+                    onPressed: _isFetchingJoinedGroupCount
+                        ? null
+                        : _fetchJoinedGroupCount,
+                  ),
                 ),
                 TextButton(
                   child: Text(

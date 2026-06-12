@@ -15,8 +15,24 @@ class AppSettings extends ChangeNotifier {
   bool useCustomAppKey = false;
   String _customAppKey = defaultCustomAppKey; // 存储用户自定义的 AppKey
 
-  // 根据 useCustomAppKey 返回对应的 AppKey
-  String get appKey => useCustomAppKey ? _customAppKey : defaultAppKey;
+  // 当前环境配置优先，避免切到非 TKE 环境时仍使用 TKE 默认 AppKey。
+  String get appKey {
+    final envAppKey = _customEnvDict[activeEnvName]?['appKey'] as String?;
+    if (envAppKey != null && envAppKey.isNotEmpty) {
+      return envAppKey;
+    }
+    ServerEnvironment? builtInEnv;
+    for (final env in ServerEnvironment.environments) {
+      if (env.name == activeEnvName) {
+        builtInEnv = env;
+        break;
+      }
+    }
+    if (builtInEnv != null && builtInEnv.appKey.isNotEmpty) {
+      return builtInEnv.appKey;
+    }
+    return useCustomAppKey ? _customAppKey : defaultAppKey;
+  }
   set appKey(String value) {
     if (useCustomAppKey) {
       _customAppKey = value;

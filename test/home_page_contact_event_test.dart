@@ -125,6 +125,95 @@ void main() {
     overlayController.hide();
   });
 
+  testWidgets('home page shows multi-device conversation event callback', (
+    tester,
+  ) async {
+    final settings = AppSettings()
+      ..isLoggedIn = true
+      ..isInit = true;
+    final overlayController = ConnectionStatusOverlayController();
+    addTearDown(overlayController.dispose);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: settings),
+          ChangeNotifierProvider.value(value: VersionManager()),
+          ChangeNotifierProvider.value(value: overlayController),
+          ChangeNotifierProvider(create: (_) => OfflineMessageCounter()),
+          ChangeNotifierProvider(
+            create: (_) => OtherLoggedInDevicesController(),
+          ),
+        ],
+        child: const MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(size: Size(390, 844)),
+            child: HomePage(),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(testClient.startCallbackCalled, isTrue);
+
+    EMClient.getInstance
+        .getMultiDeviceEventHandler('home_page_multi_device_events')
+        ?.onConversationEvent
+        ?.call(
+          EMMultiDevicesEvent.CONVERSATION_DELETE,
+          'conversation-a',
+          EMConversationType.Chat,
+        );
+
+    expect(
+      overlayController.message,
+      '多端会话事件: CONVERSATION_DELETE，会话: conversation-a，类型: Chat',
+    );
+    overlayController.hide();
+  });
+
+  testWidgets('home page shows multi-device remote messages removed callback', (
+    tester,
+  ) async {
+    final settings = AppSettings()
+      ..isLoggedIn = true
+      ..isInit = true;
+    final overlayController = ConnectionStatusOverlayController();
+    addTearDown(overlayController.dispose);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: settings),
+          ChangeNotifierProvider.value(value: VersionManager()),
+          ChangeNotifierProvider.value(value: overlayController),
+          ChangeNotifierProvider(create: (_) => OfflineMessageCounter()),
+          ChangeNotifierProvider(
+            create: (_) => OtherLoggedInDevicesController(),
+          ),
+        ],
+        child: const MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(size: Size(390, 844)),
+            child: HomePage(),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(testClient.startCallbackCalled, isTrue);
+
+    EMClient.getInstance
+        .getMultiDeviceEventHandler('home_page_multi_device_events')
+        ?.onRemoteMessagesRemoved
+        ?.call('conversation-a', 'device-a');
+
+    expect(overlayController.message, '多端漫游消息删除: conversation-a，设备: device-a');
+    overlayController.hide();
+  });
+
   testWidgets('home page shows group invitation from global SDK callback', (
     tester,
   ) async {

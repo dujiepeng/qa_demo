@@ -64,9 +64,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: SingleChatListPage(loadContacts: () async => const []),
-      ),
+      MaterialApp(home: SingleChatListPage(loadContacts: () async => const [])),
     );
     await tester.pumpAndSettle();
 
@@ -83,53 +81,103 @@ void main() {
     expect(find.text('拒绝'), findsOneWidget);
   });
 
-  testWidgets('accepting a pending friend request calls SDK accept invitation', (
+  testWidgets(
+    'accepting a pending friend request calls SDK accept invitation',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SingleChatListPage(loadContacts: () async => const []),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      EMClient.getInstance.contactManager
+          .getEventHandler('single_chat_list_page')
+          ?.onContactInvited
+          ?.call('user-a', null);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('同意'));
+      await tester.pumpAndSettle();
+
+      expect(testClient.actions.length, 1);
+      expect(testClient.actions.single.method, 'acceptInvitation');
+      expect(testClient.actions.single.userId, 'user-a');
+      expect(find.text('user-a'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'declining a pending friend request calls SDK decline invitation',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SingleChatListPage(loadContacts: () async => const []),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      EMClient.getInstance.contactManager
+          .getEventHandler('single_chat_list_page')
+          ?.onContactInvited
+          ?.call('user-a', null);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('拒绝'));
+      await tester.pumpAndSettle();
+
+      expect(testClient.actions.length, 1);
+      expect(testClient.actions.single.method, 'declineInvitation');
+      expect(testClient.actions.single.userId, 'user-a');
+      expect(find.text('user-a'), findsNothing);
+    },
+  );
+
+  testWidgets('server contact tools call server-backed SDK callbacks', (
     tester,
   ) async {
+    List<String>? fetchedContactIds;
+    int? fetchedPageSize;
+    var oldServerContactsCalled = false;
+    var oldServerBlockListCalled = false;
+
     await tester.pumpWidget(
       MaterialApp(
-        home: SingleChatListPage(loadContacts: () async => const []),
+        home: SingleChatListPage(
+          loadContacts: () async => const [],
+          fetchAllContactIds: () async {
+            fetchedContactIds = ['alice', 'bob'];
+            return fetchedContactIds!;
+          },
+          fetchPagedContacts: ({cursor, pageSize = 20}) async {
+            fetchedPageSize = pageSize;
+            return EMCursorResult<EMContact>('', [
+              EMContact.fromJson({'userId': 'alice', 'remark': 'Alice remark'}),
+            ]);
+          },
+          fetchAllContactsFromServerOld: () async {
+            oldServerContactsCalled = true;
+            return ['carol'];
+          },
+          fetchBlockListFromServerOld: () async {
+            oldServerBlockListCalled = true;
+            return ['blocked-user'];
+          },
+        ),
       ),
     );
     await tester.pumpAndSettle();
 
-    EMClient.getInstance.contactManager
-        .getEventHandler('single_chat_list_page')
-        ?.onContactInvited
-        ?.call('user-a', null);
+    await tester.tap(find.text('服务端'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('同意'));
-    await tester.pumpAndSettle();
-
-    expect(testClient.actions.length, 1);
-    expect(testClient.actions.single.method, 'acceptInvitation');
-    expect(testClient.actions.single.userId, 'user-a');
-    expect(find.text('user-a'), findsNothing);
-  });
-
-  testWidgets('declining a pending friend request calls SDK decline invitation', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: SingleChatListPage(loadContacts: () async => const []),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    EMClient.getInstance.contactManager
-        .getEventHandler('single_chat_list_page')
-        ?.onContactInvited
-        ?.call('user-a', null);
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('拒绝'));
-    await tester.pumpAndSettle();
-
-    expect(testClient.actions.length, 1);
-    expect(testClient.actions.single.method, 'declineInvitation');
-    expect(testClient.actions.single.userId, 'user-a');
-    expect(find.text('user-a'), findsNothing);
+    expect(fetchedContactIds, ['alice', 'bob']);
+    expect(fetchedPageSize, 20);
+    expect(oldServerContactsCalled, isTrue);
+    expect(oldServerBlockListCalled, isTrue);
+    expect(find.textContaining('服务端联系人ID: alice, bob'), findsWidgets);
+    expect(find.textContaining('分页联系人: alice'), findsWidgets);
+    expect(find.textContaining('old联系人: carol'), findsWidgets);
+    expect(find.textContaining('old黑名单: blocked-user'), findsWidgets);
   });
 }

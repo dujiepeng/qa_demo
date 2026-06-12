@@ -139,4 +139,67 @@ void main() {
     expect(template, 'qa-template');
     expect(find.textContaining('设置推送模板成功'), findsOneWidget);
   });
+
+  testWidgets(
+    'push settings page manages push language and batch silent mode',
+    (tester) async {
+      useLargeViewport(tester);
+      List<EMConversation>? requestedConversations;
+      String? preferredLanguage;
+      var fetchedPreferredLanguage = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PushSettingsPageMobile(
+            fetchSilentModeForConversations: (conversations) async {
+              requestedConversations = conversations;
+              return {
+                'group-001': ChatSilentModeResult(
+                  123,
+                  EMConversationType.GroupChat,
+                  'group-001',
+                  ChatPushRemindType.ALL,
+                  null,
+                  null,
+                ),
+              };
+            },
+            setPreferredNotificationLanguage: (languageCode) async {
+              preferredLanguage = languageCode;
+            },
+            fetchPreferredNotificationLanguage: () async {
+              fetchedPreferredLanguage = true;
+              return 'zh-Hans';
+            },
+          ),
+        ),
+      );
+
+      await tester.enterText(
+        find.widgetWithText(TextField, '会话 ID 列表'),
+        'group-001\nuser-002',
+      );
+      await tester.tap(find.text('批量查询静默'));
+      await tester.pumpAndSettle();
+
+      expect(requestedConversations, isNotNull);
+      expect(requestedConversations, hasLength(2));
+      expect(requestedConversations!.first.id, 'group-001');
+      expect(requestedConversations!.first.type, EMConversationType.GroupChat);
+      expect(find.textContaining('批量会话静默: group-001'), findsOneWidget);
+
+      await tester.enterText(find.widgetWithText(TextField, '推送语言'), 'en');
+      await tester.tap(find.text('设置推送语言'));
+      await tester.pumpAndSettle();
+
+      expect(preferredLanguage, 'en');
+      expect(find.textContaining('设置推送语言成功'), findsOneWidget);
+
+      await tester.tap(find.text('查询推送语言'));
+      await tester.pumpAndSettle();
+
+      expect(fetchedPreferredLanguage, isTrue);
+      expect(find.textContaining('当前推送语言: zh-Hans'), findsOneWidget);
+    },
+  );
 }

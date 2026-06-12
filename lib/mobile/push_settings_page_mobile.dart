@@ -35,6 +35,13 @@ typedef FetchPushConfigsCallback = Future<EMPushConfigs> Function();
 typedef PushTemplateSetter = Future<void> Function(String templateName);
 typedef PushTemplateGetter = Future<String?> Function();
 typedef SyncConversationsSilentModeCallback = Future<void> Function();
+typedef FetchSilentModeForConversationsCallback =
+    Future<Map<String, ChatSilentModeResult>> Function(
+      List<EMConversation> conversations,
+    );
+typedef PreferredNotificationLanguageSetter =
+    Future<void> Function(String languageCode);
+typedef PreferredNotificationLanguageFetcher = Future<String?> Function();
 
 class PushSettingsPageMobile extends StatefulWidget {
   const PushSettingsPageMobile({
@@ -50,6 +57,9 @@ class PushSettingsPageMobile extends StatefulWidget {
     this.fetchPushConfigs,
     this.setPushTemplate,
     this.getPushTemplate,
+    this.fetchSilentModeForConversations,
+    this.setPreferredNotificationLanguage,
+    this.fetchPreferredNotificationLanguage,
   });
 
   final BindDeviceTokenCallback? bindDeviceToken;
@@ -63,6 +73,11 @@ class PushSettingsPageMobile extends StatefulWidget {
   final FetchPushConfigsCallback? fetchPushConfigs;
   final PushTemplateSetter? setPushTemplate;
   final PushTemplateGetter? getPushTemplate;
+  final FetchSilentModeForConversationsCallback?
+  fetchSilentModeForConversations;
+  final PreferredNotificationLanguageSetter? setPreferredNotificationLanguage;
+  final PreferredNotificationLanguageFetcher?
+  fetchPreferredNotificationLanguage;
 
   @override
   State<PushSettingsPageMobile> createState() => _PushSettingsPageMobileState();
@@ -73,7 +88,9 @@ class _PushSettingsPageMobileState extends State<PushSettingsPageMobile> {
   final _deviceTokenController = TextEditingController();
   final _durationController = TextEditingController(text: '30');
   final _conversationIdController = TextEditingController();
+  final _conversationIdsController = TextEditingController();
   final _templateController = TextEditingController();
+  final _languageController = TextEditingController();
   DisplayStyle _displayStyle = DisplayStyle.Simple;
   EMConversationType _conversationType = EMConversationType.GroupChat;
 
@@ -83,7 +100,9 @@ class _PushSettingsPageMobileState extends State<PushSettingsPageMobile> {
     _deviceTokenController.dispose();
     _durationController.dispose();
     _conversationIdController.dispose();
+    _conversationIdsController.dispose();
     _templateController.dispose();
+    _languageController.dispose();
     super.dispose();
   }
 
@@ -195,6 +214,42 @@ class _PushSettingsPageMobileState extends State<PushSettingsPageMobile> {
     }
   }
 
+  Future<void> _fetchSilentModeForConversations() async {
+    final conversationIds = _parseInputList(_conversationIdsController.text);
+    if (conversationIds.isEmpty) {
+      _showMessage('请输入会话 ID 列表');
+      return;
+    }
+    final conversations = conversationIds
+        .map(
+          (conversationId) => EMConversation(
+            conversationId,
+            _conversationType,
+            null,
+            false,
+            false,
+            0,
+            [],
+          ),
+        )
+        .toList();
+    try {
+      final result =
+          await (widget.fetchSilentModeForConversations ??
+                  _defaultFetchSilentModeForConversations)
+              .call(conversations);
+      if (result.isEmpty) {
+        _showMessage('批量会话静默为空');
+        return;
+      }
+      _showMessage(
+        '批量会话静默: ${result.entries.map((entry) => '${entry.key}: ${_formatSilentModeResult(entry.value)}').join('；')}',
+      );
+    } catch (e) {
+      _showMessage('批量查询会话静默失败: $e');
+    }
+  }
+
   Future<void> _updatePushDisplayStyle() async {
     try {
       await (widget.updatePushDisplayStyle ?? _defaultUpdatePushDisplayStyle)
@@ -240,6 +295,34 @@ class _PushSettingsPageMobileState extends State<PushSettingsPageMobile> {
       _showMessage('当前推送模板: ${templateName ?? ''}');
     } catch (e) {
       _showMessage('查询推送模板失败: $e');
+    }
+  }
+
+  Future<void> _setPreferredNotificationLanguage() async {
+    final languageCode = _languageController.text.trim();
+    if (languageCode.isEmpty) {
+      _showMessage('请输入推送语言');
+      return;
+    }
+    try {
+      await (widget.setPreferredNotificationLanguage ??
+              _defaultSetPreferredNotificationLanguage)
+          .call(languageCode);
+      _showMessage('设置推送语言成功');
+    } catch (e) {
+      _showMessage('设置推送语言失败: $e');
+    }
+  }
+
+  Future<void> _fetchPreferredNotificationLanguage() async {
+    try {
+      final languageCode =
+          await (widget.fetchPreferredNotificationLanguage ??
+                  _defaultFetchPreferredNotificationLanguage)
+              .call();
+      _showMessage('当前推送语言: ${languageCode ?? ''}');
+    } catch (e) {
+      _showMessage('查询推送语言失败: $e');
     }
   }
 
@@ -306,6 +389,13 @@ class _PushSettingsPageMobileState extends State<PushSettingsPageMobile> {
     return EMClient.getInstance.pushManager.syncConversationsSilentMode();
   }
 
+  Future<Map<String, ChatSilentModeResult>>
+  _defaultFetchSilentModeForConversations(List<EMConversation> conversations) {
+    return EMClient.getInstance.pushManager.fetchSilentModeForConversations(
+      conversations,
+    );
+  }
+
   Future<void> _defaultUpdatePushDisplayStyle(DisplayStyle displayStyle) {
     return EMClient.getInstance.pushManager.updatePushDisplayStyle(
       displayStyle,
@@ -322,6 +412,26 @@ class _PushSettingsPageMobileState extends State<PushSettingsPageMobile> {
 
   Future<String?> _defaultGetPushTemplate() {
     return EMClient.getInstance.pushManager.getPushTemplate();
+  }
+
+  Future<void> _defaultSetPreferredNotificationLanguage(String languageCode) {
+    return EMClient.getInstance.pushManager.setPreferredNotificationLanguage(
+      languageCode,
+    );
+  }
+
+  Future<String?> _defaultFetchPreferredNotificationLanguage() {
+    return EMClient.getInstance.pushManager
+        .fetchPreferredNotificationLanguage();
+  }
+
+  List<String> _parseInputList(String rawValue) {
+    return rawValue
+        .split(RegExp(r'[,，\n]'))
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toSet()
+        .toList();
   }
 
   String _formatSilentModeResult(ChatSilentModeResult result) {
@@ -490,6 +600,21 @@ class _PushSettingsPageMobileState extends State<PushSettingsPageMobile> {
             ),
           ],
         ),
+        const SizedBox(height: 10),
+        _buildTextField(
+          controller: _conversationIdsController,
+          labelText: '会话 ID 列表',
+          hintText: '多个会话用逗号或换行分隔',
+          isDark: isDark,
+          minLines: 2,
+          maxLines: 3,
+        ),
+        const SizedBox(height: 10),
+        _ActionButton(
+          icon: Icons.playlist_add_check_outlined,
+          label: '批量查询静默',
+          onPressed: _fetchSilentModeForConversations,
+        ),
       ],
     );
   }
@@ -556,6 +681,33 @@ class _PushSettingsPageMobileState extends State<PushSettingsPageMobile> {
             ),
           ],
         ),
+        const SizedBox(height: 10),
+        _buildTextField(
+          controller: _languageController,
+          labelText: '推送语言',
+          hintText: '例如 en / zh-Hans',
+          isDark: isDark,
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _ActionButton(
+                icon: Icons.translate_outlined,
+                label: '设置推送语言',
+                onPressed: _setPreferredNotificationLanguage,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _ActionButton(
+                icon: Icons.manage_search_outlined,
+                label: '查询推送语言',
+                onPressed: _fetchPreferredNotificationLanguage,
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -566,10 +718,14 @@ class _PushSettingsPageMobileState extends State<PushSettingsPageMobile> {
     required String hintText,
     required bool isDark,
     TextInputType? keyboardType,
+    int? minLines,
+    int? maxLines,
   }) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
+      minLines: minLines,
+      maxLines: maxLines ?? 1,
       style: TextStyle(color: AppColors.textPrimary(isDark)),
       decoration: _inputDecoration(
         labelText: labelText,

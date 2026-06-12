@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
+import '../../common/widgets/input_dialog.dart';
 
 typedef GroupMembersLoader =
     Future<EMCursorResult<String>> Function(
@@ -16,8 +17,24 @@ typedef GroupMemberAttributesFetcher =
       required String groupId,
       String? userId,
     });
+typedef GroupMembersAttributesFetcher =
+    Future<Map<String, Map<String, String>>> Function({
+      required String groupId,
+      required List<String> userIds,
+      List<String>? keys,
+    });
 typedef GroupBlockListLoader =
     Future<List<String>> Function(String groupId, {int pageNum, int pageSize});
+
+List<String>? parseGroupMemberInputList(String rawValue) {
+  final list = rawValue
+      .split(RegExp(r'[\s,，;；]+'))
+      .map((item) => item.trim())
+      .where((item) => item.isNotEmpty)
+      .toSet()
+      .toList();
+  return list.isEmpty ? null : list;
+}
 
 /// 群组成员列表页面
 class GroupMembersPage extends StatefulWidget {
@@ -29,6 +46,7 @@ class GroupMembersPage extends StatefulWidget {
     this.memberBlocker,
     this.memberUnblocker,
     this.memberAttributesFetcher,
+    this.membersAttributesFetcher,
     this.blockListLoader,
   });
 
@@ -38,6 +56,7 @@ class GroupMembersPage extends StatefulWidget {
   final GroupMemberActionCallback? memberBlocker;
   final GroupMemberActionCallback? memberUnblocker;
   final GroupMemberAttributesFetcher? memberAttributesFetcher;
+  final GroupMembersAttributesFetcher? membersAttributesFetcher;
   final GroupBlockListLoader? blockListLoader;
 
   @override
@@ -452,6 +471,50 @@ class _GroupMembersPageState extends State<GroupMembersPage> {
     }
   }
 
+  Future<void> _fetchMembersAttributes() async {
+    final result = await showInputDialog(
+      context: context,
+      title: '批量查询成员属性',
+      fields: [
+        InputFieldData(
+          title: '成员 ID 列表',
+          placeholder: '多个成员 ID 用逗号、空格或换行分隔',
+          text: '',
+          multiline: true,
+        ),
+        InputFieldData(
+          title: '属性 key 列表',
+          placeholder: '可选，多个 key 用逗号、空格或换行分隔',
+          text: '',
+        ),
+      ],
+    );
+    if (result == null) return;
+    final userIds = parseGroupMemberInputList(result[0].text);
+    if (userIds == null) {
+      _showResultDialog('批量查询成员属性失败: 成员 ID 不能为空', false);
+      return;
+    }
+    final keys = parseGroupMemberInputList(result[1].text);
+    try {
+      final fetcher =
+          widget.membersAttributesFetcher ??
+          EMClient.getInstance.groupManager.fetchMembersAttributes;
+      final attributes = await fetcher(
+        groupId: widget.groupId,
+        userIds: userIds,
+        keys: keys,
+      );
+      if (mounted) {
+        _showMembersAttributesDialog(attributes);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showResultDialog('批量查询成员属性失败: ${e.toString()}', false);
+      }
+    }
+  }
+
   void _showMemberAttributesDialog(
     String memberId,
     Map<String, String> attributes,
@@ -592,6 +655,14 @@ class _GroupMembersPageState extends State<GroupMembersPage> {
                     ),
                     onPressed: _isLoading ? null : _showBlockList,
                     tooltip: '黑名单',
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.badge_outlined,
+                      color: AppColors.primary(isDark),
+                    ),
+                    onPressed: _isLoading ? null : _fetchMembersAttributes,
+                    tooltip: '批量属性',
                   ),
                   IconButton(
                     icon: Icon(Icons.refresh, color: AppColors.primary(isDark)),
@@ -748,6 +819,49 @@ class _GroupMembersPageState extends State<GroupMembersPage> {
           ),
         );
       },
+    );
+  }
+
+  void _showMembersAttributesDialog(
+    Map<String, Map<String, String>> attributes,
+  ) {
+    final isDark = _settings.isDarkMode;
+    final rows = <String>[];
+    for (final entry in attributes.entries) {
+      rows.add(entry.key);
+      if (entry.value.isEmpty) {
+        rows.add('  暂无成员属性');
+      } else {
+        for (final attr in entry.value.entries) {
+          rows.add('  ${attr.key}: ${attr.value}');
+        }
+      }
+    }
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: isDark ? const Color(0xFF2C2C2E) : Colors.white,
+        title: Text(
+          '批量成员属性',
+          style: TextStyle(color: AppColors.textPrimary(isDark)),
+        ),
+        content: SingleChildScrollView(
+          child: SelectableText(
+            rows.isEmpty ? '服务端返回空成员属性' : rows.join('\n'),
+            style: TextStyle(color: AppColors.textPrimary(isDark)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              '确定',
+              style: TextStyle(color: AppColors.primary(isDark)),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -61,7 +61,7 @@ class ServerEnvironment {
   // ebs 集群配置（只有 AppKey 可配置）
   static const ServerEnvironment online = ServerEnvironment(
     name: 'ebs',
-    appKey: 'easemob#easeim',
+    appKey: 'easemob-demo#wang',
     restServer: '',
     msyncServer: '',
     msyncPort: 0,

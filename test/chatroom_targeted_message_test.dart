@@ -10,17 +10,20 @@ void main() {
     });
 
     test('splits comma whitespace and newline separated user IDs', () {
-      expect(
-        parseChatRoomReceiverList('alice, bob，charlie\n dave'),
-        ['alice', 'bob', 'charlie', 'dave'],
-      );
+      expect(parseChatRoomReceiverList('alice, bob，charlie\n dave'), [
+        'alice',
+        'bob',
+        'charlie',
+        'dave',
+      ]);
     });
 
     test('deduplicates repeated user IDs while preserving order', () {
-      expect(
-        parseChatRoomReceiverList('alice bob alice charlie bob'),
-        ['alice', 'bob', 'charlie'],
-      );
+      expect(parseChatRoomReceiverList('alice bob alice charlie bob'), [
+        'alice',
+        'bob',
+        'charlie',
+      ]);
     });
   });
 
@@ -173,9 +176,7 @@ void main() {
     message.body.type = MessageType.CMD;
 
     await tester.pumpWidget(
-      const MaterialApp(
-        home: RoomPage(roomId: 'room-001', showAppBar: false),
-      ),
+      const MaterialApp(home: RoomPage(roomId: 'room-001', showAppBar: false)),
     );
 
     final state = tester.state(find.byType(RoomPage)) as dynamic;
@@ -231,9 +232,7 @@ void main() {
     final state = tester.state(find.byType(RoomPage)) as dynamic;
     state.addSendLog(
       'alice: file message',
-      attachment: _buildChatRoomFileMessage(
-        attributes: {'origin': 'old'},
-      ),
+      attachment: _buildChatRoomFileMessage(attributes: {'origin': 'old'}),
       tag: 'message',
     );
     await tester.pumpAndSettle();
@@ -246,7 +245,10 @@ void main() {
     expect(modifiedMessageId, 'msg-1');
     expect(modifiedBody, isNull);
     expect(modifiedAttributes?['origin'], 'old');
-    expect(modifiedAttributes?['qa_chatroom_edit'], chatRoomMessageEditExtValue);
+    expect(
+      modifiedAttributes?['qa_chatroom_edit'],
+      chatRoomMessageEditExtValue,
+    );
     expect(find.text('已编辑'), findsOneWidget);
   });
 
@@ -302,7 +304,10 @@ void main() {
     expect(customBody.params?['old'], 'value');
     expect(customBody.params?['content'], chatRoomMessageEditContent);
     expect(modifiedAttributes?['origin'], 'old');
-    expect(modifiedAttributes?['qa_chatroom_edit'], chatRoomMessageEditExtValue);
+    expect(
+      modifiedAttributes?['qa_chatroom_edit'],
+      chatRoomMessageEditExtValue,
+    );
   });
 
   testWidgets('chatroom command messages do not show edit action', (
@@ -314,9 +319,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      const MaterialApp(
-        home: RoomPage(roomId: 'room-001', showAppBar: false),
-      ),
+      const MaterialApp(home: RoomPage(roomId: 'room-001', showAppBar: false)),
     );
 
     final state = tester.state(find.byType(RoomPage)) as dynamic;
@@ -342,9 +345,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      const MaterialApp(
-        home: RoomPage(roomId: 'room-001', showAppBar: false),
-      ),
+      const MaterialApp(home: RoomPage(roomId: 'room-001', showAppBar: false)),
     );
 
     final state = tester.state(find.byType(RoomPage)) as dynamic;
@@ -371,9 +372,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      const MaterialApp(
-        home: RoomPage(roomId: 'room-001', showAppBar: false),
-      ),
+      const MaterialApp(home: RoomPage(roomId: 'room-001', showAppBar: false)),
     );
 
     final state = tester.state(find.byType(RoomPage)) as dynamic;
@@ -408,7 +407,11 @@ void main() {
           roomId: 'room-001',
           showAppBar: false,
           remoteMessageRemover:
-              ({required conversationId, required type, required msgIds}) async {
+              ({
+                required conversationId,
+                required type,
+                required msgIds,
+              }) async {
                 removedConversationId = conversationId;
                 removedConversationType = type;
                 removedMessageIds = msgIds;
@@ -439,55 +442,60 @@ void main() {
     expect(find.text('已删服务端'), findsOneWidget);
   });
 
-  testWidgets('chatroom message log removes server history before server time', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(1200, 1600);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
+  testWidgets(
+    'chatroom message log removes server history before server time',
+    (tester) async {
+      tester.view.physicalSize = const Size(1200, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-    String? removedConversationId;
-    EMConversationType? removedConversationType;
-    int? removedTimestamp;
+      String? removedConversationId;
+      EMConversationType? removedConversationType;
+      int? removedTimestamp;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: RoomPage(
-          roomId: 'room-001',
-          showAppBar: false,
-          remoteMessageBeforeTimeRemover:
-              ({required conversationId, required type, required timestamp}) async {
-                removedConversationId = conversationId;
-                removedConversationType = type;
-                removedTimestamp = timestamp;
-              },
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RoomPage(
+            roomId: 'room-001',
+            showAppBar: false,
+            remoteMessageBeforeTimeRemover:
+                ({
+                  required conversationId,
+                  required type,
+                  required timestamp,
+                }) async {
+                  removedConversationId = conversationId;
+                  removedConversationType = type;
+                  removedTimestamp = timestamp;
+                },
+          ),
         ),
-      ),
-    );
+      );
 
-    final state = tester.state(find.byType(RoomPage)) as dynamic;
-    state.addSendLog(
-      'alice: delete before server time',
-      attachment: _buildChatRoomTextMessage(
-        content: 'delete before server time',
-        msgId: 'msg-delete-time-1',
-        serverTime: 1710000000000,
-      ),
-      tag: 'message',
-    );
-    await tester.pumpAndSettle();
+      final state = tester.state(find.byType(RoomPage)) as dynamic;
+      state.addSendLog(
+        'alice: delete before server time',
+        attachment: _buildChatRoomTextMessage(
+          content: 'delete before server time',
+          msgId: 'msg-delete-time-1',
+          serverTime: 1710000000000,
+        ),
+        tag: 'message',
+      );
+      await tester.pumpAndSettle();
 
-    await tester.longPress(find.textContaining('delete before server time'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('按时间删'));
-    await tester.pumpAndSettle();
+      await tester.longPress(find.textContaining('delete before server time'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('按时间删'));
+      await tester.pumpAndSettle();
 
-    expect(removedConversationId, 'room-001');
-    expect(removedConversationType, EMConversationType.ChatRoom);
-    expect(removedTimestamp, 1710000000000);
-    expect(find.text('已按时间删服务端'), findsOneWidget);
-  });
+      expect(removedConversationId, 'room-001');
+      expect(removedConversationType, EMConversationType.ChatRoom);
+      expect(removedTimestamp, 1710000000000);
+      expect(find.text('已按时间删服务端'), findsOneWidget);
+    },
+  );
 
   testWidgets('chatroom page fetches custom attributes', (tester) async {
     List<String>? requestedKeys;
@@ -512,6 +520,143 @@ void main() {
     expect(requestedKeys, ['attKey']);
     expect(find.textContaining('聊天室属性: {attKey: attValue}'), findsOneWidget);
   });
+
+  testWidgets('chatroom combine forward sends combine message from ids', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    EMMessage? sentMessage;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RoomPage(
+          roomId: 'room-001',
+          showAppBar: false,
+          roomInfoLoader: (_) async => EMChatRoom.fromJson({
+            'roomId': 'room-001',
+            'name': 'room',
+            'permissionType': EMChatRoomPermissionType.Member.index,
+          }),
+          chatRoomMembersLoader: (_, {cursor = '', pageSize = 50}) async {
+            return EMCursorResult<String>('', []);
+          },
+          messageSender: (message) async {
+            sentMessage = message;
+            return message;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('合并转发'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextField, '消息 ID 列表'),
+      'room-msg-a\nroom-msg-b',
+    );
+    await tester.enterText(find.widgetWithText(TextField, '标题'), '聊天室记录');
+    await tester.enterText(find.widgetWithText(TextField, '摘要'), 'Alice: room');
+    await tester.tap(find.text('确定'));
+    await tester.pumpAndSettle();
+
+    expect(sentMessage, isNotNull);
+    expect(sentMessage!.to, 'room-001');
+    expect(sentMessage!.conversationId, 'room-001');
+    expect(sentMessage!.chatType, ChatType.ChatRoom);
+    expect(sentMessage!.body, isA<EMCombineMessageBody>());
+
+    final bodyJson = sentMessage!.body.toJson();
+    expect(bodyJson['messageList'], ['room-msg-a', 'room-msg-b']);
+    expect(bodyJson['title'], '聊天室记录');
+    expect(bodyJson['summary'], 'Alice: room');
+    expect(find.textContaining('合并转发消息:'), findsOneWidget);
+  });
+
+  testWidgets(
+    'chatroom combine forward pre-fills local successful message ids',
+    (tester) async {
+      tester.view.physicalSize = const Size(1200, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      EMMessage? sentMessage;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RoomPage(
+            roomId: 'room-001',
+            showAppBar: false,
+            roomInfoLoader: (_) async => EMChatRoom.fromJson({
+              'roomId': 'room-001',
+              'name': 'room',
+              'permissionType': EMChatRoomPermissionType.Member.index,
+            }),
+            messageSender: (message) async {
+              sentMessage = message;
+              return message;
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final state = tester.state(find.byType(RoomPage)) as dynamic;
+      state.addReceiveLog(
+        'alice: first',
+        attachment: _buildChatRoomTextMessage(
+          content: 'first',
+          msgId: 'room-local-a',
+        ),
+        tag: 'message',
+      );
+      state.addReceiveLog(
+        'alice: second',
+        attachment: _buildChatRoomTextMessage(
+          content: 'second',
+          msgId: 'room-local-b',
+        ),
+        tag: 'message',
+      );
+      state.addReceiveLog(
+        'alice: failed',
+        attachment: EMMessage.fromJson({
+          'to': 'room-001',
+          'from': 'alice',
+          'body': {'type': MessageType.TXT.index, 'content': 'failed'},
+          'direction': MessageDirection.SEND.index,
+          'msgId': 'room-local-failed',
+          'convId': 'room-001',
+          'chatType': ChatType.ChatRoom.index,
+          'status': MessageStatus.FAIL.index,
+        }),
+        tag: 'message',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('合并转发'));
+      await tester.pumpAndSettle();
+
+      final idsInput = tester.widget<TextField>(
+        find.widgetWithText(TextField, '消息 ID 列表'),
+      );
+      expect(idsInput.controller?.text, 'room-local-b\nroom-local-a');
+
+      await tester.tap(find.text('确定'));
+      await tester.pumpAndSettle();
+
+      expect(sentMessage, isNotNull);
+      final bodyJson = sentMessage!.body.toJson();
+      expect(bodyJson['messageList'], ['room-local-b', 'room-local-a']);
+      expect(bodyJson['messageList'], isNot(contains('room-local-failed')));
+    },
+  );
 }
 
 EMMessage _buildChatRoomTextMessage({
@@ -580,10 +725,7 @@ EMMessage _buildChatRoomCommandMessage() {
   return EMMessage.fromJson({
     'to': 'room-001',
     'from': 'alice',
-    'body': {
-      'type': MessageType.CMD.index,
-      'action': 'qa_cmd',
-    },
+    'body': {'type': MessageType.CMD.index, 'action': 'qa_cmd'},
     'direction': MessageDirection.SEND.index,
     'msgId': 'cmd-1',
     'convId': 'room-001',

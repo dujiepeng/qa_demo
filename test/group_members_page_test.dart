@@ -103,6 +103,59 @@ void main() {
     expect(find.text('attKey: attValue'), findsOneWidget);
   });
 
+  testWidgets('top action can fetch multiple member attributes', (
+    tester,
+  ) async {
+    String? fetchedGroupId;
+    List<String>? fetchedUserIds;
+    List<String>? fetchedKeys;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: GroupMembersPage(
+            groupId: 'group-001',
+            membersLoader: (_, {cursor = '', pageSize = 50}) async =>
+                EMCursorResult<String>('', const ['alice', 'bob']),
+            membersAttributesFetcher:
+                ({required groupId, required userIds, keys}) async {
+                  fetchedGroupId = groupId;
+                  fetchedUserIds = userIds;
+                  fetchedKeys = keys;
+                  return const {
+                    'alice': {'nickname': 'Alice'},
+                    'bob': {'role': 'qa'},
+                  };
+                },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('批量属性'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, '成员 ID 列表'),
+      'alice,bob',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, '属性 key 列表'),
+      'nickname,role',
+    );
+    await tester.tap(find.text('确定'));
+    await tester.pumpAndSettle();
+
+    expect(fetchedGroupId, 'group-001');
+    expect(fetchedUserIds, ['alice', 'bob']);
+    expect(fetchedKeys, ['nickname', 'role']);
+    expect(find.text('批量成员属性'), findsOneWidget);
+    expect(
+      find.textContaining('alice\n  nickname: Alice\nbob\n  role: qa'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('top action opens group block list with server data', (
     tester,
   ) async {

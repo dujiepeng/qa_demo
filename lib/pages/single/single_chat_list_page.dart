@@ -12,12 +12,24 @@ class SingleChatListPage extends StatefulWidget {
   final Function(String userId)? onItemTap;
   final Future<List<EMContact>> Function()? loadContacts;
   final Future<void> Function(String userId)? addUserToBlockList;
+  final Future<List<String>> Function()? fetchAllContactIds;
+  final Future<EMCursorResult<EMContact>> Function({
+    String? cursor,
+    int pageSize,
+  })?
+  fetchPagedContacts;
+  final Future<List<String>> Function()? fetchAllContactsFromServerOld;
+  final Future<List<String>> Function()? fetchBlockListFromServerOld;
 
   const SingleChatListPage({
     super.key,
     this.onItemTap,
     this.loadContacts,
     this.addUserToBlockList,
+    this.fetchAllContactIds,
+    this.fetchPagedContacts,
+    this.fetchAllContactsFromServerOld,
+    this.fetchBlockListFromServerOld,
   });
 
   @override
@@ -28,6 +40,7 @@ class _SingleChatListPageState extends State<SingleChatListPage> {
   final _settings = AppSettings();
   final ScrollController _scrollController = ScrollController();
   List<EMContact> _contacts = [];
+  final List<String> _serverToolLogs = [];
   final List<_ContactInvitation> _pendingInvitations = [];
   bool _isLoading = false;
 
@@ -284,6 +297,86 @@ class _SingleChatListPageState extends State<SingleChatListPage> {
     }
   }
 
+  Future<void> _fetchServerContactTools() async {
+    try {
+      final contactIds =
+          await (widget.fetchAllContactIds ??
+                  EMClient.getInstance.contactManager.fetchAllContactIds)
+              .call();
+      if (!mounted) return;
+      _appendServerToolLog(
+        contactIds.isEmpty
+            ? '服务端联系人ID为空'
+            : '服务端联系人ID: ${contactIds.join(', ')}',
+      );
+
+      final pagedContacts =
+          await (widget.fetchPagedContacts ??
+                  EMClient.getInstance.contactManager.fetchContacts)
+              .call(pageSize: 20);
+      if (!mounted) return;
+      _appendServerToolLog(
+        pagedContacts.data.isEmpty
+            ? '分页联系人为空'
+            : '分页联系人: ${_formatContactSummary(pagedContacts.data)}',
+      );
+
+      final oldContactIds =
+          await (widget.fetchAllContactsFromServerOld ??
+                  () {
+                    return EMClient.getInstance.contactManager
+                        // ignore: deprecated_member_use
+                        .getAllContactsFromServer();
+                  })
+              .call();
+      if (!mounted) return;
+      _appendServerToolLog(
+        oldContactIds.isEmpty
+            ? 'old联系人为空'
+            : 'old联系人: ${oldContactIds.join(', ')}',
+      );
+
+      final oldBlockIds =
+          await (widget.fetchBlockListFromServerOld ??
+                  () {
+                    return EMClient.getInstance.contactManager
+                        // ignore: deprecated_member_use
+                        .getBlockListFromServer();
+                  })
+              .call();
+      if (!mounted) return;
+      _appendServerToolLog(
+        oldBlockIds.isEmpty ? 'old黑名单为空' : 'old黑名单: ${oldBlockIds.join(', ')}',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _showSnackBar('服务端联系人工具失败: $e');
+    }
+  }
+
+  String _formatContactSummary(List<EMContact> contacts) {
+    return contacts
+        .map((contact) {
+          final remark = contact.remark.trim();
+          return remark.isEmpty ? contact.userId : '${contact.userId}($remark)';
+        })
+        .join(', ');
+  }
+
+  void _showSnackBar(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  void _appendServerToolLog(String text) {
+    setState(() {
+      _serverToolLogs.insert(0, text);
+      if (_serverToolLogs.length > 8) {
+        _serverToolLogs.removeLast();
+      }
+    });
+    _showSnackBar(text);
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -302,6 +395,16 @@ class _SingleChatListPageState extends State<SingleChatListPage> {
               centerTitle: true,
               actions: [
                 IconButton(onPressed: _addFriend, icon: const Icon(Icons.add)),
+                TextButton(
+                  onPressed: _fetchServerContactTools,
+                  child: Text(
+                    '服务端',
+                    style: TextStyle(
+                      color: AppColors.textPrimary(isDark),
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
                 TextButton(
                   child: Text(
                     '单聊',
@@ -339,6 +442,7 @@ class _SingleChatListPageState extends State<SingleChatListPage> {
                     child: _contacts.isEmpty && _pendingInvitations.isEmpty
                         ? ListView(
                             children: [
+                              ..._buildServerToolLogTiles(isDark),
                               SizedBox(
                                 height:
                                     MediaQuery.of(context).size.height - 200,
@@ -357,15 +461,20 @@ class _SingleChatListPageState extends State<SingleChatListPage> {
                             controller: _scrollController,
                             physics: const AlwaysScrollableScrollPhysics(),
                             itemCount:
-                                _pendingInvitations.length + _contacts.length,
+                                _serverToolLogs.length +
+                                _pendingInvitations.length +
+                                _contacts.length,
                             itemBuilder: (context, index) {
-                              if (index < _pendingInvitations.length) {
-                                final invitation =
-                                    _pendingInvitations[index];
-                                return _buildInvitationTile(
-                                  invitation,
+                              if (index < _serverToolLogs.length) {
+                                return _buildServerToolLogTile(
+                                  _serverToolLogs[index],
                                   isDark,
                                 );
+                              }
+                              index -= _serverToolLogs.length;
+                              if (index < _pendingInvitations.length) {
+                                final invitation = _pendingInvitations[index];
+                                return _buildInvitationTile(invitation, isDark);
                               }
                               final contactIndex =
                                   index - _pendingInvitations.length;
@@ -534,6 +643,28 @@ class _SingleChatListPageState extends State<SingleChatListPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  List<Widget> _buildServerToolLogTiles(bool isDark) {
+    return _serverToolLogs
+        .map((log) => _buildServerToolLogTile(log, isDark))
+        .toList();
+  }
+
+  Widget _buildServerToolLogTile(String log, bool isDark) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.inputBackground(isDark),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.glassBorder(isDark)),
+      ),
+      child: Text(
+        log,
+        style: TextStyle(color: AppColors.textPrimary(isDark), fontSize: 13),
       ),
     );
   }

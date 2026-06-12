@@ -10,8 +10,13 @@ typedef FetchOwnInfoCallback = Future<EMUserInfo?> Function();
 typedef UpdateOwnInfoCallback =
     Future<EMUserInfo> Function({
       String? nickname,
+      String? avatarUrl,
       String? birth,
       String? mail,
+      String? phone,
+      int? gender,
+      String? sign,
+      String? ext,
     });
 
 class MyUserProfilePageMobile extends StatefulWidget {
@@ -35,8 +40,13 @@ class MyUserProfilePageMobile extends StatefulWidget {
 
 class _MyUserProfilePageMobileState extends State<MyUserProfilePageMobile> {
   final _nicknameController = TextEditingController();
+  final _avatarUrlController = TextEditingController();
   final _ageController = TextEditingController();
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _genderController = TextEditingController();
+  final _signController = TextEditingController();
+  final _extController = TextEditingController();
 
   late MyUserProfile _profile;
   bool _isEditing = false;
@@ -53,8 +63,8 @@ class _MyUserProfilePageMobileState extends State<MyUserProfilePageMobile> {
 
   Future<void> _loadOwnInfo() async {
     try {
-      final userInfo =
-          await (widget.fetchOwnInfo ?? _defaultFetchOwnInfo).call();
+      final userInfo = await (widget.fetchOwnInfo ?? _defaultFetchOwnInfo)
+          .call();
       if (!mounted) {
         return;
       }
@@ -82,34 +92,84 @@ class _MyUserProfilePageMobileState extends State<MyUserProfilePageMobile> {
       nickname: userInfo.nickName?.trim().isNotEmpty == true
           ? userInfo.nickName!.trim()
           : '未设置',
+      avatarUrl: userInfo.avatarUrl?.trim() ?? '',
       birthday: userInfo.birth?.trim() ?? '',
       email: userInfo.mail?.trim() ?? '',
+      phone: userInfo.phone?.trim() ?? '',
+      gender: userInfo.gender,
+      sign: userInfo.sign?.trim() ?? '',
+      ext: userInfo.ext?.trim() ?? '',
+    );
+  }
+
+  MyUserProfile _mergeUserInfo(
+    EMUserInfo userInfo, {
+    required MyUserProfile fallback,
+  }) {
+    final nickname = userInfo.nickName?.trim();
+    final avatarUrl = userInfo.avatarUrl?.trim();
+    final birth = userInfo.birth?.trim();
+    final mail = userInfo.mail?.trim();
+    final phone = userInfo.phone?.trim();
+    final sign = userInfo.sign?.trim();
+    final ext = userInfo.ext?.trim();
+    return MyUserProfile(
+      nickname: nickname?.isNotEmpty == true ? nickname! : fallback.nickname,
+      avatarUrl: avatarUrl?.isNotEmpty == true
+          ? avatarUrl!
+          : fallback.avatarUrl,
+      birthday: birth?.isNotEmpty == true ? birth! : fallback.birthday,
+      email: mail?.isNotEmpty == true ? mail! : fallback.email,
+      phone: phone?.isNotEmpty == true ? phone! : fallback.phone,
+      gender: userInfo.gender == 0 ? fallback.gender : userInfo.gender,
+      sign: sign?.isNotEmpty == true ? sign! : fallback.sign,
+      ext: ext?.isNotEmpty == true ? ext! : fallback.ext,
     );
   }
 
   @override
   void dispose() {
     _nicknameController.dispose();
+    _avatarUrlController.dispose();
     _ageController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
+    _genderController.dispose();
+    _signController.dispose();
+    _extController.dispose();
     super.dispose();
   }
 
   void _syncControllers() {
     _nicknameController.text = _profile.nickname;
+    _avatarUrlController.text = _profile.avatarUrl;
     _ageController.text = _profile.birthday;
     _emailController.text = _profile.email;
+    _phoneController.text = _profile.phone;
+    _genderController.text = _profile.gender.toString();
+    _signController.text = _profile.sign;
+    _extController.text = _profile.ext;
   }
 
   Future<EMUserInfo> _defaultUpdateOwnInfo({
     String? nickname,
+    String? avatarUrl,
     String? birth,
     String? mail,
+    String? phone,
+    int? gender,
+    String? sign,
+    String? ext,
   }) {
     return EMClient.getInstance.userInfoManager.updateUserInfo(
       nickname: nickname,
+      avatarUrl: avatarUrl,
       birth: birth,
       mail: mail,
+      phone: phone,
+      gender: gender,
+      sign: sign,
+      ext: ext,
     );
   }
 
@@ -123,6 +183,13 @@ class _MyUserProfilePageMobileState extends State<MyUserProfilePageMobile> {
 
     final birthday = _ageController.text.trim();
     final email = _emailController.text.trim();
+    final gender = int.tryParse(_genderController.text.trim());
+    if (gender == null || gender < 0 || gender > 2) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('性别只能填写 0、1 或 2')));
+      return;
+    }
     final emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
     if (email.isEmpty || !emailPattern.hasMatch(email)) {
       ScaffoldMessenger.of(
@@ -133,8 +200,13 @@ class _MyUserProfilePageMobileState extends State<MyUserProfilePageMobile> {
 
     final nextProfile = MyUserProfile(
       nickname: _nicknameController.text.trim(),
+      avatarUrl: _avatarUrlController.text.trim(),
       birthday: birthday,
       email: email,
+      phone: _phoneController.text.trim(),
+      gender: gender,
+      sign: _signController.text.trim(),
+      ext: _extController.text.trim(),
     );
     setState(() {
       _isSaving = true;
@@ -144,14 +216,22 @@ class _MyUserProfilePageMobileState extends State<MyUserProfilePageMobile> {
       final updatedUserInfo =
           await (widget.updateOwnInfo ?? _defaultUpdateOwnInfo).call(
             nickname: nextProfile.nickname,
+            avatarUrl: nextProfile.avatarUrl,
             birth: nextProfile.birthday,
             mail: nextProfile.email,
+            phone: nextProfile.phone,
+            gender: nextProfile.gender,
+            sign: nextProfile.sign,
+            ext: nextProfile.ext,
           );
       if (!mounted) {
         return;
       }
 
-      final savedProfile = _mapUserInfo(updatedUserInfo);
+      var savedProfile = _mergeUserInfo(updatedUserInfo, fallback: nextProfile);
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _profile = savedProfile;
         _isEditing = false;
@@ -224,6 +304,13 @@ class _MyUserProfilePageMobileState extends State<MyUserProfilePageMobile> {
               enabled: _isEditing,
             ),
             _ProfileFieldCard(
+              label: '头像',
+              controller: _avatarUrlController,
+              value: _profile.avatarUrl,
+              enabled: _isEditing,
+              keyboardType: TextInputType.url,
+            ),
+            _ProfileFieldCard(
               label: '生日',
               controller: _ageController,
               value: _profile.birthday,
@@ -237,10 +324,47 @@ class _MyUserProfilePageMobileState extends State<MyUserProfilePageMobile> {
               enabled: _isEditing,
               keyboardType: TextInputType.emailAddress,
             ),
+            _ProfileFieldCard(
+              label: '手机号',
+              controller: _phoneController,
+              value: _profile.phone,
+              enabled: _isEditing,
+              keyboardType: TextInputType.phone,
+            ),
+            _ProfileFieldCard(
+              label: '性别',
+              controller: _genderController,
+              value: _genderText(_profile.gender),
+              enabled: _isEditing,
+              keyboardType: TextInputType.number,
+            ),
+            _ProfileFieldCard(
+              label: '签名',
+              controller: _signController,
+              value: _profile.sign,
+              enabled: _isEditing,
+            ),
+            _ProfileFieldCard(
+              label: '扩展',
+              controller: _extController,
+              value: _profile.ext,
+              enabled: _isEditing,
+            ),
           ],
         ),
       ),
     );
+  }
+
+  String _genderText(int gender) {
+    switch (gender) {
+      case 1:
+        return '男 (1)';
+      case 2:
+        return '女 (2)';
+      default:
+        return '未知 (0)';
+    }
   }
 }
 
@@ -283,6 +407,7 @@ class _ProfileFieldCard extends StatelessWidget {
           const SizedBox(height: 10),
           if (enabled)
             TextField(
+              key: ValueKey('profile_field_$label'),
               controller: controller,
               keyboardType: keyboardType,
               style: TextStyle(color: AppColors.textPrimary(isDark)),
