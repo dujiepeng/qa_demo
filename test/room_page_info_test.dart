@@ -31,6 +31,8 @@ class _TestClient extends Client {
 class _TestChatRoomManager extends ChatRoomManager {
   final List<_RoomAction> actions = [];
   Map<String, int> removeAttributesResult = const <String, int>{};
+  Object? muteAllError;
+  Object? unMuteAllError;
 
   @override
   Future<dynamic> callNativeMethod(String method, [dynamic params]) async {
@@ -38,6 +40,22 @@ class _TestChatRoomManager extends ChatRoomManager {
     if (method == 'removeChatRoomAttributes') {
       actions.add(_RoomAction(method, request));
       return {method: removeAttributesResult};
+    }
+    if (method == 'muteAllChatRoomMembers') {
+      actions.add(_RoomAction(method, request));
+      final error = muteAllError;
+      if (error != null) {
+        throw error;
+      }
+      return {method: true};
+    }
+    if (method == 'unMuteAllChatRoomMembers') {
+      actions.add(_RoomAction(method, request));
+      final error = unMuteAllError;
+      if (error != null) {
+        throw error;
+      }
+      return {method: true};
     }
     return {};
   }
@@ -196,7 +214,9 @@ void main() {
           msyncPort: 18000,
           wsServer: 'im.example.com',
           wsPort: 18080,
+          wsPath: '/im',
           isMsync: false,
+          enableTls: true,
         ),
       );
 
@@ -304,6 +324,108 @@ void main() {
     );
     expect(transferButton.onPressed, isNotNull);
     expect(destroyButton.onPressed, isNotNull);
+  });
+
+  testWidgets(
+    'chatroom page fetches announcement and membership states from server',
+    (tester) async {
+      String? announcementRoomId;
+      String? allowRoomId;
+      String? muteRoomId;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RoomPage(
+            roomId: 'room-001',
+            showAppBar: false,
+            roomInfoLoader: (_) async => EMChatRoom(
+              roomId: 'room-001',
+              permissionType: EMChatRoomPermissionType.Member,
+            ),
+            announcementFetcher: (roomId) async {
+              announcementRoomId = roomId;
+              return 'server announcement';
+            },
+            allowListMembershipChecker: (roomId) async {
+              allowRoomId = roomId;
+              return true;
+            },
+            muteListMembershipChecker: (roomId) async {
+              muteRoomId = roomId;
+              return false;
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('取公告'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('查白名单'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('查禁言'));
+      await tester.pumpAndSettle();
+
+      expect(announcementRoomId, 'room-001');
+      expect(allowRoomId, 'room-001');
+      expect(muteRoomId, 'room-001');
+      expect(find.textContaining('聊天室公告: server announcement'), findsOneWidget);
+      expect(find.textContaining('当前用户在聊天室白名单中: true'), findsOneWidget);
+      expect(find.textContaining('当前用户在聊天室禁言列表中: false'), findsOneWidget);
+    },
+  );
+
+  testWidgets('chatroom mute list logs when current user has no permission', (
+    tester,
+  ) async {
+    var loadCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RoomPage(
+          roomId: 'room-001',
+          showAppBar: false,
+          roomInfoLoader: (_) async {
+            loadCount += 1;
+            return EMChatRoom(
+              roomId: 'room-001',
+              permissionType: EMChatRoomPermissionType.None,
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('禁言列表'));
+    await tester.pumpAndSettle();
+
+    expect(loadCount, greaterThanOrEqualTo(1));
+    expect(find.textContaining('当前用户无聊天室权限，不能打开禁言列表'), findsOneWidget);
+    expect(find.text('暂无禁言成员'), findsNothing);
+  });
+
+  testWidgets('chatroom mute list opens when current user has permission', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RoomPage(
+          roomId: 'room-001',
+          showAppBar: false,
+          roomInfoLoader: (_) async => EMChatRoom(
+            roomId: 'room-001',
+            permissionType: EMChatRoomPermissionType.Member,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('禁言列表'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('禁言列表 (0)'), findsOneWidget);
   });
 
   testWidgets('removed from chatroom callback switches leave to join', (
@@ -432,5 +554,79 @@ void main() {
 
     expect(find.textContaining('聊天室属性 attKey 不存在，无需删除'), findsWidgets);
     expect(find.textContaining('删除聊天室属性失败详情: {attKey: 400}'), findsOneWidget);
+  });
+
+  testWidgets('chatroom all mute failure writes real error log', (
+    tester,
+  ) async {
+    final testClient = _TestClient();
+    testClient._chatRoomManager.muteAllError = Exception('permission denied');
+    Client.instance = testClient;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RoomPage(
+          roomId: 'room-001',
+          showAppBar: false,
+          roomInfoLoader: (_) async => EMChatRoom(
+            roomId: 'room-001',
+            isAllMemberMuted: false,
+            permissionType: EMChatRoomPermissionType.Member,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('全部禁言'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(Switch).last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(testClient.actions.length, 1);
+    expect(testClient.actions.single.method, 'muteAllChatRoomMembers');
+    expect(testClient.actions.single.params['roomId'], 'room-001');
+    expect(
+      find.textContaining('聊天室全部禁言失败: Exception: permission denied'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('chatroom cancel all mute failure writes real error log', (
+    tester,
+  ) async {
+    final testClient = _TestClient();
+    testClient._chatRoomManager.unMuteAllError = Exception('permission denied');
+    Client.instance = testClient;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RoomPage(
+          roomId: 'room-001',
+          showAppBar: false,
+          roomInfoLoader: (_) async => EMChatRoom(
+            roomId: 'room-001',
+            isAllMemberMuted: true,
+            permissionType: EMChatRoomPermissionType.Member,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('全部禁言'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(Switch).last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(testClient.actions.length, 1);
+    expect(testClient.actions.single.method, 'unMuteAllChatRoomMembers');
+    expect(testClient.actions.single.params['roomId'], 'room-001');
+    expect(
+      find.textContaining('聊天室取消全部禁言失败: Exception: permission denied'),
+      findsOneWidget,
+    );
   });
 }

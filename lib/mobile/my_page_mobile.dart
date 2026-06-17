@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 
 import '../common/widgets/common_gradient_background.dart';
 import '../common/widgets/input_dialog.dart';
@@ -7,9 +8,15 @@ import '../theme/app_settings.dart';
 import 'my_devices_page_mobile.dart';
 import 'my_models.dart';
 import 'my_user_profile_page_mobile.dart';
+import 'push_settings_page_mobile.dart';
+import 'user_info_lookup_page_mobile.dart';
+
+typedef UpdatePushNicknameCallback = Future<void> Function(String nickname);
 
 class MyPageMobile extends StatefulWidget {
-  const MyPageMobile({super.key});
+  const MyPageMobile({super.key, this.updatePushNickname});
+
+  final UpdatePushNicknameCallback? updatePushNickname;
 
   @override
   State<MyPageMobile> createState() => _MyPageMobileState();
@@ -39,12 +46,33 @@ class _MyPageMobileState extends State<MyPageMobile> {
       return;
     }
     final nickname = result.first.text.trim();
-    setState(() {
-      _pushNickname = nickname.isEmpty ? '未设置' : nickname;
-    });
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('推送昵称已更新')));
+    try {
+      if (nickname.isNotEmpty) {
+        await (widget.updatePushNickname ?? _updatePushNicknameFromSdk).call(
+          nickname,
+        );
+      }
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _pushNickname = nickname.isEmpty ? '未设置' : nickname;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('推送昵称已更新')));
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('推送昵称更新失败: $e')));
+    }
+  }
+
+  Future<void> _updatePushNicknameFromSdk(String nickname) {
+    return EMClient.getInstance.pushManager.updatePushNickname(nickname);
   }
 
   Future<void> _openUserProfilePage() async {
@@ -107,9 +135,33 @@ class _MyPageMobileState extends State<MyPageMobile> {
               ),
               const SizedBox(height: 12),
               _MyActionCell(
+                icon: Icons.tune_outlined,
+                title: '推送设置',
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const PushSettingsPageMobile(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+              _MyActionCell(
                 icon: Icons.badge_outlined,
                 title: '设置用户信息',
                 onTap: _openUserProfilePage,
+              ),
+              const SizedBox(height: 12),
+              _MyActionCell(
+                icon: Icons.manage_accounts_outlined,
+                title: '查询用户属性',
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const UserInfoLookupPageMobile(),
+                    ),
+                  );
+                },
               ),
             ],
           ),

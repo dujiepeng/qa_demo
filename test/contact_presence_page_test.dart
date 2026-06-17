@@ -309,6 +309,33 @@ void main() {
     expect(find.text('已查询 alice 的在线状态：在线'), findsOneWidget);
   });
 
+  testWidgets('contact presence page publishes custom status', (tester) async {
+    String? publishedDescription;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ContactPresencePage(
+          loadContacts: () async => [
+            EMContact.fromJson({'userId': 'alice', 'remark': ''}),
+          ],
+          publishPresence: (description) async {
+            publishedDescription = description;
+          },
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('发布 Presence'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'busy');
+    await tester.tap(find.text('确定'));
+    await tester.pumpAndSettle();
+
+    expect(publishedDescription, 'busy');
+    expect(find.text('Presence 状态已发布'), findsOneWidget);
+  });
+
   testWidgets('manual query refreshes display even when result time is older', (
     tester,
   ) async {

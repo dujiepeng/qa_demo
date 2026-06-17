@@ -26,10 +26,12 @@ class _HomePageState extends State<HomePage> {
   static const _offlineMessageHandlerId = 'home_page_offline_message_counter';
   static const _contactHandlerId = 'home_page_contact_events';
   static const _groupHandlerId = 'home_page_group_events';
+  static const _multiDeviceHandlerId = 'home_page_multi_device_events';
   bool _connectionHandlerAttached = false;
   bool _offlineMessageHandlerAttached = false;
   bool _contactHandlerAttached = false;
   bool _groupHandlerAttached = false;
+  bool _multiDeviceHandlerAttached = false;
 
   @override
   void initState() {
@@ -47,6 +49,7 @@ class _HomePageState extends State<HomePage> {
       _attachOfflineMessageCounter();
       _attachContactEventHandler();
       _attachGroupEventHandler();
+      _attachMultiDeviceEventHandler();
       await EMClient.getInstance.startCallback();
     });
   }
@@ -67,8 +70,57 @@ class _HomePageState extends State<HomePage> {
     if (_groupHandlerAttached) {
       EMClient.getInstance.groupManager.removeEventHandler(_groupHandlerId);
     }
+    if (_multiDeviceHandlerAttached) {
+      EMClient.getInstance.removeMultiDeviceEventHandler(_multiDeviceHandlerId);
+    }
     VersionManager().removeListener(_checkAndShowUpdateDialog);
     super.dispose();
+  }
+
+  void _attachMultiDeviceEventHandler() {
+    if (_multiDeviceHandlerAttached) {
+      return;
+    }
+    final overlayController = context.read<ConnectionStatusOverlayController>();
+    EMClient.getInstance.addMultiDeviceEventHandler(
+      _multiDeviceHandlerId,
+      EMMultiDeviceEventHandler(
+        onContactEvent: (event, userId, ext) {
+          final extText = ext?.trim();
+          final suffix = extText == null || extText.isEmpty
+              ? ''
+              : '，扩展: $extText';
+          overlayController.showMessage(
+            '多端联系人事件: ${event.name}，用户: $userId$suffix',
+          );
+        },
+        onGroupEvent: (event, groupId, userIds) {
+          final members = userIds == null || userIds.isEmpty
+              ? ''
+              : '，成员: ${userIds.join(',')}';
+          overlayController.showMessage(
+            '多端群组事件: ${event.name}，群组: $groupId$members',
+          );
+        },
+        onChatThreadEvent: (event, chatThreadId, userIds) {
+          final members = userIds.isEmpty ? '' : '，成员: ${userIds.join(',')}';
+          overlayController.showMessage(
+            '多端 Thread 事件: ${event.name}，Thread: $chatThreadId$members',
+          );
+        },
+        onRemoteMessagesRemoved: (conversationId, deviceId) {
+          overlayController.showMessage(
+            '多端漫游消息删除: $conversationId，设备: $deviceId',
+          );
+        },
+        onConversationEvent: (event, conversationId, type) {
+          overlayController.showMessage(
+            '多端会话事件: ${event.name}，会话: $conversationId，类型: ${type.name}',
+          );
+        },
+      ),
+    );
+    _multiDeviceHandlerAttached = true;
   }
 
   void _attachGroupEventHandler() {

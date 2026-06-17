@@ -11,6 +11,8 @@ import '../../common/widgets/common_section_title.dart';
 import '../../common/widgets/common_layout.dart';
 import '../../common/widgets/info_dialog.dart';
 import '../../common/mixins/base_mixin.dart';
+import '../../common/widgets/input_dialog.dart';
+import '../../common/utils/message_forward_helper.dart';
 import 'single_chat_reaction.dart';
 
 bool isSingleChatPinEventForCurrentConversation({
@@ -22,11 +24,103 @@ bool isSingleChatPinEventForCurrentConversation({
       normalizedCurrentUserId == conversationId.trim().toLowerCase();
 }
 
+EMMessage createSingleChatCommandMessage(String targetId) {
+  return EMMessage.createCmdSendMessage(
+    targetId: targetId.trim().toLowerCase(),
+    action: 'action1',
+    chatType: ChatType.Chat,
+  );
+}
+
+typedef SingleChatMessageSender = Future<EMMessage> Function(EMMessage message);
+typedef SingleChatMessageResender =
+    Future<EMMessage> Function(EMMessage message);
+typedef SingleChatMessageImporter =
+    Future<void> Function(List<EMMessage> messages);
+typedef SingleChatConversationGetter =
+    Future<EMConversation?> Function(
+      String conversationId, {
+      EMConversationType type,
+      bool createIfNeed,
+    });
+typedef SingleChatConversationMessageInserter =
+    Future<void> Function(EMConversation conversation, EMMessage message);
+typedef SingleChatMessageLoader = Future<EMMessage?> Function(String messageId);
+typedef SingleChatMessagePinInfoLoader =
+    Future<MessagePinInfo?> Function(EMMessage message);
+typedef SingleChatMessageDownloader = Future<void> Function(EMMessage message);
+typedef SingleChatCombineDetailFetcher =
+    Future<List<EMMessage>> Function(EMMessage message);
+typedef SingleChatReactionListFetcher =
+    Future<Map<String, List<EMMessageReaction>>> Function({
+      required List<String> messageIds,
+      required ChatType chatType,
+      String? groupId,
+    });
+typedef SingleChatReactionDetailFetcher =
+    Future<EMCursorResult<EMMessageReaction>> Function({
+      required String messageId,
+      required String reaction,
+      String? cursor,
+      int pageSize,
+    });
+typedef SingleChatSupportedLanguagesFetcher =
+    Future<List<EMTranslateLanguage>> Function();
+typedef SingleChatMessageReporter =
+    Future<void> Function({
+      required String messageId,
+      required String tag,
+      required String reason,
+    });
+typedef SingleChatMessageTranslator =
+    Future<EMMessage> Function({
+      required EMMessage msg,
+      required List<String> languages,
+    });
+
 class SingleChatPage extends StatefulWidget {
-  const SingleChatPage({super.key, this.userId, this.showAppBar = true});
+  const SingleChatPage({
+    super.key,
+    this.userId,
+    this.showAppBar = true,
+    this.messageSender,
+    this.messageResender,
+    this.messageImporter,
+    this.conversationGetter,
+    this.conversationMessageInserter,
+    this.messageLoader,
+    this.messagePinInfoLoader,
+    this.attachmentDownloader,
+    this.thumbnailDownloader,
+    this.combineAttachmentDownloader,
+    this.combineThumbnailDownloader,
+    this.combineMessageDetailFetcher,
+    this.reactionListFetcher,
+    this.reactionDetailFetcher,
+    this.supportedLanguagesFetcher,
+    this.messageReporter,
+    this.messageTranslator,
+  });
 
   final String? userId;
   final bool showAppBar;
+  final SingleChatMessageSender? messageSender;
+  final SingleChatMessageResender? messageResender;
+  final SingleChatMessageImporter? messageImporter;
+  final SingleChatConversationGetter? conversationGetter;
+  final SingleChatConversationMessageInserter? conversationMessageInserter;
+  final SingleChatMessageLoader? messageLoader;
+  final SingleChatMessagePinInfoLoader? messagePinInfoLoader;
+  final SingleChatMessageDownloader? attachmentDownloader;
+  final SingleChatMessageDownloader? thumbnailDownloader;
+  final SingleChatMessageDownloader? combineAttachmentDownloader;
+  final SingleChatMessageDownloader? combineThumbnailDownloader;
+  final SingleChatCombineDetailFetcher? combineMessageDetailFetcher;
+  final SingleChatReactionListFetcher? reactionListFetcher;
+  final SingleChatReactionDetailFetcher? reactionDetailFetcher;
+  final SingleChatSupportedLanguagesFetcher? supportedLanguagesFetcher;
+  final SingleChatMessageReporter? messageReporter;
+  final SingleChatMessageTranslator? messageTranslator;
 
   @override
   State<SingleChatPage> createState() => _SingleChatPageState();
@@ -293,11 +387,40 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
     final attachment = entry.attachment;
     if (entry.tag == 'message' && attachment is EMMessage) {
       final message = attachment;
-      final latestMessage =
-          await EMClient.getInstance.chatManager.loadMessage(message.msgId) ??
-          message;
-      final isPinned = await latestMessage.pinInfo() != null;
+      final latestMessage = await _loadMessage(message.msgId) ?? message;
+      final isPinned = await _loadMessagePinInfo(latestMessage) != null;
       actions.addAll([
+        LogAction(
+          id: 'forward',
+          title: '转发',
+          icon: Icons.forward_outlined,
+          onSelected: (_) => _forwardMessage(message),
+        ),
+        LogAction(
+          id: 'resend',
+          title: '重发',
+          icon: Icons.refresh_outlined,
+          onSelected: (_) async {
+            try {
+              final resent = await _resendMessage(message);
+              addSendLog(
+                '重发消息: ${resent.toJson()}',
+                attachment: resent,
+                tag: 'message',
+              );
+              return const LogActionResult(
+                overlayLabel: '已重发',
+                overlayStyle: LogOverlayStyle.success,
+              );
+            } catch (e) {
+              addAppErrLog('重发失败: $e');
+              return LogActionResult(
+                overlayLabel: '重发失败: $e',
+                overlayStyle: LogOverlayStyle.error,
+              );
+            }
+          },
+        ),
         LogAction(
           id: 'send_read_ack',
           title: '发送单聊已读ACK',
@@ -349,6 +472,67 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
               );
             }
           },
+        ),
+        LogAction(
+          id: 'fetch_reaction_list',
+          title: 'Reaction列表',
+          icon: Icons.list_alt_outlined,
+          onSelected: (_) => _fetchReactionList(message),
+        ),
+        LogAction(
+          id: 'fetch_reaction_detail',
+          title: 'Reaction详情',
+          icon: Icons.manage_search_outlined,
+          onSelected: (_) => _fetchReactionDetail(message),
+        ),
+        LogAction(
+          id: 'download_attachment',
+          title: '下附件',
+          icon: Icons.download_outlined,
+          onSelected: (_) => _downloadAttachment(message),
+        ),
+        LogAction(
+          id: 'download_thumbnail',
+          title: '下缩略图',
+          icon: Icons.image_search_outlined,
+          onSelected: (_) => _downloadThumbnail(message),
+        ),
+        LogAction(
+          id: 'download_combine_attachment',
+          title: '合并附件',
+          icon: Icons.inventory_2_outlined,
+          onSelected: (_) => _downloadCombineAttachment(message),
+        ),
+        LogAction(
+          id: 'download_combine_thumbnail',
+          title: '合并缩略',
+          icon: Icons.photo_library_outlined,
+          onSelected: (_) => _downloadCombineThumbnail(message),
+        ),
+        LogAction(
+          id: 'fetch_combine_detail',
+          title: '合并详情',
+          icon: Icons.account_tree_outlined,
+          onSelected: (_) => _fetchCombineDetail(message),
+        ),
+        LogAction(
+          id: 'fetch_supported_languages',
+          title: '语言列表',
+          icon: Icons.language_outlined,
+          onSelected: (_) => _fetchSupportedLanguages(),
+        ),
+        LogAction(
+          id: 'translate_message',
+          title: '翻译',
+          icon: Icons.translate_outlined,
+          onSelected: (_) => _translateMessage(message),
+        ),
+        LogAction(
+          id: 'report_message',
+          title: '举报',
+          icon: Icons.report_outlined,
+          isDestructive: true,
+          onSelected: (_) => _reportMessage(message),
         ),
         LogAction(
           id: 'pin_message',
@@ -480,6 +664,489 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
     return actions;
   }
 
+  Future<EMMessage> _resendMessage(EMMessage message) {
+    final resender = widget.messageResender;
+    if (resender != null) {
+      return resender(message);
+    }
+    return EMClient.getInstance.chatManager.resendMessage(message);
+  }
+
+  Future<LogActionResult?> _downloadAttachment(EMMessage message) async {
+    try {
+      await (widget.attachmentDownloader ??
+              EMClient.getInstance.chatManager.downloadAttachment)
+          .call(message);
+      addReceiveLog('已发起附件下载: ${message.msgId}');
+      return const LogActionResult(
+        overlayLabel: '附件下载已发起',
+        overlayStyle: LogOverlayStyle.info,
+      );
+    } catch (e) {
+      addAppErrLog('下载附件失败: $e');
+      return LogActionResult(
+        overlayLabel: '下载附件失败: $e',
+        overlayStyle: LogOverlayStyle.error,
+      );
+    }
+  }
+
+  Future<LogActionResult?> _downloadThumbnail(EMMessage message) async {
+    try {
+      await (widget.thumbnailDownloader ??
+              EMClient.getInstance.chatManager.downloadThumbnail)
+          .call(message);
+      addReceiveLog('已发起缩略图下载: ${message.msgId}');
+      return const LogActionResult(
+        overlayLabel: '缩略图下载已发起',
+        overlayStyle: LogOverlayStyle.info,
+      );
+    } catch (e) {
+      addAppErrLog('下载缩略图失败: $e');
+      return LogActionResult(
+        overlayLabel: '下载缩略图失败: $e',
+        overlayStyle: LogOverlayStyle.error,
+      );
+    }
+  }
+
+  Future<LogActionResult?> _downloadCombineAttachment(EMMessage message) async {
+    try {
+      await (widget.combineAttachmentDownloader ??
+              EMClient
+                  .getInstance
+                  .chatManager
+                  .downloadMessageAttachmentInCombine)
+          .call(message);
+      addReceiveLog('已发起合并消息附件下载: ${message.msgId}');
+      return const LogActionResult(
+        overlayLabel: '合并附件下载已发起',
+        overlayStyle: LogOverlayStyle.info,
+      );
+    } catch (e) {
+      addAppErrLog('下载合并消息附件失败: $e');
+      return LogActionResult(
+        overlayLabel: '合并附件失败: $e',
+        overlayStyle: LogOverlayStyle.error,
+      );
+    }
+  }
+
+  Future<LogActionResult?> _downloadCombineThumbnail(EMMessage message) async {
+    try {
+      await (widget.combineThumbnailDownloader ??
+              EMClient
+                  .getInstance
+                  .chatManager
+                  .downloadMessageThumbnailInCombine)
+          .call(message);
+      addReceiveLog('已发起合并消息缩略图下载: ${message.msgId}');
+      return const LogActionResult(
+        overlayLabel: '合并缩略下载已发起',
+        overlayStyle: LogOverlayStyle.info,
+      );
+    } catch (e) {
+      addAppErrLog('下载合并消息缩略图失败: $e');
+      return LogActionResult(
+        overlayLabel: '合并缩略失败: $e',
+        overlayStyle: LogOverlayStyle.error,
+      );
+    }
+  }
+
+  Future<LogActionResult?> _fetchCombineDetail(EMMessage message) async {
+    try {
+      final messages =
+          await (widget.combineMessageDetailFetcher ??
+                  (message) => EMClient.getInstance.chatManager
+                      .fetchCombineMessageDetail(message: message))
+              .call(message);
+      if (messages.isEmpty) {
+        addReceiveLog('合并消息详情为空: ${message.msgId}');
+      } else {
+        addReceiveLog(
+          '合并消息详情: ${messages.map((item) => item.msgId).join(',')}',
+        );
+      }
+      return const LogActionResult(
+        overlayLabel: '已取合并详情',
+        overlayStyle: LogOverlayStyle.success,
+      );
+    } catch (e) {
+      addAppErrLog('获取合并消息详情失败: $e');
+      return LogActionResult(
+        overlayLabel: '合并详情失败: $e',
+        overlayStyle: LogOverlayStyle.error,
+      );
+    }
+  }
+
+  Future<LogActionResult?> _fetchReactionList(EMMessage message) async {
+    try {
+      final result =
+          await (widget.reactionListFetcher ??
+                  EMClient.getInstance.chatManager.fetchReactionList)
+              .call(messageIds: [message.msgId], chatType: message.chatType);
+      final reactions = result[message.msgId] ?? const <EMMessageReaction>[];
+      addReceiveLog(
+        reactions.isEmpty
+            ? 'Reaction 列表为空: ${message.msgId}'
+            : 'Reaction 列表: ${reactions.map((item) => item.reaction).join(',')}',
+      );
+      return const LogActionResult(
+        overlayLabel: '已取Reaction列表',
+        overlayStyle: LogOverlayStyle.success,
+      );
+    } catch (e) {
+      addAppErrLog('获取 Reaction 列表失败: $e');
+      return LogActionResult(
+        overlayLabel: 'Reaction列表失败: $e',
+        overlayStyle: LogOverlayStyle.error,
+      );
+    }
+  }
+
+  Future<LogActionResult?> _fetchReactionDetail(EMMessage message) async {
+    try {
+      final result =
+          await (widget.reactionDetailFetcher ??
+                  EMClient.getInstance.chatManager.fetchReactionDetail)
+              .call(messageId: message.msgId, reaction: '👍', pageSize: 20);
+      addReceiveLog(
+        result.data.isEmpty
+            ? 'Reaction 详情为空: ${message.msgId}'
+            : 'Reaction 详情: ${result.data.map((item) => item.reaction).join(',')}',
+      );
+      return const LogActionResult(
+        overlayLabel: '已取Reaction详情',
+        overlayStyle: LogOverlayStyle.success,
+      );
+    } catch (e) {
+      addAppErrLog('获取 Reaction 详情失败: $e');
+      return LogActionResult(
+        overlayLabel: 'Reaction详情失败: $e',
+        overlayStyle: LogOverlayStyle.error,
+      );
+    }
+  }
+
+  Future<LogActionResult?> _fetchSupportedLanguages() async {
+    try {
+      final languages =
+          await (widget.supportedLanguagesFetcher ??
+                  EMClient.getInstance.chatManager.fetchSupportedLanguages)
+              .call();
+      addReceiveLog(
+        languages.isEmpty
+            ? '翻译语言列表为空'
+            : '翻译语言列表: ${languages.map((item) => item.languageCode).join(',')}',
+      );
+      return const LogActionResult(
+        overlayLabel: '已取语言列表',
+        overlayStyle: LogOverlayStyle.success,
+      );
+    } catch (e) {
+      addAppErrLog('获取翻译语言列表失败: $e');
+      return LogActionResult(
+        overlayLabel: '语言列表失败: $e',
+        overlayStyle: LogOverlayStyle.error,
+      );
+    }
+  }
+
+  Future<LogActionResult?> _translateMessage(EMMessage message) async {
+    final result = await showInputDialog(
+      context: context,
+      title: '翻译消息',
+      fields: [
+        InputFieldData(
+          title: '语言',
+          placeholder: '多个语言码用逗号分隔，如 en,zh-Hans',
+          text: 'en',
+        ),
+      ],
+    );
+    if (result == null) return null;
+    try {
+      final translated =
+          await (widget.messageTranslator ??
+                  EMClient.getInstance.chatManager.translateMessage)
+              .call(
+                msg: message,
+                languages: parseForwardMessageIds(result[0].text),
+              );
+      addReceiveLog(
+        '翻译消息成功: ${translated.toJson()}',
+        attachment: translated,
+        tag: 'message',
+      );
+      return const LogActionResult(
+        overlayLabel: '已翻译',
+        overlayStyle: LogOverlayStyle.success,
+      );
+    } catch (e) {
+      addAppErrLog('翻译消息失败: $e');
+      return LogActionResult(
+        overlayLabel: '翻译失败: $e',
+        overlayStyle: LogOverlayStyle.error,
+      );
+    }
+  }
+
+  Future<LogActionResult?> _reportMessage(EMMessage message) async {
+    final result = await showInputDialog(
+      context: context,
+      title: '举报消息',
+      fields: [
+        InputFieldData(title: '举报标签', placeholder: '如 ad / spam', text: ''),
+        InputFieldData(title: '举报原因', placeholder: '请输入举报原因', text: ''),
+      ],
+    );
+    if (result == null || result.length < 2) return null;
+    try {
+      await (widget.messageReporter ??
+              EMClient.getInstance.chatManager.reportMessage)
+          .call(
+            messageId: message.msgId,
+            tag: result[0].text,
+            reason: result[1].text,
+          );
+      addReceiveLog('举报消息成功: ${message.msgId}');
+      return const LogActionResult(
+        overlayLabel: '已举报',
+        overlayStyle: LogOverlayStyle.warning,
+      );
+    } catch (e) {
+      addAppErrLog('举报消息失败: $e');
+      return LogActionResult(
+        overlayLabel: '举报失败: $e',
+        overlayStyle: LogOverlayStyle.error,
+      );
+    }
+  }
+
+  Future<void> _importMessages(List<EMMessage> messages) {
+    final importer = widget.messageImporter;
+    if (importer != null) {
+      return importer(messages);
+    }
+    return EMClient.getInstance.chatManager.importMessages(messages);
+  }
+
+  Future<EMConversation?> _getConversation(
+    String conversationId, {
+    EMConversationType type = EMConversationType.Chat,
+    bool createIfNeed = true,
+  }) {
+    final getter = widget.conversationGetter;
+    if (getter != null) {
+      return getter(conversationId, type: type, createIfNeed: createIfNeed);
+    }
+    return EMClient.getInstance.chatManager.getConversation(
+      conversationId,
+      type: type,
+      createIfNeed: createIfNeed,
+    );
+  }
+
+  Future<void> _insertMessageToConversation(
+    EMConversation conversation,
+    EMMessage message,
+  ) {
+    final inserter = widget.conversationMessageInserter;
+    if (inserter != null) {
+      return inserter(conversation, message);
+    }
+    return conversation.insertMessage(message);
+  }
+
+  Future<LogActionResult?> _forwardMessage(EMMessage message) async {
+    final result = await showInputDialog(
+      context: context,
+      title: '转发消息',
+      fields: [
+        InputFieldData(
+          title: '目标 ID',
+          placeholder: '用户 / 群组 / 聊天室 ID',
+          text: '',
+        ),
+        InputFieldData(
+          title: '类型',
+          placeholder: forwardChatTypeHint(),
+          text: 'chat',
+        ),
+      ],
+    );
+    if (result == null || result.length < 2) {
+      return null;
+    }
+    try {
+      final forwarded = createForwardMessage(
+        source: message,
+        targetId: result[0].text,
+        chatType: parseForwardChatType(result[1].text),
+      );
+      await _sendMessageThroughSdk(forwarded);
+      addSendLog(
+        '转发消息: ${forwarded.toJson()}',
+        attachment: forwarded,
+        tag: 'message',
+      );
+      return const LogActionResult(
+        overlayLabel: '已转发',
+        overlayStyle: LogOverlayStyle.success,
+      );
+    } catch (e) {
+      return LogActionResult(
+        overlayLabel: '转发失败: $e',
+        overlayStyle: LogOverlayStyle.error,
+      );
+    }
+  }
+
+  Future<void> _sendCombineForwardMessage({
+    required String defaultTargetId,
+    required ChatType defaultChatType,
+  }) async {
+    final localMessageIds = successfulLocalMessageIdsForCombineForward(
+      entries: logController.entities,
+      chatType: ChatType.Chat,
+      conversationId: _userIdController.text.trim().toLowerCase(),
+    );
+    final result = await showInputDialog(
+      context: context,
+      title: '合并转发',
+      fields: [
+        InputFieldData(
+          title: '目标 ID',
+          placeholder: '用户 / 群组 / 聊天室 ID',
+          text: defaultTargetId,
+        ),
+        InputFieldData(
+          title: '类型',
+          placeholder: forwardChatTypeHint(),
+          text: defaultChatType == ChatType.GroupChat
+              ? 'group'
+              : defaultChatType == ChatType.ChatRoom
+              ? 'room'
+              : 'chat',
+        ),
+        InputFieldData(
+          title: '消息 ID 列表',
+          placeholder: '本地存在且发送成功的 msgId，多个用逗号或换行分隔',
+          text: localMessageIds.join('\n'),
+          multiline: true,
+        ),
+        InputFieldData(title: '标题', placeholder: '合并消息标题', text: '聊天记录'),
+        InputFieldData(
+          title: '摘要',
+          placeholder: '合并消息摘要',
+          text: '',
+          multiline: true,
+        ),
+        InputFieldData(
+          title: '兼容文本',
+          placeholder: '旧版本不支持合并消息时展示',
+          text: '当前版本不支持合并消息',
+        ),
+      ],
+    );
+    if (result == null || result.length < 6) {
+      return;
+    }
+    try {
+      final message = createCombineForwardMessage(
+        targetId: result[0].text,
+        chatType: parseForwardChatType(result[1].text),
+        msgIds: parseForwardMessageIds(result[2].text),
+        title: result[3].text,
+        summary: result[4].text,
+        compatibleText: result[5].text,
+      );
+      await _sendMessageThroughSdk(message);
+      addSendLog(
+        '合并转发消息: ${message.toJson()}',
+        attachment: message,
+        tag: 'message',
+      );
+    } catch (e) {
+      addSendLog('合并转发失败: $e');
+    }
+  }
+
+  EMMessage? _createLocalTextMessage(String content) {
+    final conversationId = _userIdController.text.trim().toLowerCase();
+    if (conversationId.isEmpty) {
+      addSendLog('请先输入对方ID');
+      return null;
+    }
+    final trimmedContent = content.trim();
+    if (trimmedContent.isEmpty) {
+      addSendLog('消息内容不能为空');
+      return null;
+    }
+    return EMMessage.createTxtSendMessage(
+      targetId: conversationId,
+      content: trimmedContent,
+      chatType: ChatType.Chat,
+    );
+  }
+
+  Future<void> _showImportMessageDialog() async {
+    final result = await showInputDialog(
+      context: context,
+      title: '导入消息',
+      fields: [
+        InputFieldData(title: '消息内容', placeholder: '请输入导入消息内容', text: ''),
+      ],
+    );
+    if (result == null) return;
+    final message = _createLocalTextMessage(result[0].text);
+    if (message == null) return;
+    try {
+      await _importMessages([message]);
+      addSendLog(
+        '导入消息成功: ${message.toJson()}',
+        attachment: message,
+        tag: 'message',
+      );
+    } catch (e) {
+      addAppErrLog('导入消息失败: $e');
+    }
+  }
+
+  Future<void> _showInsertMessageDialog() async {
+    final result = await showInputDialog(
+      context: context,
+      title: '插入消息',
+      fields: [
+        InputFieldData(title: '消息内容', placeholder: '请输入插入消息内容', text: ''),
+      ],
+    );
+    if (result == null) return;
+    final message = _createLocalTextMessage(result[0].text);
+    if (message == null) return;
+    try {
+      final conversation = await _getConversation(
+        message.conversationId ?? message.to!,
+        type: EMConversationType.Chat,
+        createIfNeed: true,
+      );
+      if (conversation == null) {
+        addAppErrLog('插入消息失败: SDK 未返回会话对象');
+        return;
+      }
+      await _insertMessageToConversation(conversation, message);
+      addSendLog(
+        '插入消息成功: ${message.toJson()}',
+        attachment: message,
+        tag: 'message',
+      );
+    } catch (e) {
+      addAppErrLog('插入消息失败: $e');
+    }
+  }
+
   Future<void> _sendTextMessage(String text) async {
     final trimmedText = text.trim();
     if (trimmedText.isEmpty) return;
@@ -511,10 +1178,28 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
         'date': DateTime.now().toString(),
       };
       addSendLog('开始发送消息');
-      await EMClient.getInstance.chatManager.sendMessage(msg);
+      await _sendMessageThroughSdk(msg);
     } catch (e) {
       rethrow;
     }
+  }
+
+  Future<EMMessage> _sendMessageThroughSdk(EMMessage message) {
+    return (widget.messageSender ??
+            EMClient.getInstance.chatManager.sendMessage)
+        .call(message);
+  }
+
+  Future<EMMessage?> _loadMessage(String messageId) {
+    return (widget.messageLoader ??
+            EMClient.getInstance.chatManager.loadMessage)
+        .call(messageId);
+  }
+
+  Future<MessagePinInfo?> _loadMessagePinInfo(EMMessage message) {
+    return (widget.messagePinInfoLoader ?? (message) => message.pinInfo()).call(
+      message,
+    );
   }
 
   @override
@@ -664,11 +1349,24 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
           }
         },
       ),
+      GridActionItem(
+        icon: Icons.terminal_outlined,
+        label: '命令',
+        onTap: () async {
+          try {
+            await sendMessage(
+              createSingleChatCommandMessage(_userIdController.text),
+            );
+          } catch (e) {
+            addAppErrLog('发送命令失败: ${e.toString()}');
+          }
+        },
+      ),
     ];
 
     return SizedBox(
       width: MediaQuery.of(context).size.width,
-      child: GridActionMenu(items: items, isDark: isDark, columns: 6),
+      child: GridActionMenu(items: items, isDark: isDark, columns: 7),
     );
   }
 
@@ -728,6 +1426,24 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
             addSendLog('msync拉取消息失败: $e');
           }
         },
+      ),
+      GridActionItem(
+        icon: Icons.merge_type_outlined,
+        label: '合并转发',
+        onTap: () => _sendCombineForwardMessage(
+          defaultTargetId: _userIdController.text.trim().toLowerCase(),
+          defaultChatType: ChatType.Chat,
+        ),
+      ),
+      GridActionItem(
+        icon: Icons.move_to_inbox_outlined,
+        label: '导入消息',
+        onTap: _showImportMessageDialog,
+      ),
+      GridActionItem(
+        icon: Icons.playlist_add_outlined,
+        label: '插入消息',
+        onTap: _showInsertMessageDialog,
       ),
       GridActionItem(
         icon: Icons.article_outlined,
@@ -816,10 +1532,9 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
                                               content: Text('$e'),
                                               actions: [
                                                 TextButton(
-                                                  onPressed: () =>
-                                                      Navigator.of(
-                                                        context,
-                                                      ).pop(),
+                                                  onPressed: () => Navigator.of(
+                                                    context,
+                                                  ).pop(),
                                                   child: const Text('关闭'),
                                                 ),
                                               ],

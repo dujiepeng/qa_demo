@@ -74,3 +74,7 @@ Future<List<EMPresence>> queryPresenceForMembersFromSdk(
     members: userIds,
   );
 }
+
+Future<void> publishPresenceFromSdk(String description) {
+  return EMClient.getInstance.presenceManager.publishPresence(description);
+}

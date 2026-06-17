@@ -25,6 +25,8 @@ class _GroupListPageState extends State<GroupListPage> {
   bool _isFetchingMore = false;
   bool _hasMore = true;
   int _pageNum = 0; // 群组分页从 0 开始
+  int? _joinedGroupCount;
+  bool _isFetchingJoinedGroupCount = false;
   static const int _pageSize = 20;
 
   @override
@@ -292,6 +294,37 @@ class _GroupListPageState extends State<GroupListPage> {
     }
   }
 
+  Future<void> _fetchJoinedGroupCount() async {
+    setState(() {
+      _isFetchingJoinedGroupCount = true;
+    });
+
+    try {
+      final count = await EMClient.getInstance.groupManager
+          .fetchJoinedGroupCount();
+      if (mounted) {
+        setState(() {
+          _joinedGroupCount = count;
+        });
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('查询已加入群组数量成功: $count')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('查询已加入群组数量失败: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isFetchingJoinedGroupCount = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -313,6 +346,35 @@ class _GroupListPageState extends State<GroupListPage> {
               elevation: 0,
               iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
               actions: [
+                Tooltip(
+                  message: '查询已加入群组数量',
+                  child: TextButton.icon(
+                    icon: _isFetchingJoinedGroupCount
+                        ? SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.textPrimary(isDark),
+                            ),
+                          )
+                        : Icon(
+                            Icons.groups_2_outlined,
+                            size: 18,
+                            color: AppColors.textPrimary(isDark),
+                          ),
+                    label: Text(
+                      '群组数量',
+                      style: TextStyle(
+                        color: AppColors.textPrimary(isDark),
+                        fontSize: 14,
+                      ),
+                    ),
+                    onPressed: _isFetchingJoinedGroupCount
+                        ? null
+                        : _fetchJoinedGroupCount,
+                  ),
+                ),
                 TextButton(
                   child: Text(
                     'Join',
@@ -344,161 +406,187 @@ class _GroupListPageState extends State<GroupListPage> {
                   )
                 : RefreshIndicator(
                     onRefresh: _fetchGroups,
-                    child:
-                        pendingInvitations.isEmpty &&
-                            pendingJoinRequests.isEmpty &&
-                            _groups.isEmpty
-                        ? ListView(
-                            children: [
-                              SizedBox(
-                                height:
-                                    MediaQuery.of(context).size.height - 200,
-                                child: Center(
-                                  child: Text(
-                                    '暂无加入的群组',
-                                    style: TextStyle(
-                                      color: AppColors.textSecondary(isDark),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )
-                        : ListView.builder(
-                            controller: _scrollController,
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            itemCount:
-                                pendingInvitations.length +
-                                pendingJoinRequests.length +
-                                _groups.length +
-                                (_hasMore ? 1 : 0),
-                            itemBuilder: (context, index) {
-                              if (index < pendingInvitations.length) {
-                                return _buildInvitationTile(
-                                  pendingInvitations[index],
-                                  isDark,
-                                );
-                              }
-                              final requestIndex =
-                                  index - pendingInvitations.length;
-                              if (requestIndex < pendingJoinRequests.length) {
-                                return _buildJoinRequestTile(
-                                  pendingJoinRequests[requestIndex],
-                                  isDark,
-                                );
-                              }
-                              final groupIndex =
-                                  requestIndex - pendingJoinRequests.length;
-                              if (groupIndex < _groups.length) {
-                                final group = _groups[groupIndex];
-                                return GestureDetector(
-                                  onLongPressStart: (details) async {
-                                    final position = details.globalPosition;
-                                    final value = await showMenu<String>(
-                                      context: context,
-                                      position: RelativeRect.fromLTRB(
-                                        position.dx,
-                                        position.dy,
-                                        position.dx,
-                                        position.dy,
-                                      ),
-                                      items: [
-                                        const PopupMenuItem(
-                                          value: 'copy_id',
-                                          child: Text('复制 ID'),
-                                        ),
-                                      ],
-                                    );
-
-                                    if (value == 'copy_id') {
-                                      _copyToClipboard(group.groupId);
-                                    }
-                                  },
-                                  child: Container(
-                                    margin: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 8,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.inputBackground(isDark),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: AppColors.glassBorder(isDark),
-                                      ),
-                                    ),
-                                    child: ListTile(
-                                      leading: Container(
-                                        width: 40,
-                                        height: 40,
-                                        decoration: BoxDecoration(
-                                          color: AppColors.primary(
-                                            isDark,
-                                          ).withValues(alpha: 0.1),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Icon(
-                                          Icons.group_outlined,
-                                          color: AppColors.primary(isDark),
-                                        ),
-                                      ),
-                                      title: Text(
-                                        group.groupName ?? '未命名群组',
-                                        style: TextStyle(
-                                          color: AppColors.textPrimary(isDark),
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      subtitle: Text(
-                                        'ID: ${group.groupId}',
-                                        style: TextStyle(
-                                          color: AppColors.textSecondary(
-                                            isDark,
-                                          ),
-                                          fontFamily: 'monospace',
-                                        ),
-                                      ),
-                                      trailing: Icon(
-                                        Icons.chevron_right,
-                                        color: AppColors.textSecondary(isDark),
-                                      ),
-                                      onTap: () {
-                                        if (widget.onItemTap != null) {
-                                          widget.onItemTap!(group.groupId);
-                                        } else {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => GroupPage(
-                                                groupId: group.groupId,
-                                              ),
-                                            ),
-                                          );
-                                        }
-                                      },
-                                    ),
-                                  ),
-                                );
-                              } else {
-                                return Center(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(20.0),
-                                    child: SizedBox(
-                                      width: 24,
-                                      height: 24,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: AppColors.primary(isDark),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }
-                            },
-                          ),
+                    child: _buildListContent(
+                      isDark,
+                      pendingInvitations,
+                      pendingJoinRequests,
+                    ),
                   ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildListContent(
+    bool isDark,
+    List<GroupInvitation> pendingInvitations,
+    List<GroupJoinRequest> pendingJoinRequests,
+  ) {
+    final showCount = _joinedGroupCount != null;
+    if (pendingInvitations.isEmpty &&
+        pendingJoinRequests.isEmpty &&
+        _groups.isEmpty) {
+      return ListView(
+        children: [
+          if (showCount) _buildJoinedGroupCountTile(isDark),
+          SizedBox(
+            height: MediaQuery.of(context).size.height - 200,
+            child: Center(
+              child: Text(
+                '暂无加入的群组',
+                style: TextStyle(color: AppColors.textSecondary(isDark)),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return ListView.builder(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      itemCount:
+          (showCount ? 1 : 0) +
+          pendingInvitations.length +
+          pendingJoinRequests.length +
+          _groups.length +
+          (_hasMore ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (showCount) {
+          if (index == 0) {
+            return _buildJoinedGroupCountTile(isDark);
+          }
+          index -= 1;
+        }
+        if (index < pendingInvitations.length) {
+          return _buildInvitationTile(pendingInvitations[index], isDark);
+        }
+        final requestIndex = index - pendingInvitations.length;
+        if (requestIndex < pendingJoinRequests.length) {
+          return _buildJoinRequestTile(
+            pendingJoinRequests[requestIndex],
+            isDark,
+          );
+        }
+        final groupIndex = requestIndex - pendingJoinRequests.length;
+        if (groupIndex < _groups.length) {
+          final group = _groups[groupIndex];
+          return GestureDetector(
+            onLongPressStart: (details) async {
+              final position = details.globalPosition;
+              final value = await showMenu<String>(
+                context: context,
+                position: RelativeRect.fromLTRB(
+                  position.dx,
+                  position.dy,
+                  position.dx,
+                  position.dy,
+                ),
+                items: [
+                  const PopupMenuItem(value: 'copy_id', child: Text('复制 ID')),
+                ],
+              );
+
+              if (value == 'copy_id') {
+                _copyToClipboard(group.groupId);
+              }
+            },
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.inputBackground(isDark),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.glassBorder(isDark)),
+              ),
+              child: ListTile(
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary(isDark).withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.group_outlined,
+                    color: AppColors.primary(isDark),
+                  ),
+                ),
+                title: Text(
+                  group.groupName ?? '未命名群组',
+                  style: TextStyle(
+                    color: AppColors.textPrimary(isDark),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                subtitle: Text(
+                  'ID: ${group.groupId}',
+                  style: TextStyle(
+                    color: AppColors.textSecondary(isDark),
+                    fontFamily: 'monospace',
+                  ),
+                ),
+                trailing: Icon(
+                  Icons.chevron_right,
+                  color: AppColors.textSecondary(isDark),
+                ),
+                onTap: () {
+                  if (widget.onItemTap != null) {
+                    widget.onItemTap!(group.groupId);
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => GroupPage(groupId: group.groupId),
+                      ),
+                    );
+                  }
+                },
+              ),
+            ),
+          );
+        } else {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.primary(isDark),
+                ),
+              ),
+            ),
+          );
+        }
+      },
+    );
+  }
+
+  Widget _buildJoinedGroupCountTile(bool isDark) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.inputBackground(isDark),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.glassBorder(isDark)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.numbers_outlined, color: AppColors.primary(isDark)),
+          const SizedBox(width: 12),
+          Text(
+            '已加入群组数量: $_joinedGroupCount',
+            style: TextStyle(
+              color: AppColors.textPrimary(isDark),
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

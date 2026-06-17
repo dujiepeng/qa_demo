@@ -24,6 +24,10 @@ Future<void> ensureSdkInit(AppSettings settings) async {
     final serverPort = isWs
         ? (activeConf?.wsPort ?? settings.imPort)
         : (activeConf?.msyncPort ?? settings.imPort);
+    final enableTls = activeConf?.enableTls ?? true;
+    final webSocketServer = isWs
+        ? _joinWebSocketServerAndPath(serverHost, activeConf?.wsPath ?? '')
+        : serverHost;
 
     if (isWs) {
       options = EMOptions.withAppKey(
@@ -34,8 +38,8 @@ Future<void> ensureSdkInit(AppSettings settings) async {
         enableDNSConfig: false,
         usingHttpsOnly: false,
         webSocketPort: serverPort,
-        webSocketServer: serverHost,
-        enableTLS: true,
+        webSocketServer: webSocketServer,
+        enableTLS: enableTls,
         requireDeliveryAck: true,
       );
     } else {
@@ -54,7 +58,7 @@ Future<void> ensureSdkInit(AppSettings settings) async {
     }
 
     debugPrint(
-      'ensureSdkInit: Initializing with CUSTOM server (${settings.activeEnvName}): $serverHost:$serverPort, Mode: ${isWs ? 'WebSocket' : 'TCP'}',
+      'ensureSdkInit: Initializing with CUSTOM server (${settings.activeEnvName}): ${isWs ? webSocketServer : serverHost}:$serverPort, Mode: ${isWs ? 'WebSocket' : 'TCP'}',
     );
   } else {
     // ebs 公有云环境，只传 AppKey
@@ -72,6 +76,18 @@ Future<void> ensureSdkInit(AppSettings settings) async {
   settings.isInit = true;
   settings.isDirty = false;
   debugPrint('ensureSdkInit: SDK Initialized with AppKey: ${settings.appKey}');
+}
+
+String _joinWebSocketServerAndPath(String server, String path) {
+  final trimmedServer = server.trim();
+  final trimmedPath = path.trim();
+  if (trimmedPath.isEmpty) {
+    return trimmedServer;
+  }
+  final normalizedPath = trimmedPath.startsWith('/')
+      ? trimmedPath
+      : '/$trimmedPath';
+  return '${trimmedServer.replaceFirst(RegExp(r'/+$'), '')}$normalizedPath';
 }
 
 /// 提取出的公用登录逻辑，供 Mobile 和 Pad 的 LoginPage 使用

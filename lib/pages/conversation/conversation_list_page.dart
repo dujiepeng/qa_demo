@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_settings.dart';
+import '../../common/utils/conversation_server_message_deleter.dart';
 import '../../common/widgets/common_gradient_background.dart';
 
 enum ConversationListFilter { all, pinned, mark1, mark2, mark3 }
@@ -15,6 +16,27 @@ typedef ConversationPageLoader =
     });
 
 typedef LocalConversationsLoader = Future<List<EMConversation>> Function();
+typedef ConversationReadAckSender =
+    Future<void> Function(String conversationId);
+typedef ServerConversationListLoader = Future<List<EMConversation>> Function();
+typedef ServerConversationPageLoader =
+    Future<List<EMConversation>> Function({int pageNum, int pageSize});
+typedef ServerConversationCursorLoader =
+    Future<EMCursorResult<EMConversation>> Function({
+      String? cursor,
+      int pageSize,
+    });
+typedef PinnedConversationsFetcher =
+    Future<EMCursorResult<EMConversation>> Function({
+      String? cursor,
+      int pageSize,
+    });
+typedef ConversationRemindTypeFetcher =
+    Future<ChatPushRemindType> Function(EMConversation conversation);
+typedef LocalAndServerMessagesDeleter =
+    Future<void> Function(EMConversation conversation, List<String> msgIds);
+typedef LocalAndServerMessagesByTimeDeleter =
+    Future<void> Function(EMConversation conversation, int beforeMs);
 
 /// 会话列表页面
 class ConversationListPage extends StatefulWidget {
@@ -26,6 +48,15 @@ class ConversationListPage extends StatefulWidget {
     this.latestMessageBuilder,
     this.addConversationMark,
     this.removeConversationMark,
+    this.conversationReadAckSender,
+    this.getConversationsFromServerOld,
+    this.fetchConversationListFromServerOld,
+    this.fetchConversationFromServerOld,
+    this.fetchPinnedConversations,
+    this.conversationRemindTypeFetcher,
+    this.localAndServerMessagesDeleter,
+    this.localAndServerMessagesByTimeDeleter,
+    this.nowBuilder,
   });
 
   final ConversationPageLoader? loadConversationsPage;
@@ -37,6 +68,16 @@ class ConversationListPage extends StatefulWidget {
   addConversationMark;
   final Future<void> Function(String conversationId, ConversationMarkType mark)?
   removeConversationMark;
+  final ConversationReadAckSender? conversationReadAckSender;
+  final ServerConversationListLoader? getConversationsFromServerOld;
+  final ServerConversationPageLoader? fetchConversationListFromServerOld;
+  final ServerConversationCursorLoader? fetchConversationFromServerOld;
+  final PinnedConversationsFetcher? fetchPinnedConversations;
+  final ConversationRemindTypeFetcher? conversationRemindTypeFetcher;
+  final LocalAndServerMessagesDeleter? localAndServerMessagesDeleter;
+  final LocalAndServerMessagesByTimeDeleter?
+  localAndServerMessagesByTimeDeleter;
+  final DateTime Function()? nowBuilder;
 
   @override
   State<ConversationListPage> createState() => _ConversationListPageState();
@@ -51,6 +92,7 @@ class _ConversationListPageState extends State<ConversationListPage> {
   String? _cursor;
   bool _hasMore = true;
   bool _isLoadingMore = false;
+  final List<String> _serverToolLogs = [];
 
   @override
   void initState() {
@@ -362,6 +404,95 @@ class _ConversationListPageState extends State<ConversationListPage> {
     return conversation.latestMessage();
   }
 
+  Future<void> _fetchServerConversationTools() async {
+    try {
+      final oldList =
+          await (widget.getConversationsFromServerOld ??
+                  () {
+                    return EMClient.getInstance.chatManager
+                        // ignore: deprecated_member_use
+                        .getConversationsFromServer();
+                  })
+              .call();
+      if (!mounted) return;
+      _appendServerToolLog(
+        oldList.isEmpty
+            ? 'old会话列表为空'
+            : 'old会话列表: ${_formatConversationIds(oldList)}',
+      );
+
+      final oldPagedList =
+          await (widget.fetchConversationListFromServerOld ??
+                  ({pageNum = 1, pageSize = 20}) {
+                    return EMClient.getInstance.chatManager
+                    // ignore: deprecated_member_use
+                    .fetchConversationListFromServer(
+                      pageNum: pageNum,
+                      pageSize: pageSize,
+                    );
+                  })
+              .call(pageNum: 1, pageSize: 20);
+      if (!mounted) return;
+      _appendServerToolLog(
+        oldPagedList.isEmpty
+            ? 'old分页会话为空'
+            : 'old分页会话: ${_formatConversationIds(oldPagedList)}',
+      );
+
+      final oldCursorPage =
+          await (widget.fetchConversationFromServerOld ??
+                  ({cursor, pageSize = 20}) {
+                    // ignore: deprecated_member_use
+                    return EMClient.getInstance.chatManager.fetchConversation(
+                      cursor: cursor,
+                      pageSize: pageSize,
+                    );
+                  })
+              .call(pageSize: 20);
+      if (!mounted) return;
+      _appendServerToolLog(
+        oldCursorPage.data.isEmpty
+            ? 'old游标会话为空'
+            : 'old游标会话: ${_formatConversationIds(oldCursorPage.data)}',
+      );
+
+      final pinnedPage =
+          await (widget.fetchPinnedConversations ??
+                  ({cursor, pageSize = 20}) {
+                    return EMClient.getInstance.chatManager
+                    // ignore: deprecated_member_use
+                    .fetchPinnedConversations(
+                      cursor: cursor,
+                      pageSize: pageSize,
+                    );
+                  })
+              .call(pageSize: 20);
+      if (!mounted) return;
+      _appendServerToolLog(
+        pinnedPage.data.isEmpty
+            ? '置顶会话为空'
+            : '置顶会话: ${_formatConversationIds(pinnedPage.data)}',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _appendServerToolLog('服务端会话工具失败: $e');
+    }
+  }
+
+  String _formatConversationIds(List<EMConversation> conversations) {
+    return conversations.map((conversation) => conversation.id).join(', ');
+  }
+
+  void _appendServerToolLog(String text) {
+    setState(() {
+      _serverToolLogs.insert(0, text);
+      if (_serverToolLogs.length > 8) {
+        _serverToolLogs.removeLast();
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
   /// 切换置顶状态
   Future<void> _togglePin(EMConversation conversation) async {
     try {
@@ -432,6 +563,185 @@ class _ConversationListPageState extends State<ConversationListPage> {
     }
   }
 
+  Future<void> _sendConversationReadAck(EMConversation conversation) async {
+    try {
+      final sender = widget.conversationReadAckSender;
+      if (sender != null) {
+        await sender(conversation.id);
+      } else {
+        await EMClient.getInstance.chatManager.sendConversationReadAck(
+          conversation.id,
+        );
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('会话已读 ACK 已发送: ${conversation.id}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('发送会话已读 ACK 失败: $e')));
+      }
+    }
+  }
+
+  Future<void> _fetchConversationRemindType(EMConversation conversation) async {
+    try {
+      final remindType =
+          await (widget.conversationRemindTypeFetcher ??
+                  (conversation) => conversation.remindType())
+              .call(conversation);
+      if (!mounted) return;
+      _showSnackBar('会话提醒类型: ${conversation.id}, ${remindType.name}');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('查询会话提醒类型失败: $e')));
+      }
+    }
+  }
+
+  Future<void> _deleteLocalAndServerMessages(
+    EMConversation conversation,
+  ) async {
+    final defaultMsgId = await _defaultMessageIdForDelete(conversation);
+    if (!mounted) return;
+    final controller = TextEditingController(text: defaultMsgId);
+    final msgIds = await showDialog<List<String>>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('删除本地+服务端消息'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: '消息 ID 列表',
+            hintText: '多个消息 ID 用逗号或换行分隔',
+          ),
+          minLines: 2,
+          maxLines: 4,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () =>
+                Navigator.pop(context, _parseInputList(controller.text)),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+    if (msgIds == null) return;
+    if (msgIds.isEmpty) {
+      _showSnackBar('请输入消息 ID');
+      return;
+    }
+    try {
+      await (widget.localAndServerMessagesDeleter ??
+              (conversation, msgIds) =>
+                  conversation.deleteLocalAndServerMessages(msgIds: msgIds))
+          .call(conversation, msgIds);
+      if (!mounted) return;
+      _showSnackBar('已删除本地+服务端消息: ${conversation.id}, ${msgIds.length} 条');
+      await _fetchConversations(silent: true);
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar('删除本地+服务端消息失败: $e');
+      }
+    }
+  }
+
+  Future<String> _defaultMessageIdForDelete(EMConversation conversation) async {
+    try {
+      final message = await _getLatestMessage(conversation);
+      return message?.msgId ?? '';
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar('获取会话最新消息 ID 失败，请手动输入: $e');
+      }
+      return '';
+    }
+  }
+
+  Future<void> _deleteLocalAndServerMessagesByTime(
+    EMConversation conversation,
+  ) async {
+    final controller = TextEditingController(text: '60');
+    final minutes = await showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('按时间删除本地+服务端消息'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: '删除多少分钟前',
+            hintText: '默认 60，表示删除 60 分钟前的消息',
+          ),
+          keyboardType: TextInputType.number,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () =>
+                Navigator.pop(context, int.tryParse(controller.text.trim())),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+    if (minutes == null) return;
+    if (minutes <= 0) {
+      _showSnackBar('请输入大于 0 的分钟数');
+      return;
+    }
+
+    final now = widget.nowBuilder?.call() ?? DateTime.now();
+    final beforeMs = now
+        .subtract(Duration(minutes: minutes))
+        .millisecondsSinceEpoch;
+    try {
+      await (widget.localAndServerMessagesByTimeDeleter ??
+              (conversation, beforeMs) => deleteConversationServerMessagesByTime(
+                conversation,
+                beforeMs: beforeMs,
+              ))
+          .call(conversation, beforeMs);
+      if (!mounted) return;
+      _showSnackBar(
+        '按时间删除本地+服务端消息: ${conversation.id}, $minutes 分钟前, ts=$beforeMs',
+      );
+      await _fetchConversations(silent: true);
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar('按时间删除本地+服务端消息失败: $e');
+      }
+    }
+  }
+
+  List<String> _parseInputList(String rawValue) {
+    return rawValue
+        .split(RegExp(r'[,，\n]'))
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toSet()
+        .toList();
+  }
+
+  void _showSnackBar(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(SnackBar(content: Text(text)));
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -452,6 +762,16 @@ class _ConversationListPageState extends State<ConversationListPage> {
               elevation: 0,
               iconTheme: IconThemeData(color: AppColors.textPrimary(isDark)),
               actions: [
+                TextButton(
+                  onPressed: _fetchServerConversationTools,
+                  child: Text(
+                    '服务端',
+                    style: TextStyle(
+                      color: AppColors.textPrimary(isDark),
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
                 IconButton(
                   icon: const Icon(Icons.refresh),
                   tooltip: '从服务器重新获取',
@@ -479,6 +799,7 @@ class _ConversationListPageState extends State<ConversationListPage> {
                                     SliverToBoxAdapter(
                                       child: _buildInteractionHint(isDark),
                                     ),
+                                    ..._buildServerToolLogSlivers(isDark),
                                     SliverFillRemaining(
                                       child: Center(
                                         child: Text(
@@ -499,6 +820,7 @@ class _ConversationListPageState extends State<ConversationListPage> {
                                   controller: _scrollController,
                                   children: [
                                     _buildInteractionHint(isDark),
+                                    ..._buildServerToolLogTiles(isDark),
                                     ...List.generate(
                                       _conversations.length +
                                           (_hasMore ? 1 : 0),
@@ -593,7 +915,7 @@ class _ConversationListPageState extends State<ConversationListPage> {
             PopupMenuItem(
               value: 'mark_as_read',
               child: FutureBuilder<int>(
-                future: conversation.unreadCount(),
+                future: _getUnreadCount(conversation),
                 builder: (context, snapshot) {
                   return Text(
                     '设置为已读',
@@ -603,6 +925,22 @@ class _ConversationListPageState extends State<ConversationListPage> {
                   );
                 },
               ),
+            ),
+            const PopupMenuItem(
+              value: 'send_conversation_read_ack',
+              child: Text('发送会话已读ACK'),
+            ),
+            const PopupMenuItem(
+              value: 'fetch_remind_type',
+              child: Text('查提醒类型'),
+            ),
+            const PopupMenuItem(
+              value: 'delete_local_server_messages',
+              child: Text('删服务端消息'),
+            ),
+            const PopupMenuItem(
+              value: 'delete_local_server_messages_by_time',
+              child: Text('按时间删服务端'),
             ),
             const PopupMenuItem(
               value: 'delete',
@@ -629,6 +967,14 @@ class _ConversationListPageState extends State<ConversationListPage> {
           _removeConversationMark(conversation, ConversationMarkType.Type3);
         } else if (value == 'mark_as_read') {
           _markAsRead(conversation);
+        } else if (value == 'send_conversation_read_ack') {
+          _sendConversationReadAck(conversation);
+        } else if (value == 'fetch_remind_type') {
+          _fetchConversationRemindType(conversation);
+        } else if (value == 'delete_local_server_messages') {
+          _deleteLocalAndServerMessages(conversation);
+        } else if (value == 'delete_local_server_messages_by_time') {
+          _deleteLocalAndServerMessagesByTime(conversation);
         } else if (value == 'delete') {
           _deleteConversation(conversation);
         }
@@ -754,12 +1100,43 @@ class _ConversationListPageState extends State<ConversationListPage> {
         border: Border.all(color: AppColors.glassBorder(isDark)),
       ),
       child: Text(
-        '长按会话可复制 ID、置顶、标记、设为已读或删除',
+        '长按会话可复制 ID、置顶、标记、设为已读、发送会话已读ACK或删除',
         style: TextStyle(
           color: AppColors.textSecondary(isDark),
           fontSize: 12,
           fontWeight: FontWeight.w500,
         ),
+      ),
+    );
+  }
+
+  List<Widget> _buildServerToolLogTiles(bool isDark) {
+    return _serverToolLogs
+        .map((log) => _buildServerToolLogTile(log, isDark))
+        .toList();
+  }
+
+  List<Widget> _buildServerToolLogSlivers(bool isDark) {
+    return _serverToolLogs
+        .map(
+          (log) =>
+              SliverToBoxAdapter(child: _buildServerToolLogTile(log, isDark)),
+        )
+        .toList();
+  }
+
+  Widget _buildServerToolLogTile(String log, bool isDark) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.inputBackground(isDark),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.glassBorder(isDark)),
+      ),
+      child: Text(
+        log,
+        style: TextStyle(color: AppColors.textPrimary(isDark), fontSize: 13),
       ),
     );
   }
