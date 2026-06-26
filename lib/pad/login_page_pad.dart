@@ -71,6 +71,8 @@ class _LoginPagePadState extends State<LoginPagePad> with LoginLogicMixin {
   Widget build(BuildContext context) {
     final isDark = settings.isDarkMode;
     final hasNewVersion = context.watch<VersionManager>().hasNewVersion;
+    final panelColor = _panelColor(isDark);
+    final panelBorderColor = _panelBorderColor(isDark);
 
     return Scaffold(
       body: GestureDetector(
@@ -84,16 +86,16 @@ class _LoginPagePadState extends State<LoginPagePad> with LoginLogicMixin {
                 constraints: const BoxConstraints(maxWidth: 450),
                 padding: const EdgeInsets.all(40),
                 decoration: BoxDecoration(
-                  color: AppColors.inputBackground(
-                    isDark,
-                  ).withValues(alpha: 0.8),
+                  color: panelColor,
                   borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: AppColors.glassBorder(isDark)),
+                  border: Border.all(color: panelBorderColor, width: 1.2),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
+                      color: Colors.black.withValues(
+                        alpha: isDark ? 0.38 : 0.16,
+                      ),
+                      blurRadius: 28,
+                      offset: const Offset(0, 16),
                     ),
                   ],
                 ),
@@ -223,35 +225,21 @@ class _LoginPagePadState extends State<LoginPagePad> with LoginLogicMixin {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        TextButton.icon(
+                        _buildActionButton(
                           onPressed: () => openSdkLogPage(context),
-                          icon: Icon(
-                            Icons.article_outlined,
-                            color: AppColors.textSecondary(isDark),
-                            size: 20,
-                          ),
-                          label: Text(
-                            '查看日志',
-                            style: TextStyle(
-                              color: AppColors.textSecondary(isDark),
-                            ),
-                          ),
+                          icon: Icons.article_outlined,
+                          label: '查看日志',
+                          color: _logActionColor(isDark),
+                          isDark: isDark,
                         ),
                         const SizedBox(width: 20),
-                        TextButton.icon(
+                        _buildActionButton(
                           onPressed: () =>
                               Navigator.pushNamed(context, '/server_config'),
-                          icon: Icon(
-                            Icons.settings_outlined,
-                            color: AppColors.textSecondary(isDark),
-                            size: 20,
-                          ),
-                          label: Text(
-                            '服务器配置',
-                            style: TextStyle(
-                              color: AppColors.textSecondary(isDark),
-                            ),
-                          ),
+                          icon: Icons.settings_outlined,
+                          label: '服务器配置',
+                          color: _configActionColor(isDark),
+                          isDark: isDark,
                         ),
                       ],
                     ),
@@ -274,9 +262,9 @@ class _LoginPagePadState extends State<LoginPagePad> with LoginLogicMixin {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? Colors.black12 : Colors.white24,
+        color: _fieldColor(isDark),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: AppColors.glassBorder(isDark)),
+        border: Border.all(color: _fieldBorderColor(isDark)),
       ),
       child: TextFormField(
         controller: controller,
@@ -303,4 +291,44 @@ class _LoginPagePadState extends State<LoginPagePad> with LoginLogicMixin {
       ),
     );
   }
+
+  Widget _buildActionButton({
+    required VoidCallback onPressed,
+    required IconData icon,
+    required String label,
+    required Color color,
+    required bool isDark,
+  }) {
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 20),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: color,
+        backgroundColor: color.withValues(alpha: isDark ? 0.12 : 0.08),
+        side: BorderSide(color: color.withValues(alpha: isDark ? 0.62 : 0.5)),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        textStyle: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+
+  Color _panelColor(bool isDark) =>
+      isDark ? const Color(0xDD0B1220) : const Color(0xFFF7FAFF);
+
+  Color _panelBorderColor(bool isDark) =>
+      isDark ? const Color(0x665B7CFA) : const Color(0x553B5998);
+
+  Color _fieldColor(bool isDark) =>
+      isDark ? const Color(0x6618273A) : Colors.white;
+
+  Color _fieldBorderColor(bool isDark) =>
+      isDark ? const Color(0x445B7CFA) : const Color(0x223B5998);
+
+  Color _logActionColor(bool isDark) =>
+      isDark ? const Color(0xFF5BD6D6) : const Color(0xFF147C84);
+
+  Color _configActionColor(bool isDark) =>
+      isDark ? const Color(0xFF9AA7FF) : const Color(0xFF4358B8);
 }

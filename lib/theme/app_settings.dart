@@ -33,6 +33,7 @@ class AppSettings extends ChangeNotifier {
     }
     return useCustomAppKey ? _customAppKey : defaultAppKey;
   }
+
   set appKey(String value) {
     if (useCustomAppKey) {
       _customAppKey = value;
@@ -40,9 +41,9 @@ class AppSettings extends ChangeNotifier {
   }
 
   bool useCustomServer = false;
-  String imServer = ServerEnvironment.tke.msyncServer;
-  int imPort = ServerEnvironment.tke.msyncPort;
-  String restServer = ServerEnvironment.tke.restServer;
+  String imServer = '';
+  int imPort = 0;
+  String restServer = '';
 
   final bool _isDarkMode = true; // 强制开启深色模式
   bool get isDarkMode => _isDarkMode;
@@ -134,11 +135,9 @@ class AppSettings extends ChangeNotifier {
     useCustomAppKey = prefs.getBool(_keyUseCustomAppKey) ?? false;
     _customAppKey = prefs.getString(_keyAppKey) ?? defaultCustomAppKey;
     useCustomServer = prefs.getBool(_keyUseCustomServer) ?? false;
-    imServer =
-        prefs.getString(_keyImServer) ?? ServerEnvironment.tke.msyncServer;
-    imPort = prefs.getInt(_keyImPort) ?? ServerEnvironment.tke.msyncPort;
-    restServer =
-        prefs.getString(_keyRestServer) ?? ServerEnvironment.tke.restServer;
+    imServer = prefs.getString(_keyImServer) ?? '';
+    imPort = prefs.getInt(_keyImPort) ?? 0;
+    restServer = prefs.getString(_keyRestServer) ?? '';
     // 加载历史记录 (为保持老版本兼容暂时留下，新版本UI不展示了)
     final historyJson = prefs.getStringList(_keyConfigHistory);
     if (historyJson != null) {
@@ -299,21 +298,18 @@ class AppSettings extends ChangeNotifier {
   ServerConfig? get activeConfig {
     final currentDict = _customEnvDict[activeEnvName];
     if (currentDict == null) return null;
-    final fallbackEnv = ServerEnvironment.environments.firstWhere(
-      (e) => e.name == activeEnvName,
-      orElse: () => ServerEnvironment.tke,
-    );
     return ServerConfig(
       envName: activeEnvName,
       appKey: appKey,
-      restServer: currentDict['restServer'] as String? ?? restServer,
-      msyncServer: currentDict['msyncServer'] as String? ?? imServer,
-      msyncPort: currentDict['msyncPort'] as int? ?? imPort,
-      wsServer: currentDict['wsServer'] as String? ?? fallbackEnv.wsServer,
-      wsPort: currentDict['wsPort'] as int? ?? fallbackEnv.wsPort,
-      wsPath: currentDict['wsPath'] as String? ?? fallbackEnv.wsPath,
-      isMsync: currentDict['isMsync'] as bool? ?? fallbackEnv.isMsync,
-      enableTls: currentDict['enableTls'] as bool? ?? fallbackEnv.enableTls,
+      restServer: currentDict['restServer'] as String?,
+      msyncServer: currentDict['msyncServer'] as String?,
+      msyncPort: currentDict['msyncPort'] as int?,
+      wsServer: currentDict['wsServer'] as String?,
+      wsPort: currentDict['wsPort'] as int?,
+      wsPath: currentDict['wsPath'] as String?,
+      dnsUrl: currentDict['dnsUrl'] as String?,
+      isMsync: currentDict['isMsync'] as bool?,
+      enableTls: currentDict['enableTls'] as bool?,
     );
   }
 
@@ -353,82 +349,106 @@ class AppSettings extends ChangeNotifier {
     if (_customEnvDict[activeEnvName] == null) {
       _customEnvDict[activeEnvName] = {};
     }
-    _customEnvDict[activeEnvName]!['appKey'] = config.appKey;
-    _customEnvDict[activeEnvName]!['restServer'] = config.restServer;
-    _customEnvDict[activeEnvName]!['msyncServer'] = config.msyncServer;
-    _customEnvDict[activeEnvName]!['msyncPort'] = config.msyncPort;
-    _customEnvDict[activeEnvName]!['wsServer'] = config.wsServer;
-    _customEnvDict[activeEnvName]!['wsPort'] = config.wsPort;
-    _customEnvDict[activeEnvName]!['wsPath'] = config.wsPath;
-    _customEnvDict[activeEnvName]!['isMsync'] = config.isMsync;
-    _customEnvDict[activeEnvName]!['enableTls'] = config.enableTls;
+    _customEnvDict[activeEnvName]!
+      ..clear()
+      ..['appKey'] = config.appKey;
+    _putIfNotNull(
+      _customEnvDict[activeEnvName]!,
+      'restServer',
+      config.restServer,
+    );
+    _putIfNotNull(
+      _customEnvDict[activeEnvName]!,
+      'msyncServer',
+      config.msyncServer,
+    );
+    _putIfNotNull(
+      _customEnvDict[activeEnvName]!,
+      'msyncPort',
+      config.msyncPort,
+    );
+    _putIfNotNull(_customEnvDict[activeEnvName]!, 'wsServer', config.wsServer);
+    _putIfNotNull(_customEnvDict[activeEnvName]!, 'wsPort', config.wsPort);
+    _putIfNotNull(_customEnvDict[activeEnvName]!, 'wsPath', config.wsPath);
+    _putIfNotNull(_customEnvDict[activeEnvName]!, 'dnsUrl', config.dnsUrl);
+    _putIfNotNull(_customEnvDict[activeEnvName]!, 'isMsync', config.isMsync);
+    _putIfNotNull(
+      _customEnvDict[activeEnvName]!,
+      'enableTls',
+      config.enableTls,
+    );
 
     // 强制旧变量更新
     appKey = config.appKey;
-    restServer = config.restServer;
-    imServer = config.msyncServer;
-    imPort = config.msyncPort;
+    restServer = config.restServer ?? restServer;
+    imServer = config.msyncServer ?? imServer;
+    imPort = config.msyncPort ?? imPort;
 
     notifyListeners();
+  }
+}
+
+void _putIfNotNull(Map<String, dynamic> target, String key, Object? value) {
+  if (value != null) {
+    target[key] = value;
   }
 }
 
 class ServerConfig {
   final String envName;
   final String appKey;
-  final String restServer;
-  final String msyncServer;
-  final int msyncPort;
-  final String wsServer;
-  final int wsPort;
-  final String wsPath;
-  final bool isMsync;
-  final bool enableTls;
+  final String? restServer;
+  final String? msyncServer;
+  final int? msyncPort;
+  final String? wsServer;
+  final int? wsPort;
+  final String? wsPath;
+  final String? dnsUrl;
+  final bool? isMsync;
+  final bool? enableTls;
 
   ServerConfig({
     required this.envName,
     required this.appKey,
-    required this.restServer,
-    required this.msyncServer,
-    required this.msyncPort,
-    required this.wsServer,
-    required this.wsPort,
-    required this.wsPath,
-    required this.isMsync,
-    required this.enableTls,
+    this.restServer,
+    this.msyncServer,
+    this.msyncPort,
+    this.wsServer,
+    this.wsPort,
+    this.wsPath,
+    this.dnsUrl,
+    this.isMsync,
+    this.enableTls,
   });
 
-  Map<String, dynamic> toJson() => {
-    'envName': envName,
-    'appKey': appKey,
-    'restServer': restServer,
-    'msyncServer': msyncServer,
-    'msyncPort': msyncPort,
-    'wsServer': wsServer,
-    'wsPort': wsPort,
-    'wsPath': wsPath,
-    'isMsync': isMsync,
-    'enableTls': enableTls,
-  };
+  Map<String, dynamic> toJson() {
+    final json = <String, dynamic>{'envName': envName, 'appKey': appKey};
+    _putIfNotNull(json, 'restServer', restServer);
+    _putIfNotNull(json, 'msyncServer', msyncServer);
+    _putIfNotNull(json, 'msyncPort', msyncPort);
+    _putIfNotNull(json, 'wsServer', wsServer);
+    _putIfNotNull(json, 'wsPort', wsPort);
+    _putIfNotNull(json, 'wsPath', wsPath);
+    _putIfNotNull(json, 'dnsUrl', dnsUrl);
+    _putIfNotNull(json, 'isMsync', isMsync);
+    _putIfNotNull(json, 'enableTls', enableTls);
+    return json;
+  }
 
   factory ServerConfig.fromJson(Map<String, dynamic> json) {
     String envName = json['envName'] as String? ?? 'TKE';
-    final fallbackEnv = ServerEnvironment.environments.firstWhere(
-      (e) => e.name == envName,
-      orElse: () => ServerEnvironment.tke,
-    );
-
     return ServerConfig(
       envName: envName,
-      appKey: json['appKey'] as String? ?? fallbackEnv.appKey,
-      restServer: json['restServer'] as String? ?? fallbackEnv.restServer,
-      msyncServer: json['msyncServer'] as String? ?? fallbackEnv.msyncServer,
-      msyncPort: json['msyncPort'] as int? ?? fallbackEnv.msyncPort,
-      wsServer: json['wsServer'] as String? ?? fallbackEnv.wsServer,
-      wsPort: json['wsPort'] as int? ?? fallbackEnv.wsPort,
-      wsPath: json['wsPath'] as String? ?? fallbackEnv.wsPath,
-      isMsync: json['isMsync'] as bool? ?? true,
-      enableTls: json['enableTls'] as bool? ?? fallbackEnv.enableTls,
+      appKey: json['appKey'] as String? ?? '',
+      restServer: json['restServer'] as String?,
+      msyncServer: json['msyncServer'] as String?,
+      msyncPort: json['msyncPort'] as int?,
+      wsServer: json['wsServer'] as String?,
+      wsPort: json['wsPort'] as int?,
+      wsPath: json['wsPath'] as String?,
+      dnsUrl: json['dnsUrl'] as String?,
+      isMsync: json['isMsync'] as bool?,
+      enableTls: json['enableTls'] as bool?,
     );
   }
 
@@ -444,6 +464,7 @@ class ServerConfig {
         other.wsServer == wsServer &&
         other.wsPort == wsPort &&
         other.wsPath == wsPath &&
+        other.dnsUrl == dnsUrl &&
         other.isMsync == isMsync &&
         other.enableTls == enableTls;
   }
@@ -458,6 +479,7 @@ class ServerConfig {
         wsServer.hashCode ^
         wsPort.hashCode ^
         wsPath.hashCode ^
+        dnsUrl.hashCode ^
         isMsync.hashCode ^
         enableTls.hashCode;
   }

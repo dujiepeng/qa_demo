@@ -101,16 +101,16 @@ void main() {
 
     final qaCabin = environments[qaIndex];
     expect(qaCabin.appKey, 'easemob-demo#qatest');
-    expect(qaCabin.restServer, 'http://10.202.1.58:8081');
-    expect(qaCabin.wsServer, '10.202.1.58');
+    expect(qaCabin.restServer, 'http://10.202.1.60:8081');
+    expect(qaCabin.wsServer, '10.202.1.60');
     expect(qaCabin.wsPort, 4717);
     expect(qaCabin.wsPath, '/websocket');
-    expect(qaCabin.enableTls, isFalse);
-    expect(qaCabin.msyncServer, '10.202.1.58');
+    expect(qaCabin.msyncServer, '10.202.1.60');
     expect(qaCabin.msyncPort, 4300);
+    expect(qaCabin.dnsUrl, isNull);
   });
 
-  test('qa cabin websocket init disables TLS for ws endpoint', () async {
+  test('non qa websocket init keeps manual server config', () async {
     SharedPreferences.setMockInitialValues({});
     final previousClient = Client.instance;
     final client = _InitCaptureClient();
@@ -123,58 +123,54 @@ void main() {
     settings.isInit = false;
     settings.useCustomAppKey = true;
     settings.useCustomServer = true;
-    settings.appKey = ServerEnvironment.qaCabin.appKey;
-    settings.restServer = ServerEnvironment.qaCabin.restServer;
-    settings.imServer = ServerEnvironment.qaCabin.msyncServer;
-    settings.imPort = ServerEnvironment.qaCabin.msyncPort;
-    settings.saveCustomEnv('qa隔舱', {
-      'appKey': ServerEnvironment.qaCabin.appKey,
-      'restServer': ServerEnvironment.qaCabin.restServer,
-      'msyncServer': ServerEnvironment.qaCabin.msyncServer,
-      'msyncPort': ServerEnvironment.qaCabin.msyncPort,
-      'wsServer': ServerEnvironment.qaCabin.wsServer,
-      'wsPort': ServerEnvironment.qaCabin.wsPort,
-      'wsPath': ServerEnvironment.qaCabin.wsPath,
-      'enableTls': ServerEnvironment.qaCabin.enableTls,
+    settings.appKey = ServerEnvironment.sandbox.appKey;
+    settings.restServer = ServerEnvironment.sandbox.restServer!;
+    settings.imServer = ServerEnvironment.sandbox.msyncServer!;
+    settings.imPort = ServerEnvironment.sandbox.msyncPort!;
+    settings.saveCustomEnv('开发沙箱', {
+      'appKey': ServerEnvironment.sandbox.appKey,
+      'restServer': ServerEnvironment.sandbox.restServer,
+      'msyncServer': ServerEnvironment.sandbox.msyncServer,
+      'msyncPort': ServerEnvironment.sandbox.msyncPort,
+      'wsServer': ServerEnvironment.sandbox.wsServer,
+      'wsPort': ServerEnvironment.sandbox.wsPort,
+      'wsPath': '/websocket',
+      'enableTls': false,
       'isMsync': false,
     });
-    settings.activeEnvName = 'qa隔舱';
+    settings.activeEnvName = '开发沙箱';
 
     await ensureSdkInit(settings);
 
-    expect(client.initOptions?['webSocketServer'], '10.202.1.58/websocket');
-    expect(client.initOptions?['webSocketPort'], 4717);
+    expect(
+      client.initOptions?['webSocketServer'],
+      '${ServerEnvironment.sandbox.wsServer}/websocket',
+    );
+    expect(
+      client.initOptions?['webSocketPort'],
+      ServerEnvironment.sandbox.wsPort,
+    );
     expect(client.initOptions?['enableTLS'], isFalse);
     expect(client.initOptions?['imServer'], isNull);
     expect(client.initOptions?['imPort'], isNull);
   });
 
-  test('qa cabin websocket uses default TLS flag for saved legacy env', () async {
+  test('qa cabin websocket init uses manual server config', () async {
+    SharedPreferences.setMockInitialValues({});
+    final previousClient = Client.instance;
+    final client = _InitCaptureClient();
+    Client.instance = client;
+    addTearDown(() {
+      Client.instance = previousClient;
+    });
+
     final settings = AppSettings();
+    settings.isInit = false;
     settings.useCustomAppKey = true;
     settings.useCustomServer = true;
-    settings.appKey = ServerEnvironment.qaCabin.appKey;
-    settings.restServer = ServerEnvironment.qaCabin.restServer;
-    settings.imServer = ServerEnvironment.qaCabin.msyncServer;
-    settings.imPort = ServerEnvironment.qaCabin.msyncPort;
-    settings.saveCustomEnv('qa隔舱', {
-      'appKey': ServerEnvironment.qaCabin.appKey,
-      'restServer': ServerEnvironment.qaCabin.restServer,
-      'msyncServer': ServerEnvironment.qaCabin.msyncServer,
-      'msyncPort': ServerEnvironment.qaCabin.msyncPort,
-      'wsServer': ServerEnvironment.qaCabin.wsServer,
-      'wsPort': ServerEnvironment.qaCabin.wsPort,
-      'isMsync': false,
-    });
-    settings.activeEnvName = 'qa隔舱';
-
-    expect(settings.activeConfig?.enableTls, isFalse);
-    expect(settings.activeConfig?.wsPath, '/websocket');
-  });
-
-  test('active env app key does not fall back to TKE when custom flag is false', () {
-    final settings = AppSettings();
-    settings.useCustomAppKey = false;
+    settings.restServer = ServerEnvironment.qaCabin.restServer!;
+    settings.imServer = ServerEnvironment.qaCabin.msyncServer!;
+    settings.imPort = ServerEnvironment.qaCabin.msyncPort!;
     settings.saveCustomEnv('qa隔舱', {
       'appKey': ServerEnvironment.qaCabin.appKey,
       'restServer': ServerEnvironment.qaCabin.restServer,
@@ -183,14 +179,55 @@ void main() {
       'wsServer': ServerEnvironment.qaCabin.wsServer,
       'wsPort': ServerEnvironment.qaCabin.wsPort,
       'wsPath': ServerEnvironment.qaCabin.wsPath,
-      'enableTls': ServerEnvironment.qaCabin.enableTls,
+      'isMsync': false,
+      'enableTls': false,
+    });
+    settings.activeEnvName = 'qa隔舱';
+
+    await ensureSdkInit(settings);
+
+    expect(client.initOptions?['appKey'], ServerEnvironment.qaCabin.appKey);
+    expect(client.initOptions?['enableDNSConfig'], isFalse);
+    expect(client.initOptions?['dnsUrl'], isNull);
+    expect(
+      client.initOptions?['restServer'],
+      ServerEnvironment.qaCabin.restServer,
+    );
+    expect(client.initOptions?['imServer'], isNull);
+    expect(client.initOptions?['imPort'], isNull);
+    expect(client.initOptions?['webSocketServer'], '10.202.1.60/websocket');
+    expect(client.initOptions?['webSocketPort'], 4717);
+  });
+
+  test('qa cabin env without dns url keeps dns url absent', () async {
+    final settings = AppSettings();
+    settings.useCustomAppKey = true;
+    settings.useCustomServer = true;
+    settings.appKey = ServerEnvironment.qaCabin.appKey;
+    settings.saveCustomEnv('qa隔舱', {
+      'appKey': ServerEnvironment.qaCabin.appKey,
       'isMsync': false,
     });
     settings.activeEnvName = 'qa隔舱';
 
-    expect(settings.appKey, ServerEnvironment.qaCabin.appKey);
-    expect(settings.activeConfig?.appKey, ServerEnvironment.qaCabin.appKey);
+    expect(settings.activeConfig?.dnsUrl, isNull);
   });
+
+  test(
+    'active env app key does not fall back to TKE when custom flag is false',
+    () {
+      final settings = AppSettings();
+      settings.useCustomAppKey = false;
+      settings.saveCustomEnv('qa隔舱', {
+        'appKey': ServerEnvironment.qaCabin.appKey,
+        'isMsync': false,
+      });
+      settings.activeEnvName = 'qa隔舱';
+
+      expect(settings.appKey, ServerEnvironment.qaCabin.appKey);
+      expect(settings.activeConfig?.appKey, ServerEnvironment.qaCabin.appKey);
+    },
+  );
 
   test('known active env app key uses built in environment fallback', () {
     final settings = AppSettings();

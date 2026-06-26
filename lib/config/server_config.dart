@@ -1,26 +1,28 @@
 class ServerEnvironment {
   final String name;
   final String appKey;
-  final String restServer;
-  final String msyncServer;
-  final int msyncPort;
-  final String wsServer;
-  final int wsPort;
-  final String wsPath;
-  final bool isMsync;
-  final bool enableTls;
+  final String? restServer;
+  final String? msyncServer;
+  final int? msyncPort;
+  final String? wsServer;
+  final int? wsPort;
+  final String? wsPath;
+  final String? dnsUrl;
+  final bool? isMsync;
+  final bool? enableTls;
 
   const ServerEnvironment({
     required this.name,
     required this.appKey,
-    required this.restServer,
-    required this.msyncServer,
-    required this.msyncPort,
-    required this.wsServer,
-    required this.wsPort,
-    this.wsPath = '',
-    this.isMsync = true,
-    this.enableTls = true,
+    this.restServer,
+    this.msyncServer,
+    this.msyncPort,
+    this.wsServer,
+    this.wsPort,
+    this.wsPath,
+    this.dnsUrl,
+    this.isMsync,
+    this.enableTls,
   });
 
   // TKE 集群默认配置
@@ -38,13 +40,12 @@ class ServerEnvironment {
   static const ServerEnvironment qaCabin = ServerEnvironment(
     name: 'qa隔舱',
     appKey: 'easemob-demo#qatest',
-    restServer: 'http://10.202.1.58:8081',
-    msyncServer: '10.202.1.58',
+    restServer: 'http://10.202.1.60:8081',
+    msyncServer: '10.202.1.60',
     msyncPort: 4300,
-    wsServer: '10.202.1.58',
+    wsServer: '10.202.1.60',
     wsPort: 4717,
     wsPath: '/websocket',
-    enableTls: false,
   );
 
   // 开发沙箱 集群默认配置
@@ -62,11 +63,6 @@ class ServerEnvironment {
   static const ServerEnvironment online = ServerEnvironment(
     name: 'ebs',
     appKey: 'easemob-demo#wang',
-    restServer: '',
-    msyncServer: '',
-    msyncPort: 0,
-    wsServer: '',
-    wsPort: 0,
   );
 
   static const List<ServerEnvironment> environments = [

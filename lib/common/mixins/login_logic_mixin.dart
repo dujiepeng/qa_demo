@@ -15,8 +15,8 @@ Future<void> ensureSdkInit(AppSettings settings) async {
   EMOptions options;
   if (settings.activeEnvName != 'ebs') {
     // 非 ebs 的开发/私有集群，在构造时直接传入详细信息
-    final isWs = !settings.isMsync;
     final activeConf = settings.activeConfig;
+    final isWs = !settings.isMsync;
 
     final serverHost = isWs
         ? (activeConf?.wsServer ?? settings.imServer)

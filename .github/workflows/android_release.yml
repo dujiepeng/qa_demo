@@ -2,8 +2,8 @@ name: Android Release
 
 on:
   push:
-    tags:
-      - '*'
+    branches:
+      - dev
 
 permissions:
   contents: write
@@ -34,6 +34,95 @@ jobs:
       - name: Get Dependencies
         run: flutter pub get
 
+      - name: Resolve release version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
+          if [ -z "$VERSION" ]; then
+            echo "Cannot resolve version from pubspec.yaml"
+            exit 1
+          fi
+
+          TAG="v${VERSION}"
+          APK_NAME="qa_demo_${TAG}.apk"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "apk_name=${APK_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate changelog for release version
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          import os
+          import re
+          import sys
+          from pathlib import Path
+
+          version = os.environ["RELEASE_VERSION"]
+          changelog = Path("changelog.md").read_text(encoding="utf-8")
+          section_pattern = re.compile(
+              rf"^## \[{re.escape(version)}\] - \d{{4}}-\d{{2}}-\d{{2}}.*?(?=^## |\Z)",
+              re.M | re.S,
+          )
+          section_match = section_pattern.search(changelog)
+          if not section_match:
+              print(
+                  f"changelog.md must contain a release section: ## [{version}] - YYYY-MM-DD",
+                  file=sys.stderr,
+              )
+              sys.exit(1)
+
+          section = section_match.group(0)
+          parsed_titles = ("Feature", "UI/UX", "Bug Fix")
+          has_release_item = False
+          for title in parsed_titles:
+              match = re.search(
+                  rf"^### {re.escape(title)}\n(.*?)(?=^### |\Z)",
+                  section,
+                  re.M | re.S,
+              )
+              if match and any(
+                  line.strip().startswith("- ")
+                  for line in match.group(1).splitlines()
+              ):
+                  has_release_item = True
+                  break
+
+          if not has_release_item:
+              print(
+                  "changelog.md release section must include at least one '- ' item "
+                  "under ### Feature, ### UI/UX, or ### Bug Fix.",
+                  file=sys.stderr,
+              )
+              sys.exit(1)
+          PY
+
+      - name: Generate release notes
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          version = os.environ["RELEASE_VERSION"]
+          changelog = Path("changelog.md").read_text(encoding="utf-8")
+          section_pattern = re.compile(
+              rf"^## \[{re.escape(version)}\] - \d{{4}}-\d{{2}}-\d{{2}}\n(.*?)(?=^## |\Z)",
+              re.M | re.S,
+          )
+          section = section_pattern.search(changelog).group(1).strip()
+          Path("RELEASE_NOTES.md").write_text(section + "\n", encoding="utf-8")
+          PY
+
       - name: Build APK (arm64-v8a)
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -50,20 +139,23 @@ jobs:
           rm android/release.jks android/key.properties
 
       - name: Rename APK
-        run: mv build/app/outputs/flutter-apk/app-release.apk "build/app/outputs/flutter-apk/qa_demo_${GITHUB_REF_NAME}.apk"
+        run: mv build/app/outputs/flutter-apk/app-release.apk "build/app/outputs/flutter-apk/${{ steps.version.outputs.apk_name }}"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: build/app/outputs/flutter-apk/qa_demo_${{ github.ref_name }}.apk
-          generate_release_notes: true
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          files: build/app/outputs/flutter-apk/${{ steps.version.outputs.apk_name }}
+          body_path: RELEASE_NOTES.md
+          make_latest: true
+          overwrite_files: true
 
       - name: Notify WeCom with release card
-        if: startsWith(github.ref, 'refs/tags/')
         env:
           WCHAT_HOOK: ${{ secrets.WCHAT_HOOK }}
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
           REPOSITORY: ${{ github.repository }}
         run: |
           if [ -z "$WCHAT_HOOK" ]; then

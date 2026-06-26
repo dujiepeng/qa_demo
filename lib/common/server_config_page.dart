@@ -43,16 +43,19 @@ class _ServerConfigPageState extends State<ServerConfigPage>
       // 如果 _settings 里有保存的该环境的值，就用保存的值，否则用默认值
       final savedEnvStr = _settings.getCustomEnv(env.name);
       final appKey = savedEnvStr?['appKey'] ?? env.appKey;
-      final restServer = savedEnvStr?['restServer'] ?? env.restServer;
-      final msyncServer = savedEnvStr?['msyncServer'] ?? env.msyncServer;
+      final restServer = savedEnvStr?['restServer'] ?? env.restServer ?? '';
+      final msyncServer = savedEnvStr?['msyncServer'] ?? env.msyncServer ?? '';
       final msyncPort =
-          savedEnvStr?['msyncPort']?.toString() ?? env.msyncPort.toString();
-      final wsServer = savedEnvStr?['wsServer'] ?? env.wsServer;
+          savedEnvStr?['msyncPort']?.toString() ??
+          env.msyncPort?.toString() ??
+          '';
+      final wsServer = savedEnvStr?['wsServer'] ?? env.wsServer ?? '';
       final wsPort =
-          savedEnvStr?['wsPort']?.toString() ?? env.wsPort.toString();
-      final wsPath = savedEnvStr?['wsPath'] ?? env.wsPath;
-      final isMsync = savedEnvStr?['isMsync'] ?? env.isMsync;
-      final enableTls = savedEnvStr?['enableTls'] ?? env.enableTls;
+          savedEnvStr?['wsPort']?.toString() ?? env.wsPort?.toString() ?? '';
+      final wsPath = savedEnvStr?['wsPath'] ?? env.wsPath ?? '';
+      final dnsUrl = savedEnvStr?['dnsUrl'] ?? env.dnsUrl ?? '';
+      final isMsync = savedEnvStr?['isMsync'] ?? env.isMsync ?? true;
+      final enableTls = savedEnvStr?['enableTls'] ?? env.enableTls ?? true;
 
       _controllers[env.name] = _EnvControllers(
         appKeyController: TextEditingController(text: appKey),
@@ -62,6 +65,7 @@ class _ServerConfigPageState extends State<ServerConfigPage>
         wsServerController: TextEditingController(text: wsServer),
         wsPortController: TextEditingController(text: wsPort),
         wsPathController: TextEditingController(text: wsPath),
+        dnsUrlController: TextEditingController(text: dnsUrl),
         isMsync: isMsync,
         enableTls: enableTls,
       );
@@ -83,17 +87,26 @@ class _ServerConfigPageState extends State<ServerConfigPage>
     final ctrl = _controllers[activeEnv.name]!;
 
     // 存储当前选中的环境名称与值
-    final customData = {
+    final customData = <String, dynamic>{
       'appKey': ctrl.appKeyController.text.trim(),
-      'restServer': ctrl.restServerController.text.trim(),
-      'msyncServer': ctrl.msyncServerController.text.trim(),
-      'msyncPort': int.tryParse(ctrl.msyncPortController.text.trim()) ?? 6717,
-      'wsServer': ctrl.wsServerController.text.trim(),
-      'wsPort': int.tryParse(ctrl.wsPortController.text.trim()) ?? 443,
-      'wsPath': ctrl.wsPathController.text.trim(),
-      'isMsync': ctrl.isMsync,
-      'enableTls': ctrl.enableTls,
     };
+    _putTextIfNotEmpty(
+      customData,
+      'restServer',
+      ctrl.restServerController.text,
+    );
+    _putTextIfNotEmpty(
+      customData,
+      'msyncServer',
+      ctrl.msyncServerController.text,
+    );
+    _putIntIfValid(customData, 'msyncPort', ctrl.msyncPortController.text);
+    _putTextIfNotEmpty(customData, 'wsServer', ctrl.wsServerController.text);
+    _putIntIfValid(customData, 'wsPort', ctrl.wsPortController.text);
+    _putTextIfNotEmpty(customData, 'wsPath', ctrl.wsPathController.text);
+    _putTextIfNotEmpty(customData, 'dnsUrl', ctrl.dnsUrlController.text);
+    customData['isMsync'] = ctrl.isMsync;
+    customData['enableTls'] = ctrl.enableTls;
 
     // 保存到 AppSettings
     _settings.saveCustomEnv(activeEnv.name, customData);
@@ -106,10 +119,12 @@ class _ServerConfigPageState extends State<ServerConfigPage>
 
     // 依然修改 AppSettings 老字段，以便于兼容之前的逻辑和历史记录功能
     _settings.appKey = customData['appKey'] as String;
-    _settings.restServer = customData['restServer'] as String;
+    _settings.restServer =
+        customData['restServer'] as String? ?? _settings.restServer;
     // 将 msync 对应给 imServer 等，这里先向后兼容老代码
-    _settings.imServer = customData['msyncServer'] as String;
-    _settings.imPort = customData['msyncPort'] as int;
+    _settings.imServer =
+        customData['msyncServer'] as String? ?? _settings.imServer;
+    _settings.imPort = customData['msyncPort'] as int? ?? _settings.imPort;
 
     // 保存到历史记录中
     _settings.addCurrentConfigToHistory();
@@ -146,14 +161,15 @@ class _ServerConfigPageState extends State<ServerConfigPage>
     final ctrl = _controllers[config.envName];
     if (ctrl != null) {
       ctrl.appKeyController.text = config.appKey;
-      ctrl.restServerController.text = config.restServer;
-      ctrl.msyncServerController.text = config.msyncServer;
-      ctrl.msyncPortController.text = config.msyncPort.toString();
-      ctrl.wsServerController.text = config.wsServer;
-      ctrl.wsPortController.text = config.wsPort.toString();
-      ctrl.wsPathController.text = config.wsPath;
-      ctrl.isMsync = config.isMsync;
-      ctrl.enableTls = config.enableTls;
+      ctrl.restServerController.text = config.restServer ?? '';
+      ctrl.msyncServerController.text = config.msyncServer ?? '';
+      ctrl.msyncPortController.text = config.msyncPort?.toString() ?? '';
+      ctrl.wsServerController.text = config.wsServer ?? '';
+      ctrl.wsPortController.text = config.wsPort?.toString() ?? '';
+      ctrl.wsPathController.text = config.wsPath ?? '';
+      ctrl.dnsUrlController.text = config.dnsUrl ?? '';
+      ctrl.isMsync = config.isMsync ?? true;
+      ctrl.enableTls = config.enableTls ?? true;
 
       // 切换到对应的 tab
       final index = _envs.indexWhere((e) => e.name == config.envName);
@@ -215,11 +231,20 @@ class _ServerConfigPageState extends State<ServerConfigPage>
                             itemCount: _settings.configHistory.length,
                             itemBuilder: (context, index) {
                               final config = _settings.configHistory[index];
-                              final subTitle =
-                                  '集群: ${config.envName} | 连接: ${config.isMsync ? 'TCP' : 'WebSocket'}';
+                              final isQaCabin =
+                                  config.envName ==
+                                  ServerEnvironment.qaCabin.name;
+                              final isMsync = config.isMsync ?? true;
+                              final dnsUrl = config.dnsUrl ?? '';
+                              final title = isQaCabin
+                                  ? (dnsUrl.isEmpty ? 'DNS URL 未配置' : dnsUrl)
+                                  : config.appKey;
+                              final subTitle = isQaCabin
+                                  ? '集群: ${config.envName} | DNS URL'
+                                  : '集群: ${config.envName} | 连接: ${isMsync ? 'TCP' : 'WebSocket'}';
                               return ListTile(
                                 title: Text(
-                                  config.appKey,
+                                  title,
                                   style: TextStyle(
                                     color: AppColors.textPrimary(isDark),
                                     fontWeight: FontWeight.bold,
@@ -263,27 +288,9 @@ class _ServerConfigPageState extends State<ServerConfigPage>
                                                 ),
                                               ),
                                               const SizedBox(height: 8),
-                                              Text(
-                                                'AppKey: ${config.appKey}',
-                                                style: TextStyle(
-                                                  color: AppColors.textPrimary(
-                                                    isDark,
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                '连接方式: ${config.isMsync ? 'TCP' : 'WebSocket'}',
-                                                style: TextStyle(
-                                                  color: AppColors.textPrimary(
-                                                    isDark,
-                                                  ),
-                                                ),
-                                              ),
-                                              if (config.envName != 'ebs') ...[
-                                                const SizedBox(height: 8),
+                                              if (isQaCabin) ...[
                                                 Text(
-                                                  'REST: ${config.restServer}',
+                                                  'DNS URL: $dnsUrl',
                                                   style: TextStyle(
                                                     color:
                                                         AppColors.textPrimary(
@@ -291,10 +298,32 @@ class _ServerConfigPageState extends State<ServerConfigPage>
                                                         ),
                                                   ),
                                                 ),
-                                                if (config.isMsync) ...[
-                                                  const SizedBox(height: 8),
+                                              ] else ...[
+                                                Text(
+                                                  'AppKey: ${config.appKey}',
+                                                  style: TextStyle(
+                                                    color:
+                                                        AppColors.textPrimary(
+                                                          isDark,
+                                                        ),
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 8),
+                                                Text(
+                                                  '连接方式: ${isMsync ? 'TCP' : 'WebSocket'}',
+                                                  style: TextStyle(
+                                                    color:
+                                                        AppColors.textPrimary(
+                                                          isDark,
+                                                        ),
+                                                  ),
+                                                ),
+                                              ],
+                                              if (config.envName != 'ebs') ...[
+                                                const SizedBox(height: 8),
+                                                if (!isQaCabin)
                                                   Text(
-                                                    'MSYNC: ${config.msyncServer}:${config.msyncPort}',
+                                                    'REST: ${config.restServer ?? ''}',
                                                     style: TextStyle(
                                                       color:
                                                           AppColors.textPrimary(
@@ -302,10 +331,21 @@ class _ServerConfigPageState extends State<ServerConfigPage>
                                                           ),
                                                     ),
                                                   ),
-                                                ] else ...[
+                                                if (!isQaCabin && isMsync) ...[
                                                   const SizedBox(height: 8),
                                                   Text(
-                                                    'WebSocket: ${config.wsServer}:${config.wsPort}',
+                                                    'MSYNC: ${config.msyncServer ?? ''}:${config.msyncPort ?? ''}',
+                                                    style: TextStyle(
+                                                      color:
+                                                          AppColors.textPrimary(
+                                                            isDark,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                ] else if (!isQaCabin) ...[
+                                                  const SizedBox(height: 8),
+                                                  Text(
+                                                    'WebSocket: ${config.wsServer ?? ''}:${config.wsPort ?? ''}',
                                                     style: TextStyle(
                                                       color:
                                                           AppColors.textPrimary(
@@ -661,6 +701,7 @@ class _EnvControllers {
   final TextEditingController wsServerController;
   final TextEditingController wsPortController;
   final TextEditingController wsPathController;
+  final TextEditingController dnsUrlController;
   bool isMsync;
   bool enableTls;
 
@@ -672,6 +713,7 @@ class _EnvControllers {
     required this.wsServerController,
     required this.wsPortController,
     required this.wsPathController,
+    required this.dnsUrlController,
     required this.isMsync,
     required this.enableTls,
   });
@@ -684,5 +726,20 @@ class _EnvControllers {
     wsServerController.dispose();
     wsPortController.dispose();
     wsPathController.dispose();
+    dnsUrlController.dispose();
+  }
+}
+
+void _putTextIfNotEmpty(Map<String, dynamic> target, String key, String value) {
+  final trimmed = value.trim();
+  if (trimmed.isNotEmpty) {
+    target[key] = trimmed;
+  }
+}
+
+void _putIntIfValid(Map<String, dynamic> target, String key, String value) {
+  final parsed = int.tryParse(value.trim());
+  if (parsed != null) {
+    target[key] = parsed;
   }
 }

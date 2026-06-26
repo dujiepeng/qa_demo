@@ -33,6 +33,7 @@ migrate_working_dir/
 /build/
 /coverage/
 outputs/
+docs/superpowers/plans/
 
 # Symbolication related
 app.*.symbols

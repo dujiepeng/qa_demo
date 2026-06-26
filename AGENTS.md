@@ -115,10 +115,14 @@
 
 ## Release Rule
 
-- If a version tag has already been created and pushed, any later code changes must bump the app version before creating a new release tag.
-- Release flow for follow-up changes is: update `pubspec.yaml` version, update `changelog.md`, commit, create the matching `v<version>` tag, then push both commit and tag.
+- Android release builds are triggered by pushes to the `dev` branch, not by manually pushing tags.
+- The release workflow reads `pubspec.yaml` `version:` and creates or updates the matching GitHub Release tag `v<version>` automatically.
+- Any code change that should be available through app update detection must bump the app version before it is pushed to `dev`.
+- Release flow for follow-up changes is: update `pubspec.yaml` version, update `changelog.md`, commit, then push the commit to `dev`. Do not manually create the release tag for the normal dev release flow.
+- If a GitHub Release for the current `pubspec.yaml` version already exists, pushing to `dev` with the same version may update/overwrite that release asset. Use a new version for user-visible follow-up changes so update detection and release notes remain unambiguous.
 - Every release entry in `changelog.md` must use this exact section header format: `## [<version>] - YYYY-MM-DD`. The `<version>` must exactly match `pubspec.yaml` version and the Git tag without the leading `v`, so tag `v1.77.9+217` must match changelog header `## [1.77.9+217] - 2026-04-16`.
 - The release date in the changelog header must be the actual release date used when creating that version entry. Do not leave an old date in place when bumping a new release.
+- The release workflow fails before building if `changelog.md` does not contain a section for the current `pubspec.yaml` version.
 - The Android release workflow parses `changelog.md` by matching the current version section and then extracting only `### Feature`, `### UI/UX`, and `### Bug Fix` subsections. These subsection titles are case-sensitive and must be written exactly as shown.
 - For release card generation:
   - `### Feature` and `### UI/UX` are merged into the WeCom card's “新增” content.

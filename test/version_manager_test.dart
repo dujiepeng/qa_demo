@@ -93,5 +93,70 @@ void main() {
       expect(manager.status, VersionCheckStatus.upToDate);
       expect(manager.lastCheckSource, VersionCheckSource.loginSilent);
     });
+
+    test('login silent check refreshes stale new-version flag', () async {
+      final manager = VersionManager();
+      manager.debugApplyResult(
+        const VersionCheckResult(
+          status: VersionCheckStatus.hasUpdate,
+          latestVersion: '2.0.0+2',
+        ),
+        source: VersionCheckSource.startupSilent,
+      );
+      manager.debugSetLastCheckTime(DateTime.now());
+
+      var calls = 0;
+      manager.debugSetCheckRunner(({
+        required bool force,
+        required bool notifyOnChecking,
+        required VersionCheckSource source,
+      }) async {
+        calls++;
+        expect(source, VersionCheckSource.loginSilent);
+        return const VersionCheckResult(status: VersionCheckStatus.upToDate);
+      });
+      addTearDown(() {
+        manager.debugSetCheckRunner(null);
+        manager.debugSetLastCheckTime(null);
+      });
+
+      await manager.silentCheck(source: VersionCheckSource.loginSilent);
+
+      expect(calls, 1);
+      expect(manager.hasNewVersion, isFalse);
+      expect(manager.status, VersionCheckStatus.upToDate);
+    });
+
+    test('non-login silent check still returns cached snapshot', () async {
+      final manager = VersionManager();
+      manager.debugApplyResult(
+        const VersionCheckResult(
+          status: VersionCheckStatus.hasUpdate,
+          latestVersion: '2.0.0+2',
+        ),
+        source: VersionCheckSource.manualSettings,
+      );
+      manager.debugSetLastCheckTime(DateTime.now());
+
+      var calls = 0;
+      manager.debugSetCheckRunner(({
+        required bool force,
+        required bool notifyOnChecking,
+        required VersionCheckSource source,
+      }) async {
+        calls++;
+        return const VersionCheckResult(status: VersionCheckStatus.upToDate);
+      });
+      addTearDown(() {
+        manager.debugSetCheckRunner(null);
+        manager.debugSetLastCheckTime(null);
+      });
+
+      await manager.silentCheck(source: VersionCheckSource.manualSettings);
+
+      expect(calls, 0);
+      expect(manager.hasNewVersion, isTrue);
+      expect(manager.status, VersionCheckStatus.hasUpdate);
+    });
   });
 }

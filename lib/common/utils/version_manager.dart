@@ -110,11 +110,26 @@ class VersionManager extends ChangeNotifier {
     _debugCheckRunner = runner;
   }
 
+  @visibleForTesting
+  void debugSetLastCheckTime(DateTime? time) {
+    _lastCheckTime = time;
+  }
+
   Future<VersionCheckResult> _runCheck({
     required bool force,
     required bool notifyOnChecking,
     required VersionCheckSource source,
   }) async {
+    final shouldThrottle =
+        !force &&
+        source != VersionCheckSource.startupSilent &&
+        source != VersionCheckSource.loginSilent;
+    if (shouldThrottle &&
+        _lastCheckTime != null &&
+        DateTime.now().difference(_lastCheckTime!) < _checkInterval) {
+      return _snapshotResult();
+    }
+
     if (_debugCheckRunner != null) {
       final result = await _debugCheckRunner!(
         force: force,
@@ -123,12 +138,6 @@ class VersionManager extends ChangeNotifier {
       );
       _applyResult(result, source: source);
       return result;
-    }
-
-    if (!force &&
-        _lastCheckTime != null &&
-        DateTime.now().difference(_lastCheckTime!) < _checkInterval) {
-      return _snapshotResult();
     }
 
     if (notifyOnChecking) {
