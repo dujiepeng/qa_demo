@@ -189,7 +189,17 @@ class _SingleChatPageState extends State<SingleChatPage> with BaseMixin {
             }
           }
         },
-
+        onCmdMessagesReceived: (messages) {
+          for (var msg in messages) {
+            if (msg.chatType == ChatType.Chat) {
+              addReceiveLog(
+                '${msg.from}: ${msg.toJson().toString()}',
+                attachment: msg,
+                tag: 'message',
+              );
+            }
+          }
+        },
         onMessagePinChanged:
             (messageId, conversationId, pinOperation, pinInfo) {
               if (!isSingleChatPinEventForCurrentConversation(
