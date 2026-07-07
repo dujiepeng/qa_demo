@@ -76,6 +76,7 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       title: 'QA Flutter',
       debugShowCheckedModeBanner: false,
+      navigatorKey: appNavigatorKey,
       navigatorObservers: [appRouteObserver],
 
       theme: ThemeData(

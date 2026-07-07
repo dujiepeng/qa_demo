@@ -160,4 +160,67 @@ void main() {
       expect(calls, 2);
     });
   });
+
+  group('exportLogFileForSharing', () {
+    test('copies log file into export directory', () async {
+      final sourceDir = await Directory.systemTemp.createTemp('log-source');
+      final exportDir = await Directory.systemTemp.createTemp('log-export');
+      addTearDown(() => sourceDir.delete(recursive: true));
+      addTearDown(() => exportDir.delete(recursive: true));
+
+      final sourceFile = File('${sourceDir.path}/easemob.log');
+      await sourceFile.writeAsString('hello export');
+
+      final result = await exportLogFileForSharing(
+        sourceLogPath: sourceFile.path,
+        externalStorageDirectoryProvider: () async => exportDir,
+        now: () => DateTime(2026, 7, 7, 12, 30, 15),
+      );
+
+      expect(result.status, LogFileExportStatus.exported);
+      expect(result.exportPath, isNotNull);
+      final exportedFile = File(result.exportPath!);
+      expect(await exportedFile.exists(), isTrue);
+      expect(await exportedFile.readAsString(), 'hello export');
+      expect(
+        exportedFile.path,
+        contains('qa_flutter_logs${Platform.pathSeparator}easemob_20260707_123015.log'),
+      );
+    });
+
+    test('returns unavailable when source file is missing', () async {
+      final result = await exportLogFileForSharing(
+        sourceLogPath: '/tmp/missing.log',
+        externalStorageDirectoryProvider: () async => Directory.systemTemp,
+      );
+
+      expect(result.status, LogFileExportStatus.unavailable);
+      expect(result.message, contains('不存在'));
+    });
+  });
+
+  test('buildAdbPullCommand uses export path and target directory', () {
+    final command = buildAdbPullCommand(
+      '/sdcard/Android/data/com.example.qa_flutter/files/qa_flutter_logs/a.log',
+      hostTargetDirectory: '/Users/dujiepeng/Desktop/qa_logs/',
+    );
+
+    expect(
+      command,
+      'adb pull "/sdcard/Android/data/com.example.qa_flutter/files/qa_flutter_logs/a.log" "/Users/dujiepeng/Desktop/qa_logs/"',
+    );
+  });
+
+  test('buildLogShareText returns adb command only', () {
+    final shareText = buildLogShareText(
+      '/sdcard/Android/data/com.example.qa_flutter/files/qa_flutter_logs/a.log',
+      deviceId: 'emulator-5556',
+      hostTargetDirectory: r'$HOME/Downloads/',
+    );
+
+    expect(
+      shareText,
+      r'adb -s emulator-5556 pull "/sdcard/Android/data/com.example.qa_flutter/files/qa_flutter_logs/a.log" "$HOME/Downloads/"',
+    );
+  });
 }

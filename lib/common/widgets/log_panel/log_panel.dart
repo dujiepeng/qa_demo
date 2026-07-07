@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../theme/app_colors.dart';
+import '../log_page_launcher.dart';
 import '../../utils/sdk_log_update_stream.dart';
 import 'log_panel_controller.dart';
 import 'log_panel_visibility_observer.dart';
@@ -9,17 +10,21 @@ import 'log_panel_visibility_observer.dart';
 class LogPanel extends StatefulWidget {
   final bool isDark;
   final PrepareLogFileForPanelCallback? prepareLogFile;
+  final Future<void> Function(BuildContext context)? openLogPage;
   final ReadLogPanelStateCallback? readLogState;
   final LogUpdateStreamFactory? logUpdateStreamFactory;
   final int maxRetainedCharacters;
+  final int? maxVisibleLines;
   final bool enableFallbackPolling;
   const LogPanel({
     super.key,
     required this.isDark,
     this.prepareLogFile,
+    this.openLogPage,
     this.readLogState,
     this.logUpdateStreamFactory,
     this.maxRetainedCharacters = maxRetainedLogPanelCharacters,
+    this.maxVisibleLines,
     this.enableFallbackPolling = true,
   });
 
@@ -46,6 +51,7 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
   String _searchKeyword = '';
   String _lastRawContent = '';
   String _lastFilterKeyword = '';
+  List<String> _rawLinesCache = const [];
   List<String> _visibleLinesCache = const [];
   List<int> _searchMatchIndices = const [];
   int _currentSearchMatchIndex = -1;
@@ -109,6 +115,8 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
   void _rebuildVisibleLinesCache() {
     final rawContent = _controller.content;
     final normalizedKeyword = _filterKeyword.trim().toLowerCase();
+    final previousRawContent = _lastRawContent;
+    final previousFilterKeyword = _lastFilterKeyword;
     if (rawContent == _lastRawContent &&
         normalizedKeyword == _lastFilterKeyword) {
       return;
@@ -118,11 +126,28 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
     _lastFilterKeyword = normalizedKeyword;
 
     if (rawContent.isEmpty) {
+      _rawLinesCache = const [];
       _visibleLinesCache = const [];
       return;
     }
 
-    final allLines = rawContent.split('\n');
+    final canAppendIncrementally =
+        normalizedKeyword.isEmpty &&
+        previousFilterKeyword.isEmpty &&
+        _rawLinesCache.isNotEmpty &&
+        rawContent.length >= previousRawContent.length &&
+        rawContent.startsWith(previousRawContent);
+
+    var allLines = canAppendIncrementally
+        ? _appendLines(_rawLinesCache, rawContent.substring(previousRawContent.length))
+        : rawContent.split('\n');
+    _rawLinesCache = List.unmodifiable(allLines);
+    final maxVisibleLines = widget.maxVisibleLines;
+    if (maxVisibleLines != null &&
+        maxVisibleLines > 0 &&
+        allLines.length > maxVisibleLines) {
+      allLines = allLines.sublist(allLines.length - maxVisibleLines);
+    }
     if (normalizedKeyword.isEmpty) {
       _visibleLinesCache = List.unmodifiable(allLines);
       return;
@@ -131,6 +156,26 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
     _visibleLinesCache = List.unmodifiable(
       allLines.where((line) => line.toLowerCase().contains(normalizedKeyword)),
     );
+  }
+
+  List<String> _appendLines(List<String> existingLines, String appendedText) {
+    if (appendedText.isEmpty) {
+      return List<String>.from(existingLines);
+    }
+
+    final appendedParts = appendedText.split('\n');
+    final nextLines = List<String>.from(existingLines);
+    if (nextLines.isEmpty) {
+      nextLines.addAll(appendedParts);
+      return nextLines;
+    }
+
+    nextLines[nextLines.length - 1] =
+        '${nextLines.last}${appendedParts.first}';
+    if (appendedParts.length > 1) {
+      nextLines.addAll(appendedParts.skip(1));
+    }
+    return nextLines;
   }
 
   void _refreshSearchMatches() {
@@ -264,6 +309,7 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
     _rebuildVisibleLinesCache();
     final visibleContent = _visibleContent;
     final hasFilter = _filterKeyword.trim().isNotEmpty;
+    final maxVisibleLines = widget.maxVisibleLines;
     final searchCount = _searchMatchIndices.length;
     final currentSearchDisplay = searchCount == 0
         ? '0/0'
@@ -292,13 +338,26 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        '日志',
-                        style: TextStyle(
-                          color: AppColors.primary(isDark),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '日志',
+                            style: TextStyle(
+                              color: AppColors.primary(isDark),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          if (maxVisibleLines != null && maxVisibleLines > 0)
+                            Text(
+                              '最近 $maxVisibleLines 行',
+                              style: TextStyle(
+                                color: AppColors.textSecondary(isDark),
+                                fontSize: 11,
+                              ),
+                            ),
+                        ],
                       ),
                       Flexible(
                         child: SingleChildScrollView(
@@ -388,6 +447,15 @@ class _LogPanelState extends State<LogPanel> with TickerProviderStateMixin {
                                   });
                                 },
                                 tooltip: _showFilterField ? '收起过滤' : '过滤日志',
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.open_in_new, size: 18),
+                                onPressed: () {
+                                  final openLogPage =
+                                      widget.openLogPage ?? openSdkLogPage;
+                                  openLogPage(context);
+                                },
+                                tooltip: '完整日志',
                               ),
                               IconButton(
                                 icon: const Icon(Icons.copy_all, size: 18),

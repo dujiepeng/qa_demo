@@ -490,6 +490,135 @@ void main() {
     messenger.setMockMethodCallHandler(SystemChannels.platform, null);
   });
 
+  testWidgets('log panel exposes full log entry point', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 300,
+            child: LogPanel(
+              isDark: true,
+              prepareLogFile: () async => const LogFileOpenResult(
+                status: LogFileOpenStatus.ready,
+                logPath: '/tmp/mock.log',
+              ),
+              readLogState: (
+                logPath, {
+                previous,
+                maxRetainedCharacters = 120000,
+              }) async {
+                return const LogPanelFileState(
+                  content: 'alpha\nbeta',
+                  fileLength: 10,
+                  unchangedCount: 0,
+                  nextPollInterval: Duration(seconds: 1),
+                );
+              },
+              enableFallbackPolling: false,
+              logUpdateStreamFactory: (_) => const Stream<Object?>.empty(),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('完整日志'), findsOneWidget);
+  });
+
+  testWidgets('log panel full log button uses injected prepare callback', (
+    tester,
+  ) async {
+    var prepareCalls = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 300,
+            child: LogPanel(
+              isDark: true,
+              prepareLogFile: () async {
+                prepareCalls++;
+                return const LogFileOpenResult(
+                  status: LogFileOpenStatus.ready,
+                  logPath: '/tmp/mock.log',
+                );
+              },
+              readLogState: (
+                logPath, {
+                previous,
+                maxRetainedCharacters = 120000,
+              }) async {
+                return const LogPanelFileState(
+                  content: 'alpha\nbeta',
+                  fileLength: 10,
+                  unchangedCount: 0,
+                  nextPollInterval: Duration(seconds: 1),
+                );
+              },
+              enableFallbackPolling: false,
+              logUpdateStreamFactory: (_) => const Stream<Object?>.empty(),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('完整日志'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(prepareCalls, 1);
+  });
+
+  testWidgets('log panel full log button invokes injected open callback', (tester) async {
+    var openCalls = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 300,
+            child: LogPanel(
+              isDark: true,
+              prepareLogFile: () async => const LogFileOpenResult(
+                status: LogFileOpenStatus.ready,
+                logPath: '/tmp/mock.log',
+              ),
+              openLogPage: (context) async {
+                openCalls++;
+              },
+              readLogState: (
+                logPath, {
+                previous,
+                maxRetainedCharacters = 120000,
+              }) async {
+                return const LogPanelFileState(
+                  content: 'alpha\nbeta',
+                  fileLength: 10,
+                  unchangedCount: 0,
+                  nextPollInterval: Duration(seconds: 1),
+                );
+              },
+              enableFallbackPolling: false,
+              logUpdateStreamFactory: (_) => const Stream<Object?>.empty(),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('完整日志'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(openCalls, 1);
+  });
+
   testWidgets('log panel search shows match count and navigates results', (
     tester,
   ) async {
@@ -911,6 +1040,52 @@ void main() {
 
     expect(find.textContaining('67890'), findsOneWidget);
     expect(find.textContaining('1234567890'), findsNothing);
+  });
+
+  testWidgets('log panel can limit visible lines to recent tail', (
+    tester,
+  ) async {
+    const content = 'line1\nline2\nline3\nline4';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 300,
+            child: LogPanel(
+              isDark: true,
+              maxVisibleLines: 2,
+              prepareLogFile: () async => const LogFileOpenResult(
+                status: LogFileOpenStatus.ready,
+                logPath: '/tmp/mock.log',
+              ),
+              readLogState: (
+                logPath, {
+                previous,
+                maxRetainedCharacters = 120000,
+              }) async {
+                return const LogPanelFileState(
+                  content: content,
+                  fileLength: content.length,
+                  unchangedCount: 0,
+                  nextPollInterval: Duration(seconds: 1),
+                );
+              },
+              enableFallbackPolling: false,
+              logUpdateStreamFactory: (_) => const Stream<Object?>.empty(),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('line1'), findsNothing);
+    expect(find.textContaining('line2'), findsNothing);
+    expect(find.textContaining('line3'), findsOneWidget);
+    expect(find.textContaining('line4'), findsOneWidget);
+    expect(find.text('最近 2 行'), findsOneWidget);
   });
 
   testWidgets('log panel shows more visible log area when height increases', (

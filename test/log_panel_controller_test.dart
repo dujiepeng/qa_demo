@@ -135,7 +135,7 @@ void main() {
     updates.add(null);
     updates.add(null);
 
-    await Future<void>.delayed(const Duration(milliseconds: 80));
+    await Future<void>.delayed(const Duration(milliseconds: 140));
 
     expect(controller.content, 'line1\nline2');
     expect(readCalls, 2);
@@ -183,7 +183,7 @@ void main() {
     content = 'line1\nline2';
     updates.add(null);
     updates.add(null);
-    await Future<void>.delayed(const Duration(milliseconds: 80));
+    await Future<void>.delayed(const Duration(milliseconds: 140));
 
     expect(latestStats!.syncCount, 2);
     expect(latestStats!.eventSyncCount, 1);

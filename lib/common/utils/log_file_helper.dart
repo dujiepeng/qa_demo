@@ -3,8 +3,11 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:im_flutter_sdk/im_flutter_sdk.dart';
+import 'package:path_provider/path_provider.dart';
 
 enum LogFileOpenStatus { ready, unavailable }
+
+enum LogFileExportStatus { exported, unavailable }
 
 class LogFileOpenResult {
   const LogFileOpenResult({
@@ -18,7 +21,20 @@ class LogFileOpenResult {
   final String message;
 }
 
+class LogFileExportResult {
+  const LogFileExportResult({
+    required this.status,
+    this.exportPath,
+    this.message = '',
+  });
+
+  final LogFileExportStatus status;
+  final String? exportPath;
+  final String message;
+}
+
 typedef CompressLogsCallback = Future<String> Function();
+typedef DirectoryProvider = Future<Directory?> Function();
 
 String? _cachedReadableLogPath;
 Future<LogFileOpenResult>? _pendingPreparation;
@@ -140,12 +156,112 @@ void debugResetLogFilePreparationCache() {
   _cachedUnavailableResult = null;
 }
 
+Future<LogFileExportResult> exportLogFileForSharing({
+  required String sourceLogPath,
+  DirectoryProvider? externalStorageDirectoryProvider,
+  DirectoryProvider? documentsDirectoryProvider,
+  DateTime Function()? now,
+}) async {
+  try {
+    final sourceFile = File(sourceLogPath);
+    if (!await sourceFile.exists()) {
+      return const LogFileExportResult(
+        status: LogFileExportStatus.unavailable,
+        message: '日志文件不存在，无法导出',
+      );
+    }
+
+    final externalDirectoryProvider =
+        externalStorageDirectoryProvider ?? getExternalStorageDirectory;
+    final documentsDirectoryResolver =
+        documentsDirectoryProvider ?? getApplicationDocumentsDirectory;
+    final exportBaseDirectory =
+        await externalDirectoryProvider() ?? await documentsDirectoryResolver();
+    if (exportBaseDirectory == null) {
+      return const LogFileExportResult(
+        status: LogFileExportStatus.unavailable,
+        message: '未找到可用的导出目录',
+      );
+    }
+
+    final exportDirectory = Directory(
+      '${exportBaseDirectory.path}${Platform.pathSeparator}qa_flutter_logs',
+    );
+    await exportDirectory.create(recursive: true);
+
+    final exportFileName = _buildExportFileName(
+      sourceLogPath: sourceLogPath,
+      now: (now ?? DateTime.now)(),
+    );
+    final exportPath =
+        '${exportDirectory.path}${Platform.pathSeparator}$exportFileName';
+    await sourceFile.copy(exportPath);
+
+    return LogFileExportResult(
+      status: LogFileExportStatus.exported,
+      exportPath: exportPath,
+      message: '日志已导出到 $exportPath',
+    );
+  } catch (e) {
+    return LogFileExportResult(
+      status: LogFileExportStatus.unavailable,
+      message: '日志导出失败: $e',
+    );
+  }
+}
+
+String buildAdbPullCommand(
+  String exportPath, {
+  String? deviceId,
+  String hostTargetDirectory = '/path/on/your/computer/',
+}) {
+  final deviceSegment = deviceId == null || deviceId.isEmpty
+      ? ''
+      : '-s $deviceId ';
+  return 'adb ${deviceSegment}pull "$exportPath" "$hostTargetDirectory"';
+}
+
+String buildLogShareText(
+  String exportPath, {
+  String? deviceId,
+  String hostTargetDirectory = '/path/on/your/computer/',
+}) {
+  return buildAdbPullCommand(
+    exportPath,
+    deviceId: deviceId,
+    hostTargetDirectory: hostTargetDirectory,
+  );
+}
+
 LogFileOpenResult _cacheUnavailableResult(LogFileOpenResult result) {
   _cachedUnavailableResult = _CachedUnavailableResult(
     result: result,
     recordedAt: DateTime.now(),
   );
   return result;
+}
+
+String _buildExportFileName({
+  required String sourceLogPath,
+  required DateTime now,
+}) {
+  final sourceName = sourceLogPath.split(Platform.pathSeparator).last;
+  final extensionIndex = sourceName.lastIndexOf('.');
+  final baseName = extensionIndex >= 0
+      ? sourceName.substring(0, extensionIndex)
+      : sourceName;
+  final extension = extensionIndex >= 0
+      ? sourceName.substring(extensionIndex)
+      : '.log';
+  final timestamp =
+      '${now.year.toString().padLeft(4, '0')}'
+      '${now.month.toString().padLeft(2, '0')}'
+      '${now.day.toString().padLeft(2, '0')}_'
+      '${now.hour.toString().padLeft(2, '0')}'
+      '${now.minute.toString().padLeft(2, '0')}'
+      '${now.second.toString().padLeft(2, '0')}';
+  final sanitizedBaseName = baseName.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+  return '${sanitizedBaseName}_$timestamp$extension';
 }
 
 Future<String?> _resolveReadableLogPath(String rawPath) async {

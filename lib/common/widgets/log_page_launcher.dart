@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../log_content_page.dart';
+import '../utils/app_route_observer.dart';
 import '../utils/log_file_helper.dart';
 
 typedef PrepareLogFileCallback = Future<LogFileOpenResult> Function();
 typedef PushLogPageCallback =
-    Future<void> Function(BuildContext context, String logPath);
+    Future<void> Function(NavigatorState navigator, String logPath);
 
 Future<void>? _pendingLogPageOpen;
 
@@ -23,7 +24,7 @@ Future<void> openSdkLogPage(
     prepareLogFile: prepareLogFile ?? prepareLogFileForViewing,
     pushLogPage:
         pushLogPage ??
-        (context, logPath) => Navigator.of(context).push(
+        (navigator, logPath) => navigator.push(
           MaterialPageRoute(
             builder: (context) => LogContentPage(logPath: logPath),
           ),
@@ -45,7 +46,13 @@ Future<void> _openSdkLogPageInternal(
   required PrepareLogFileCallback prepareLogFile,
   required PushLogPageCallback pushLogPage,
 }) async {
-  final navigator = Navigator.of(context, rootNavigator: true);
+  final navigator = appNavigatorKey.currentState;
+  if (navigator == null) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('当前无法打开日志页面')));
+    return;
+  }
   final progressRoute = DialogRoute<void>(
     context: context,
     barrierDismissible: false,
@@ -71,7 +78,7 @@ Future<void> _openSdkLogPageInternal(
   if (!context.mounted) return;
 
   if (result.status == LogFileOpenStatus.ready && result.logPath != null) {
-    await pushLogPage(context, result.logPath!);
+    await pushLogPage(navigator, result.logPath!);
     return;
   }
 

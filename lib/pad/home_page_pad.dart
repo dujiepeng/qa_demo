@@ -8,6 +8,7 @@ import '../theme/app_settings.dart';
 import '../common/widgets/common_dialogs.dart';
 import '../common/widgets/connection_status_light.dart';
 import '../common/widgets/log_panel/log_panel.dart';
+import '../common/widgets/log_panel/log_panel_controller.dart';
 import 'me_page_pad.dart';
 import 'page_pad.dart';
 
@@ -23,6 +24,7 @@ class _HomePagePadState extends State<HomePagePad> with TickerProviderStateMixin
 
   // 日志高度
   double _logPanelHeight = 300.0;
+  bool _isLogPanelExpanded = false;
   // 最小日志高度
   static const double _minLogHeight = 100.0;
 
@@ -181,6 +183,18 @@ class _HomePagePadState extends State<HomePagePad> with TickerProviderStateMixin
         ),
 
         // 可拖动的分割线手柄
+        _buildLogPanelSection(isDark),
+      ],
+    );
+  }
+
+  Widget _buildLogPanelSection(bool isDark) {
+    if (!_isLogPanelExpanded) {
+      return _buildCollapsedLogBar(isDark);
+    }
+
+    return Column(
+      children: [
         GestureDetector(
           behavior: HitTestBehavior.translucent,
           onVerticalDragUpdate: (details) {
@@ -200,29 +214,78 @@ class _HomePagePadState extends State<HomePagePad> with TickerProviderStateMixin
           child: MouseRegion(
             cursor: SystemMouseCursors.resizeUpDown,
             child: Container(
-              height: 10,
+              height: 36,
               width: double.infinity,
-              color: Colors.transparent, // 点击热区
-              child: Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.glassBorder(isDark),
-                    borderRadius: BorderRadius.circular(2),
+              color: Colors.transparent,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.glassBorder(isDark),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _isLogPanelExpanded = false;
+                      });
+                    },
+                    child: const Text('收起日志'),
+                  ),
+                ],
               ),
             ),
           ),
         ),
-
-        // 下半部分: 日志区域
         SizedBox(
           height: _logPanelHeight,
-          child: LogPanel(isDark: isDark),
+          child: LogPanel(
+            isDark: isDark,
+            maxRetainedCharacters: compactRetainedLogPanelCharacters,
+            maxVisibleLines: 300,
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCollapsedLogBar(bool isDark) {
+    return Container(
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: AppColors.glassBorder(isDark), width: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          Text(
+            '日志面板已折叠',
+            style: TextStyle(
+              color: AppColors.textSecondary(isDark),
+              fontSize: 13,
+            ),
+          ),
+          const Spacer(),
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _isLogPanelExpanded = true;
+              });
+            },
+            child: const Text('展开日志'),
+          ),
+        ],
+      ),
     );
   }
 
